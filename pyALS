@@ -1,0 +1,19 @@
+#!/usr/bin/python3
+import sys
+from src.ALSPass import *
+
+def cli_parser():
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--source","--input", type = str, dest = "source", help="Select the input source file")
+  parser.add_argument("--top", type = str, dest = "top", help="Select the top-module entity.")
+  args, left = parser.parse_known_args()
+  sys.argv = sys.argv[:1] + left
+  return args
+
+if __name__ == '__main__':
+  args = cli_parser()
+  design = ys.Design()
+  ys.run_pass("read_verilog -sv " + str(args.source), design)
+  ys.run_pass("hierarchy -check -top " + args.top, design)
+  als = ALSPass()
+  als.py_execute(sys.argv[1:], design)
