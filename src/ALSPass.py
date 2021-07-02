@@ -46,7 +46,7 @@ class ALSPass(ys.Pass):
   def __cli_parser(self, args):
     parser = argparse.ArgumentParser()
     parser.add_argument("--threads", type = str, help = "the amount of parallel worker threads", default = "1")
-    parser.add_argument("--lut", type = str, help = "Select the LUT technology to be adopted (4-LUT, 6-LUT...)", default = "6")
+    parser.add_argument("--lut", type = str, help = "Select the LUT technology to be adopted (4-LUT, 6-LUT...)", default = "4")
     parser.add_argument("--metric", type = str, help = "Select the error metric (ers | epsmax, default: ers)", default = "ers")
     parser.add_argument("--weight", action = "append", nargs = 2, help = "Set the weight for the output signal.")
     parser.add_argument("--iterations", type = int, help = "Set the number of iterations for the optimizer.", default = 2500)
