@@ -35,6 +35,12 @@ class ALSSMT:
     self.__distance = distance
     self.__solver = z3.Solver()
     self.__solver.set(timeout = timeout)
+    self.__S = [[],[]]       # Sets of SMT variables which represent indexes
+    self.__P = [[],[]]       # Sets of SMT variables which represent polarities
+    self.__A = [[],[]]       # Sets of SMT variables which represent login-AND gates inputs
+    self.__p = z3.Bool('p')  # SMT variable for the output polarity
+    self.__ax = []           # Set of SMT variable which encodes the approximate function semantic
+
 
   """
   @brief Generate single input assignment varying the primary-input i and the input-vector t
@@ -54,14 +60,21 @@ class ALSSMT:
   The function semantic encoded is that at least \a distance input-output correspondences of the exact behavior are 
   preserved.
   """
-  def __add_ax_function_semantic_constraints(self, B, out_p):
+  def __add_ax_function_semantic_constraints(self):
     if self.__distance == 0:
-      self.__solver.add( [ B[-1][t] == z3.Xor(bool(self.__fun_spec[t]), z3.Not(out_p)) for t in range(len(self.__fun_spec)) ] )
+      self.__solver.add( [ self.__B[-1][t] == z3.Xor(bool(self.__fun_spec[t]), z3.Not(self.__p)) for t in range(len(self.__fun_spec)) ] )
+      self.__ax = [False for i in range(len(self.__fun_spec)) ]
     else:
-      ax = [z3.Bool("ax_{t}".format(t = t )) for t in range(len(self.__fun_spec))]
-      self.__solver.add( [ ax[t] == z3.Xor(B[-1][t], (z3.Xor(z3.Not(out_p), bool(self.__fun_spec[t])))) for t in range(len(self.__fun_spec)) ])
-      self.__solver.add(z3.AtMost(*ax, self.__distance))
+      self.__ax = [z3.Bool("ax_{t}".format(t = t )) for t in range(len(self.__fun_spec))]
+      self.__solver.add( [ self.__ax[t] == z3.Xor(self.__B[-1][t], (z3.Xor(z3.Not(self.__p), bool(self.__fun_spec[t])))) for t in range(len(self.__fun_spec)) ])
+      self.__solver.add(z3.AtMost(*self.__ax, self.__distance))
 
+  """
+  @brief Get the synthetisez function specification, as a string
+  """
+  def __get_synthesized_spec(self):
+    return "".join(["1" if bool(self.__fun_spec[i]) != bool(self.__solver.model()[self.__ax[i]]) else "0" for i in range(len(self.__fun_spec))])[::-1] if self.__distance > 0 else self.__fun_spec
+    
   """
   @brief Perform the exact synthesis of a given n-input-1-output Boolean function, using the SMT formulation.
 
@@ -74,16 +87,20 @@ class ALSSMT:
   @param[in] timeout
             Timeout for the solver to circumvent time-consuming unsatisfiability trials: if an SMT problem instance 
             cannot be solved within the given time budget, the function behaves as if such a problem is unsatisfiable.
+
+  @returns  the synthesized specification and its corresponding number of AND-gates
   """
   def synthesize(self):
     # computing the amount of inputs, based on the given function specification
     num_inputs = math.ceil(math.log2(len(self.__fun_spec)))
     assert 2**num_inputs == len(self.__fun_spec), "Incomplete specification"
     
-    S = [[],[]]       # Sets of SMT variables which represent indexes
-    P = [[],[]]       # Sets of SMT variables which represent polarities
-    A = [[],[]]       # Sets of SMT variables which represent login-AND gates inputs
-    p = z3.Bool('p')  # SMT variable for the output polarity
+    self.__S = [[],[]]       # Sets of SMT variables which represent indexes
+    self.__P = [[],[]]       # Sets of SMT variables which represent polarities
+    self.__A = [[],[]]       # Sets of SMT variables which represent login-AND gates inputs
+    self.__B = []            # Set of SMT variables which represent primary input and logic-AND gates
+    self.__p = z3.Bool('p')  # SMT variable for the output polarity
+    self.__ax = []           # Set of SMT variable which encodes the approximate function semantic
 
     #* Input assignment
     #* This formulation makes use of the explicit function representation -- i.e. the Boolean function is represented in 
@@ -91,17 +108,17 @@ class ALSSMT:
     #* behavior of the Boolean function for each input assignment, each node i [n+1, n+r] is replicated once for each of
     #* the input vectors t in [0, 2^n-1].
     # Set of SMT variables which encode primary-inputs assignment for t in [0 2**ninputs-1], for i in [0 ninputs]
-    B = [ [ z3.Bool("b_{i}_{t}".format(i = i, t = t)) for t in range(len(self.__fun_spec)) ] for i in range(num_inputs + 1) ] 
-    self.__solver.add([ B[i][t] == self.__input_assignment(i, t) for i in range(num_inputs + 1) for t in range(len(self.__fun_spec)) ])
+    self.__B = [ [ z3.Bool("b_{i}_{t}".format(i = i, t = t)) for t in range(len(self.__fun_spec)) ] for i in range(num_inputs + 1) ] 
+    self.__solver.add([ self.__B[i][t] == self.__input_assignment(i, t) for i in range(num_inputs + 1) for t in range(len(self.__fun_spec)) ])
 
     self.__solver.push() # Create a backtracking point
     # Encode the function semantic
-    self.__add_ax_function_semantic_constraints(B, p)
+    self.__add_ax_function_semantic_constraints()
 
     #* The first time the z3.Solver.check() function is called, no element has yet been added in B that encodes the 
-    #* logic-AND, so it is as if synthesis is attempted with zero nodes, i.e. using a constant zero or one.
+    #* logic-AND behavior, so it is as if synthesis is attempted with zero nodes, i.e. using a constant value.
     while self.__solver.check() == z3.unsat:
-      nodes = len(B)
+      nodes = len(self.__B)
       gates = nodes - num_inputs - 1
       # Go to the last backtraking point. This effectively brings back the solver as if the check() function has not yet
       # been called, and removes constraints added by the previous call to the add_ax_function_semantic_constraints()
@@ -111,21 +128,20 @@ class ALSSMT:
       #* 1. introduce s_1_i and s_2_i indexes, and  p_1_i and p_2_i boolean variables, for i in [n+1, n+r] and 2. enforce
       #* no-cycles and ordering constraints, i.e. s_1i < s_2i < i for i in [n+1, n+r] 
       for c in range(2):
-        S[c].append(z3.Int("s_{}_{}".format(c,nodes)))
-        P[c].append(z3.Bool("p_{}_{}".format(c, nodes)))
-        self.__solver.add(S[c][gates] < nodes, S[c][gates] >= 0)
-      self.__solver.add(S[0][gates] < S[1][gates])
+        self.__S[c].append(z3.Int("s_{}_{}".format(c,nodes)))
+        self.__P[c].append(z3.Bool("p_{}_{}".format(c, nodes)))
+        self.__solver.add(self.__S[c][gates] < nodes, self.__S[c][gates] >= 0)
+      self.__solver.add(self.__S[0][gates] < self.__S[1][gates])
 
       #* 3. encode the logic-AND behavior, i.e. b_i^(t) = a_1_i^(t) & a_2_i^(t),for i in [n+1, n+r], t in [0, 2**n-1], and 
-      B.append([z3.Bool("b_{i}_{t}".format(i = nodes, t = t)) for t in range(len(self.__fun_spec))])
+      self.__B.append([z3.Bool("b_{i}_{t}".format(i = nodes, t = t)) for t in range(len(self.__fun_spec))])
       for c in range(2):
-        A[c].append([z3.Bool("a_{c}_{i}_{t}".format(c = c, i = nodes, t = t)) for t in range(len(self.__fun_spec))])
-      self.__solver.add( [ B[nodes][t] == z3.And(A[0][gates][t], A[1][gates][t]) for t in range(len(self.__fun_spec)) ] )
+        self.__A[c].append([z3.Bool("a_{c}_{i}_{t}".format(c = c, i = nodes, t = t)) for t in range(len(self.__fun_spec))])
+      self.__solver.add( [ self.__B[nodes][t] == z3.And(self.__A[0][gates][t], self.__A[1][gates][t]) for t in range(len(self.__fun_spec)) ] )
       #* 4. encode primary-input connection and value propagation
-      self.__solver.add( [ z3.Implies(S[c][gates] == j, A[c][gates][t] == z3.Xor(B[j][t], z3.Not(P[c][gates]))) for c in range(2) for j in range(nodes) for t in range(len(self.__fun_spec)) ])
+      self.__solver.add( [ z3.Implies(self.__S[c][gates] == j, self.__A[c][gates][t] == z3.Xor(self.__B[j][t], z3.Not(self.__P[c][gates]))) for c in range(2) for j in range(nodes) for t in range(len(self.__fun_spec)) ])
 
       self.__solver.push() # Create a backtracking point
       #* 5. Encode the function semantic
-      self.__add_ax_function_semantic_constraints(B, p)
-
-    return len(B) - num_inputs - 1, self.__solver.model
+      self.__add_ax_function_semantic_constraints()
+    return self.__get_synthesized_spec(), len(self.__S[0])

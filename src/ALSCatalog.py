@@ -25,9 +25,9 @@ class ALSCatalog:
     try:
       self.__connection = sqlite3.connect(file_name)
       self.__cursor = self.__connection.cursor()
-      print("Database created and successfully connected to SQLite")
       print(sqlite3.version)
       self.__init_db()
+      print("Database created and successfully connected to SQLite")
     except sqlite3.Error as e:
       print(e)
       exit()
@@ -58,8 +58,10 @@ class ALSCatalog:
       result = self.get_synthesized_lut(lut, 0)
       while True: #TODO replace True with result.aig.gates > 0
         hamming_distance += 1
-        result = self.get_synthesized_lut(lut, hamming_distance)
-    # FIXME what do we do with the generated catalog?
+        synt_spec, gates = self.get_synthesized_lut(lut, hamming_distance)
+        if gates == 0:
+          break
+    # TODO what do we do with the generated catalog?
 
   """
   @brief Queries the database for a particular lut specification. 
@@ -79,41 +81,37 @@ class ALSCatalog:
   @return If the lut exists, it is returned, otherwise the function performs the exact synthesis of the lut and adds it
   to the catalog before returning it to the caller.
   """
-  def get_synthesized_lut(self, lut, distance):
-    result = self.__get_lut_at_dist(lut, distance)
+  def get_synthesized_lut(self, lut_spec, distance):
+    result = self.__get_lut_at_dist(lut_spec, distance)
     if result is None:
-      ys.log("Cache miss for lut " + lut.as_string() + " at distance " + str(distance) + "\n")
-      result = self.__synthesize_lut(lut, distance)
-      self.__add_lut(lut, result)
+      ys.log("Cache miss for lut {spec}@{dist}\n".format(spec = lut_spec.as_string(), dist = distance))
+      ys.log("Performing exact synthesis for LUT specification {spec}@{dist} ...".format(spec = lut_spec.as_string(), dist = distance))
+      synth_spec, gates = ALSSMT(lut_spec, distance, self.__es_timeout).synthesize()
+      ys.log(" ...Done! {spec}@{dist} satisfied using {gates} gates. Synthesized spec.: {synth_spec}\n".format(spec = lut_spec, dist = distance, synth_spec = synth_spec, gates = gates))
+      self.__add_lut(lut_spec, distance, synth_spec, gates)
+      return synth_spec, gates
     else:
-      ys.log("Cache hit for lut " + lut.as_string() + " at distance " + str(distance) + "\n")
-    return result
-
-  def __synthesize_lut(self, lut_spec, distance):
-    ys.log("Performing exact synthesis for LUT specification " + lut_spec.as_string() + "@" + str(distance) + " ...\n")
-    gates, model = ALSSMT(lut_spec, distance, self.__es_timeout).synthesize()
-    ys.log(" ...Done! " + lut_spec.as_string() + "@" + str(distance) + " satisfied using " + str(gates) + " gates\n")
-    print(model)
-    return model
+      ys.log("Cache hit for lut " + lut_spec.as_string() + " at distance " + str(distance) + "\n")
+    return result[0], result[1]
 
   """ 
   @brief Inits the database
   """
   def __init_db(self):
-    self.__cursor.execute("create table if not exists luts (spec text not null, aig blob not null, primary key (spec));")
+    self.__cursor.execute("create table if not exists luts (spec text not null, distance integer not null, synth_spec text, gates integer, primary key (spec, distance))")
     self.__connection.commit()
   
   """
   @brief Queries the database for a particular lut specification. 
   """
   def __get_lut_at_dist(self, spec, dist):
-    self.__cursor.execute("select aig from luts where spec = '" + str(spec) + "@" + str(dist) + "';")
+    self.__cursor.execute("select synth_spec, gates from luts where spec = '{spec}' and distance = {dist};".format(spec = spec, dist = dist))
     return self.__cursor.fetchone()
 
   """
   @brief Insert a synthesized LUT into the database
   """
-  def __add_lut(self, spec, aig):
-    self.__cursor.execute("insert into luts (spec, aig) values ('" + str(spec) + "', ?)",  sqlite3.Binary(aig))
-    self.__connectionn.commit()
+  def __add_lut(self, spec, dist, synth_spec, gates):
+    self.__cursor.execute("insert into luts (spec, distance, synth_spec, gates) values ('{spec}', {dist}, '{synth_spec}', {gates});".format(spec = spec, dist = dist, synth_spec = synth_spec, gates = gates))
+    self.__connection.commit()
     
