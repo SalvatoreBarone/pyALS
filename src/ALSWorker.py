@@ -1,22 +1,30 @@
+"""
+Copyright 2021 Salvatore Barone <salvatore.barone@unina.it>
 
+This is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation; either version 3 of the License, or any later version.
+
+This is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+
+You should have received a copy of the GNU General Public License along with
+RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
+Street, Fifth Floor, Boston, MA 02110-1301, USA.
+"""
 from pyosys import libyosys as ys
 from .ALSEpsMaxEvaluator import *
 from .ALSErsEvaluator import *
 from .ALSCatalog import *
 
 class ALSWorker:
-  def __init__(self, module, rewrite, luts_t, catalog, metric, weights, attempts, iterations, nvectors, debug):
+  def __init__(self, module, luts_tech, catalog, es_timeout, debug):
     self.__module = module
-    self.__rewrite = rewrite
-    self.__luts_t = luts_t
-    self.__catalog = ALSCatalog(catalog)
-    self.__metric = metric
-    self.__iterations = iterations
-    self.__weights = weights
-    self.__attempts = attempts
-    self.__nvectors = nvectors
+    self.__luts_tech = luts_tech
+    self.__catalog = ALSCatalog(catalog, es_timeout)
     self.__debug = debug
-    self.__synthesized_luts = None
     
   """
   @brief Implements the whole Catalog-based AIG rewriting (C-AIGRW) approximate technique workflow
@@ -46,11 +54,11 @@ class ALSWorker:
       ys.run_pass("splitnets -ports",  self.__module.design)
 
       # 1. K-LUT synthesis
-      ys.run_pass("synth -lut " + str(self.__luts_t), self.__module.design)
+      ys.run_pass("synth -lut " + str(self.__luts_tech), self.__module.design)
       
       # 2. SMT exact synthesis for catalog generation.
       ys.log_header(self.__module.design, "k-LUT catalog generation.\n")
-      self.__catalog_generation()
+      self.__catalog.generate_catalog(self.__module.design)
       
       # 3. Optimize
       ys.log_header(self.__module.design, "Running oprimization\n")
@@ -75,50 +83,6 @@ class ALSWorker:
     ys.run_pass("clean ", self.__module.design)
 
   def __replace_lut(self, lut, aig):
-    # TODO: to be implemented
-    pass
-
-  """
-  @brief Catalog generation procedure
-
-  @details
-  Starting from the exact specification of each unique LUT in the considered circuit, we progressively increase the
-  Hamming distance between the function being implemented by original LUT (cut) and the approximate one, while 
-  performing Exact Synthesis. 
-  
-  The procedure stops when, due to the approximation itself, the synthesis becomes trivial, i.e. it results in a catalog
-  entry of size zero.
-  """
-  def __catalog_generation(self):
-    luts_set = set()
-    for module in self.__module.design.selected_whole_modules_warn():
-      for cell in module.selected_cells():
-        if ys.IdString("\LUT") in cell.parameters:     
-          print(cell.parameters[ys.IdString("\LUT")].as_string())
-          luts_set.add(cell.parameters[ys.IdString("\LUT")])
-
-    # Sinthesizing the baseline lut and, then, approximate ones
-    # This for loop can be partitioned among multiple threads
-    for lut in luts_set:
-      hamming_distance = 0;
-      result = self.__get_synthesized_lut(lut, 0)
-      while True: #TODO replace True with result.aig.gates > 0
-        hamming_distance += 1
-        result = self.__get_synthesized_lut(lut, hamming_distance)
-
-  def __get_synthesized_lut(self, lut, distance):
-    result = self.__catalog.get_lut_at_dist(lut, distance)
-    if result is None:
-      ys.log("Cache miss for lut " + lut.as_string() + " at distance " + str(distance) + "\n")
-      ys.log("Performing exact synthesis...")
-      result = self.__synthesize_lut(lut, distance)
-      ys.log(" Done\n")
-      self.__catalog.add_lut(lut, result)
-    else:
-      ys.log("Cache miss for lut " + lut.as_string() + " at distance " + str(distance) + "\n")
-    return result
-
-  def __synthesize_lut(self, lut, distance):
     # TODO: to be implemented
     pass
 
