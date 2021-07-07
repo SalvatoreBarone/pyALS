@@ -241,15 +241,21 @@ class ALSOptimizer:
     #* 4. optimize
     self.__result = minimize(self.__problem, self.__algorithm, self.__termination, verbose = True)
 
+  def print_pareto(self):
+    row_format = "{:<10}" * (len(self.__result.pop.get("F"))) + "{:>4}" * (len(self.__result.pop.get("X")) + 2)
+    print("Final population:\nError     Cost         Genes...")
+    for fitness, chromosome in zip(self.__result.pop.get("F"), self.__result.pop.get("X")):
+      print(row_format.format(*fitness, *chromosome))
+
   """
-  @brief Print the Pareto-front resulting from DSE on a CSV file
+  @brief Generate a CSV report for the last optimization run
 
   @param [in] report_file
               path of the CSV file
   @param [in] separator
               field separator. Default is ";"
   """
-  def print_pareto(self, report_file, separator = ";"):
+  def report(self, report_file, separator = ";"):
     original_stdout = sys.stdout
     with open(report_file, "w") as file:
       sys.stdout = file

@@ -96,6 +96,7 @@ class ALSWorker:
       ys.log_header(self.__module.design, "Running oprimization\n")
       optimizer = ALSOptimizer(self.__module.design, catalog_entries, self.__nvectors, self.__metric, self.__weights, self.__popsize, self.__iter, self.__pcross, self.__etac, self.__pmut, self.__etam)
       optimizer.optimize()
+      optimizer.print_pareto()
 
       ys.log_header(self.__module.design, "Rolling-back all rewrites.\n")
       ys.log_pop()
