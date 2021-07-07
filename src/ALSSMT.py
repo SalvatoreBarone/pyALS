@@ -73,7 +73,13 @@ class ALSSMT:
   @brief Get the synthetisez function specification, as a string
   """
   def __get_synthesized_spec(self):
-    return "".join(["1" if bool(self.__fun_spec[i]) != bool(self.__solver.model()[self.__ax[i]]) else "0" for i in range(len(self.__fun_spec))])[::-1] if self.__distance > 0 else self.__fun_spec
+    if self.__distance > 0:
+      original_spec = [ True if self.__fun_spec[i] == "1" else False for i in range(len(self.__fun_spec)) ]
+      smt_result = [ self.__solver.model()[self.__ax[i]] for i in range(len(self.__fun_spec)) ]
+      final_spec = [ bool(original_spec[i]) != bool(smt_result[i]) for i in range(len(self.__fun_spec)) ]
+      #for o, s, f in zip(original_spec, smt_result, final_spec):
+      #  print ("{o}\t{s}\t{f}".format(o = o, s = s, f = f))
+    return "".join(["1" if bool(final_spec[i]) else "0" for i in range(len(self.__fun_spec))]) if self.__distance > 0 else self.__fun_spec
     
   """
   @brief Perform the exact synthesis of a given n-input-1-output Boolean function, using the SMT formulation.
