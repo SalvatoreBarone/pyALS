@@ -117,7 +117,7 @@ class ALSSMT:
 
     #* The first time the z3.Solver.check() function is called, no element has yet been added in B that encodes the 
     #* logic-AND behavior, so it is as if synthesis is attempted with zero nodes, i.e. using a constant value.
-    while self.__solver.check() == z3.unsat:
+    while self.__solver.check() != z3.sat:
       nodes = len(self.__B)
       gates = nodes - num_inputs - 1
       # Go to the last backtraking point. This effectively brings back the solver as if the check() function has not yet
