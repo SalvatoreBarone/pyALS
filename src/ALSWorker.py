@@ -58,7 +58,7 @@ class ALSWorker:
       
       # 2. SMT exact synthesis for catalog generation.
       ys.log_header(self.__module.design, "k-LUT catalog generation.\n")
-      self.__catalog.generate_catalog(self.__module.design)
+      catalog_entries = self.__catalog.generate_catalog(self.__module.design)
       
       # 3. Optimize
       ys.log_header(self.__module.design, "Running oprimization\n")
