@@ -132,8 +132,8 @@ class ALSCatalog:
       self.__add_lut(lut_spec, distance, synth_spec, gates)
       return synth_spec, gates
     else:
-      ys.log("Cache hit for {spec}@{dist}\n".format(spec = lut_spec.as_string(), dist = distance))
-    return result[0], result[1]
+      ys.log("Cache hit for {spec}@{dist}, which is implemented as {synth_spec} using {gates} gates\n".format(spec = lut_spec.as_string(), dist = distance, synth_spec = result[0], gates = result[1]))
+      return result[0], result[1]
 
   """ 
   @brief Inits the database
