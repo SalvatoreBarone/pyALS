@@ -15,16 +15,47 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 from pyosys import libyosys as ys
-from .ALSEpsMaxEvaluator import *
-from .ALSErsEvaluator import *
+
 from .ALSCatalog import *
+from .ALSOptimizer import *
 
 class ALSWorker:
-  def __init__(self, module, luts_tech, catalog, es_timeout, debug):
+  """
+  @param Builds a new Als-worker.
+
+  @param [in] module      Yosys top-module instance
+  @param [in] luts_tech   LUT technology to be adopted (4-LUT, 6-LUT...)
+  @param [in] catalog     path to the catalog.
+  @param [in] es_timeout  time budget for the SMT synthesis of LUTs, in ms.
+  @param [in] nvectors    number of random test vectors for error evaluation
+  @param [in] metric      error metric (ers, epsmax)
+  @param [in] weights     weights for the output signals
+  @param [in] popsize     NSGA-II population size
+  @param [in] iter        NSGA-II termination criterion, in terms of iterations.
+  @param [in] pcross      NSGA-II crossover probability
+  @param [in] etac        NSGA-II crossover distribution index
+  @param [in] pmut        NSGA-II mutation probability
+  @param [in] etam        NSGA-II mutation distribution index
+  """
+  def __init__(self, module, luts_tech, catalog, es_timeout, nvectors, metric, weights, popsize, iter, pcross, etac, pmut, etam):
     self.__module = module
     self.__luts_tech = luts_tech
     self.__catalog = ALSCatalog(catalog, es_timeout)
-    self.__debug = debug
+    self.__nvectors = nvectors
+    self.__metric = metric
+    self.__weights = weights
+    self.__popsize = popsize
+    self.__iter = iter
+    self.__pcross = pcross
+    self.__etac = etac
+    self.__pmut = pmut
+    self.__etam = etam
+
+    if self.__metric == "ers":
+      self.__metric == ALSEvaluator.ErrorMetric.ErrorFrequency
+    else:
+      print("Unrecognized error metric. Bailing out!")
+      sys.exit(0)
     
   """
   @brief Implements the whole Catalog-based AIG rewriting (C-AIGRW) approximate technique workflow
@@ -55,37 +86,17 @@ class ALSWorker:
 
       # 1. K-LUT synthesis
       ys.run_pass("synth -lut " + str(self.__luts_tech), self.__module.design)
-      
+      ys.run_pass("show", self.__module.design)      
+
       # 2. SMT exact synthesis for catalog generation.
       ys.log_header(self.__module.design, "k-LUT catalog generation.\n")
       catalog_entries = self.__catalog.generate_catalog(self.__module.design)
-      
-      # 3. Optimize
+
+      # 3. Optimization
       ys.log_header(self.__module.design, "Running oprimization\n")
-      self.__optimize()
+      optimizer = ALSOptimizer(self.__module.design, catalog_entries, self.__nvectors, self.__metric, self.__weights, self.__popsize, self.__iter, self.__pcross, self.__etac, self.__pmut, self.__etam)
+      optimizer.optimize()
 
       ys.log_header(self.__module.design, "Rolling-back all rewrites.\n")
       ys.log_pop()
     
-  def print_archive(self):
-    # TODO: to be implemented
-    pass
-
-  def __rewrite_run(self):
-    ys.log_header(self.__module.design, "Rewriting the AIG.\n")
-    ys.run_pass("clean ", self.__module.design)
-    to_sub = []
-    for cell in self.__module.cells():
-      if cell.getParam("\\LUT"):
-        to_sub.append(cell)
-    for cell in to_sub:
-      self.__replace_lut(self.__module, cell, ALSWorker.__synthesize_lut(cell.getParam("\\LUT"), 0, self.__attempts, self.__debug, self.__db_connb))
-    ys.run_pass("clean ", self.__module.design)
-
-  def __replace_lut(self, lut, aig):
-    # TODO: to be implemented
-    pass
-
-  def __optimize(self):
-    # TODO: to be implemented
-    pass
