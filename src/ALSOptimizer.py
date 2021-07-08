@@ -104,11 +104,11 @@ class ALSOptimizer:
       entries_available = [ len(entry) for lut in self.__lut_list for entry in self.__catalog if entry[0]["spec"] == lut.as_string() ]
       upper_bounds = np.array([ e - 1 for e in entries_available ], dtype = np.uint32)
 
-      print ("LUTS:       ", self.__lut_list)
-      print ("Num. genes: ", ngenes)
-      print ("Entries:    ", entries_available)
-      print ("Gene min.:  ", lower_bounds)
-      print ("Gene max.:  ", upper_bounds)
+      ys.log("LUTS:       {}\n".format(self.__lut_list))
+      ys.log("Num. genes: {}\n".format(ngenes))
+      ys.log("Entries:    {}\n".format(entries_available))
+      ys.log("Gene min.:  {}\n".format(lower_bounds))
+      ys.log("Gene max.:  {}\n".format(upper_bounds))
 
       # call to the super() class initializer
       # TODO: two more parameters could be added to the constructor, to define two constraints on maximum error and minimum savings
@@ -131,19 +131,12 @@ class ALSOptimizer:
       # genotype to phenotype transition: the X chromosome is interpreteted as approximate configuration; each gene is
       # used to pick a function specification from the catalog.
       picked_entries = [ entry[gene] for gene, lut in zip(X, self.__lut_list) for entry in self.__catalog if entry[0]["spec"] == lut.as_string() ]
-      #* Equavalent explanatory code
-      #*for gene, lut in zip(X, self.__lut_list):
-      #*  #pick the appropriate catalog entry
-      #*  ax_list =  [ entry for entry in self.__catalog if entry[0]["spec"] == lut.as_string() ][0]
-      #*  print ("LUT", lut.as_string(), "entries", ax_list, "gene", gene, "pick", ax_list[gene]["spec"], "gates", ax_list[gene]["gates"])
-
       ## Fitness evaluation
       evaluation = self.__evaluator.evaluate(picked_entries)
       # The error function: depending on the selected error metric, an appropriate evaluator should be adopted
       f1 = evaluation["error"]
       # The cost function: it is computed as the sum of the amount of AND-gates needed to synthesize the Boolean function implemented by each lut
       f2 = evaluation["cost"]
-
       # After doing the necessary calculations, the objective values must be added to the dictionary out with the key F
       # and the constraints with key G.
       out["F"] = [f1, f2]
@@ -203,11 +196,22 @@ class ALSOptimizer:
 
   """
   def __init__(self, design, catalog, n_vectors, metric, weights, nsgaii_pop_size, nsgaii_iter, nsgaii_cross_prob, nsgaii_cross_eta, nsgaii_mut_prob, nsgaii_mut_eta):
+
+    ys.log_push()
+    ys.log_header(design, "Building the Evaluator\n")
+    self.__evaluator = ALSEvaluator(design, n_vectors, metric, weights)
+    ys.log_pop()
+
     ##* MOP definition
     #* 1. Implementation of a Problem (element-wise class, in our case)
-    self.__problem = ALSOptimizer.MOP(design, catalog, ALSEvaluator(design, n_vectors, metric, weights))
+    ys.log_push()
+    ys.log_header(design, "Building the MOP problem\n")
+    self.__problem = ALSOptimizer.MOP(design, catalog, self.__evaluator)
+    ys.log_pop()
 
     #* 2. Initialization of an Algorithm (in our case, NSGA-II)
+    ys.log_push()
+    ys.log_header(design, "Setting-up the NSGA-II...\n")
     self.__algorithm = NSGA2(
       pop_size = nsgaii_pop_size,
       # n_offsprings = None sets the number of offsprings equal to the population size
@@ -236,6 +240,8 @@ class ALSOptimizer:
     #* 3. Definition of the termination criterion
     self.__termination = get_termination('n_gen', nsgaii_iter)
     self.__result = None
+    ys.log("NSGA-II configured uning {} individuals, {} generations, Pcross = {}, ETAc = {}, Pmut = {}, ETAm = {}\n".format(nsgaii_pop_size, nsgaii_iter, nsgaii_cross_prob, nsgaii_cross_eta, nsgaii_mut_prob, nsgaii_mut_eta))
+    ys.log_pop()
 
   def optimize(self):
     #* 4. optimize
