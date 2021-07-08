@@ -242,8 +242,8 @@ class ALSOptimizer:
     self.__result = minimize(self.__problem, self.__algorithm, self.__termination, verbose = True)
 
   def print_pareto(self):
-    row_format = "{:<10}" * (len(self.__result.pop.get("F"))) + "{:>4}" * (len(self.__result.pop.get("X")) + 2)
-    print("Final population:\nError     Cost         Genes...")
+    row_format = "{:<10}" * (len(self.__result.pop.get("F")[0])) + "{:>3}" * (len(self.__result.pop.get("X")[0]))
+    print("Final population:\nError     Cost        Chromosome")
     for fitness, chromosome in zip(self.__result.pop.get("F"), self.__result.pop.get("X")):
       print(row_format.format(*fitness, *chromosome))
 
