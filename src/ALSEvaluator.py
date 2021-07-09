@@ -14,7 +14,10 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
+import igraph as ig
 from enum import Enum
+from pyosys import libyosys as ys
+from .ALSGraph import *
 
 class ALSEvaluator:
   class ErrorMetric(Enum):
@@ -22,16 +25,24 @@ class ALSEvaluator:
     EpsMax = 1
 
   def __init__(self, design, nvectors, metric, weights):
-    self.__design = design
-    self.__nvectors = nvectors
-    self.__metric = metric
-    self.__weights = weights
+    self.__metric = self.__parse_metric(metric)
+    self.__graph = ALSGraph(design, weights)
+    self.__test_vectors = self.__graph.generate_random_test_set(nvectors)
+    ys.log_header(design, "Collecting the circuit outputs...\n")
+    self.__expected_outputs = [ self.__graph.evaluate(t) for t in self.__test_vectors]
 
   """
   @brief Implements fitness-function computation
 
   @param [in] configuration
-              list of picked luts implementations, with corresponding required AND-gates
+              list of picked luts implementations, with corresponding required AND-gates. The list MUST be in the 
+              following form:
+              [
+                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
+                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
+                ...
+                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
+              ]
 
   @return a dict containing both the error and the cost fitness function values for the given configuration
   """
@@ -49,7 +60,19 @@ class ALSEvaluator:
   implemented by each of the picked luts
   """
   def __compute_error(self, configuration):
-    return 0
+    outputs = [ self.__graph.evaluate(t, configuration) for t in self.__test_vectors]
+    error = 0
+    if self.__metric == ALSEvaluator.ErrorMetric.ErrorFrequency:
+      for e, o in zip(self.__expected_outputs, outputs):
+        error += 1 if e != o else 0
+      return error / len(self.__expected_outputs)
+    elif self.__metric == ALSEvaluator.ErrorMetric.EpsMax:
+      weights = self.__graph.get_po_weights()
+      for e, o, w in zip(self.__expected_outputs, outputs, weights):
+        error += w if e != o else 0
+      return error
+    else:
+      return 0
 
   """
   @brief Compute the cost function.
@@ -62,4 +85,13 @@ class ALSEvaluator:
   implemented by each of the picked luts
   """
   def __compute_requirements(self, configuration):
-    return sum ([ e["gates"] for e in configuration])
+    return sum ([ e["gates"] for e in configuration])  
+
+  def __parse_metric(self, metric):
+    if metric == "ers":
+      return ALSEvaluator.ErrorMetric.ErrorFrequency
+    elif metric == "epsmax":
+      return ALSEvaluator.ErrorMetric.EpsMax
+    else:
+      # TODO raise an exception
+      pass

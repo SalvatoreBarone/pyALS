@@ -48,7 +48,21 @@ class ALSGraph:
     return [ [ bool(random.getrandbits(1)) for n in range(len(self.__pinputs)) ] for i in range(nvectors) ]
 
   """
+  @brief Evaluate the circuit output, using its graph representation
 
+  @param [in] inputs
+              circuit inputs: a list of Boolean elements.
+
+  @param [in] configuration
+              Approximate configuration: list of picked luts implementations, with corresponding required AND-gates. 
+              The list MUST be in the 
+              following form:
+              [
+                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
+                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
+                ...
+                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
+              ]
   """
   def evaluate(self, inputs, configuration = None):
     cell_values = dict()
@@ -65,7 +79,13 @@ class ALSGraph:
     for c in self.__cells:
       input_value = [ cell_values[n] for n in c.neighbors(mode="in") ]
       out_idx = sum ([ 1 * 2** i if input_value[i] else 0 for i in range(len(input_value)) ])
-      cell_spec = c["cell"].parameters[ys.IdString("\LUT")].as_string()[::-1] if configuration == None else configuration[c["name"]]["spec"][::-1]
+      cell_spec = None
+      if configuration == None:
+        cell_spec = c["cell"].parameters[ys.IdString("\LUT")].as_string()[::-1] 
+      else:
+        #*get the element of the list having the appropriate spec
+        cell_spec = [ conf for conf in configuration if conf["name"] == c["name"] ][0]["spec"][::-1]
+        #print("Ax spec:", cell_spec)
       out_value = cell_spec[out_idx]
       #print("{name} {spec} [{n}] = {i} ({I}) -> {o}".format(name = c["name"], spec = cell_spec, n = [ n["name"] for n in c.neighbors(mode="in") ],  i = input_value, I = out_idx, o = out_value))
       cell_values[c] = True if out_value == "1" else False

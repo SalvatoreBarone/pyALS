@@ -95,16 +95,17 @@ class ALSOptimizer:
       self.__evaluator = evaluator
 
       # get the list of LUTs within the given circuit, in order to determine the number of needed genes
-      self.__lut_list = [ cell.parameters[ys.IdString("\LUT")] for module in self.__design.selected_whole_modules_warn() for cell in module.selected_cells() if ys.IdString("\LUT") in cell.parameters ]
+      self.__lut_list = [ {"name" : cell.name.str(), "spec" : cell.parameters[ys.IdString("\LUT")].as_string()} for module in self.__design.selected_whole_modules_warn() for cell in module.selected_cells() if ys.IdString("\LUT") in cell.parameters ]
+      #print(self.__lut_list)
       ngenes = len (self.__lut_list)
       # the lower bound for genes is always 0 (no approximation)
       lower_bounds = np.zeros(ngenes, dtype = np.uint32)
       # the upper bound for genes is given by the amount of catalog entries for a certain function specification (minus one)
       # for each of the LUTs within the circuit, get the amount of catalog entries, i.e. the range [0, N) for each gene
-      entries_available = [ len(entry) for lut in self.__lut_list for entry in self.__catalog if entry[0]["spec"] == lut.as_string() ]
+      entries_available = [ len(entry) for lut in self.__lut_list for entry in self.__catalog if entry[0]["spec"] == lut["spec"] ]
       upper_bounds = np.array([ e - 1 for e in entries_available ], dtype = np.uint32)
 
-      ys.log("LUTS:       {}\n".format(self.__lut_list))
+      #ys.log("LUTS:       {}\n".format(self.__lut_list))
       ys.log("Num. genes: {}\n".format(ngenes))
       ys.log("Entries:    {}\n".format(entries_available))
       ys.log("Gene min.:  {}\n".format(lower_bounds))
@@ -130,7 +131,7 @@ class ALSOptimizer:
     def _evaluate(self, X, out, *args, **kwargs):
       # genotype to phenotype transition: the X chromosome is interpreteted as approximate configuration; each gene is
       # used to pick a function specification from the catalog.
-      picked_entries = [ entry[gene] for gene, lut in zip(X, self.__lut_list) for entry in self.__catalog if entry[0]["spec"] == lut.as_string() ]
+      picked_entries = [ {"name" : lut["name"], "spec" : entry[gene]["spec"], "gates" : entry[gene]["gates"]}  for gene, lut in zip(X, self.__lut_list) for entry in self.__catalog if entry[0]["spec"] == lut["spec"] ]
       ## Fitness evaluation
       evaluation = self.__evaluator.evaluate(picked_entries)
       # The error function: depending on the selected error metric, an appropriate evaluator should be adopted
@@ -197,20 +198,15 @@ class ALSOptimizer:
   """
   def __init__(self, design, catalog, n_vectors, metric, weights, nsgaii_pop_size, nsgaii_iter, nsgaii_cross_prob, nsgaii_cross_eta, nsgaii_mut_prob, nsgaii_mut_eta):
 
-    ys.log_push()
     ys.log_header(design, "Building the Evaluator\n")
     self.__evaluator = ALSEvaluator(design, n_vectors, metric, weights)
-    ys.log_pop()
 
     ##* MOP definition
     #* 1. Implementation of a Problem (element-wise class, in our case)
-    ys.log_push()
     ys.log_header(design, "Building the MOP problem\n")
     self.__problem = ALSOptimizer.MOP(design, catalog, self.__evaluator)
-    ys.log_pop()
 
     #* 2. Initialization of an Algorithm (in our case, NSGA-II)
-    ys.log_push()
     ys.log_header(design, "Setting-up the NSGA-II...\n")
     self.__algorithm = NSGA2(
       pop_size = nsgaii_pop_size,
@@ -241,7 +237,6 @@ class ALSOptimizer:
     self.__termination = get_termination('n_gen', nsgaii_iter)
     self.__result = None
     ys.log("NSGA-II configured uning {} individuals, {} generations, Pcross = {}, ETAc = {}, Pmut = {}, ETAm = {}\n".format(nsgaii_pop_size, nsgaii_iter, nsgaii_cross_prob, nsgaii_cross_eta, nsgaii_mut_prob, nsgaii_mut_eta))
-    ys.log_pop()
 
   def optimize(self):
     #* 4. optimize

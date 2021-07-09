@@ -86,7 +86,7 @@ class ALSWorker:
 
       # 1. K-LUT synthesis
       ys.run_pass("synth -lut " + str(self.__luts_tech), self.__module.design)
-      ys.run_pass("show", self.__module.design)      
+      #ys.run_pass("show", self.__module.design)      
 
       # 2. SMT exact synthesis for catalog generation.
       ys.log_header(self.__module.design, "k-LUT catalog generation.\n")
