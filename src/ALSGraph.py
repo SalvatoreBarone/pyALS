@@ -75,25 +75,29 @@ class ALSGraph:
     assert len(self.__pinputs) == len(inputs)
     for p, i in zip (self.__pinputs, inputs):
       cell_values[p] = bool(i)
+      #print("{name} -> {o}".format(name = p["name"], o = cell_values[p]))
     #* evaluate the output of each cell
     for c in self.__cells:
       input_value = [ cell_values[n] for n in c.neighbors(mode="in") ]
       out_idx = sum ([ 1 * 2** i if input_value[i] else 0 for i in range(len(input_value)) ])
-      cell_spec = None
+      cell_spec = c["cell"].parameters[ys.IdString("\LUT")].as_string()[::-1] 
+      out_value = cell_spec[out_idx]
+      ax_cell_spec = None 
+      ax_out_value = None
       if configuration == None:
-        cell_spec = c["cell"].parameters[ys.IdString("\LUT")].as_string()[::-1] 
+        cell_values[c] = True if out_value == "1" else False
       else:
         #*get the element of the list having the appropriate spec
-        cell_spec = [ conf for conf in configuration if conf["name"] == c["name"] ][0]["spec"][::-1]
-        #print("Ax spec:", cell_spec)
-      out_value = cell_spec[out_idx]
-      #print("{name} {spec} [{n}] = {i} ({I}) -> {o}".format(name = c["name"], spec = cell_spec, n = [ n["name"] for n in c.neighbors(mode="in") ],  i = input_value, I = out_idx, o = out_value))
-      cell_values[c] = True if out_value == "1" else False
+        ax_cell_spec = [ conf for conf in configuration if conf["name"] == c["name"] ][0]["spec"][::-1]
+        ax_out_value = ax_cell_spec[out_idx]
+        cell_values[c] = True if ax_out_value == "1" else False
+      #print("{name} {spec} {axspec}, {inputs} = {I} ({i}) -> {o} ({axo})".format(name = c["name"], spec = cell_spec, axspec = ax_cell_spec, inputs = [ n["name"] for n in c.neighbors(mode="in")], I = input_value, i = out_idx, o = out_value, axo =  ax_out_value))
     #* evaluate the circuit output
     output = []
     for o in self.__poutputs:
-      cell_values[o] = cell_values[c.neighbors(mode="in")[0]]
-      #print("{name} -> {o}".format(name = o["name"], o = cell_values[o]))
+      input_cells = [ i["name"] for i in o.neighbors(mode="in")]
+      cell_values[o] = cell_values[o.neighbors(mode="in")[0]]
+      #print("{inputs} -> {name} = {o}".format(inputs = input_cells, name = o["name"], o = cell_values[o]))
       output.append(cell_values[o])
     #print(output)
     return output
