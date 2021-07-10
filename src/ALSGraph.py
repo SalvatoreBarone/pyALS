@@ -95,7 +95,7 @@ class ALSGraph:
     #* evaluate the circuit output
     output = []
     for o in self.__poutputs:
-      input_cells = [ i["name"] for i in o.neighbors(mode="in")]
+      #input_cells = [ i["name"] for i in o.neighbors(mode="in")]
       cell_values[o] = cell_values[o.neighbors(mode="in")[0]]
       #print("{inputs} -> {name} = {o}".format(inputs = input_cells, name = o["name"], o = cell_values[o]))
       output.append(cell_values[o])
