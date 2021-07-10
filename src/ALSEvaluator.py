@@ -61,16 +61,11 @@ class ALSEvaluator:
   """
   def __compute_error(self, configuration):
     outputs = [ self.__graph.evaluate(t, configuration) for t in self.__test_vectors]
-    error = 0
     if self.__metric == ALSEvaluator.ErrorMetric.ErrorFrequency:
-      for e, o in zip(self.__expected_outputs, outputs):
-        error += 1 if e != o else 0
-      return error / len(self.__expected_outputs)
+      return sum ([ 1 if e != o else 0 for e, o in zip(self.__expected_outputs, outputs) ]) / len(self.__expected_outputs)
     elif self.__metric == ALSEvaluator.ErrorMetric.EpsMax:
       weights = self.__graph.get_po_weights()
-      for e, o, w in zip(self.__expected_outputs, outputs, weights):
-        error += w if e != o else 0
-      return error
+      return max([ sum([w if e[i] != o[i] else 0 for i in range(zip(e,o))]) for e, o, w in zip(self.__expected_outputs, outputs, weights) ])
     else:
       return 0
 
