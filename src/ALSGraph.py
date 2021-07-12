@@ -29,7 +29,7 @@ class ALSGraph:
     CELL = 3,
     PRIMARY_OUTPUT = 4
 
-  def __init__(self, design, weights):
+  def __init__(self, design, weights = None):
     self.__design = design
     self.__weights = weights
     self.__graph = ig.Graph(directed=True)
