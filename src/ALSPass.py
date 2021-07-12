@@ -29,7 +29,6 @@ class ALSPass(ys.Pass):
     ys.log("\n")
     ys.log("ALS - Approximate logic synthesis plugin, using Catalog-based AIG rewriting\n")
     ys.log("    --outdir <value>           path of the output directory, default is output/\n")
-    ys.log("    --threads <amount>         select the amount of parallel worker threads, default: 1\n")
     ys.log("    --lut <inputs>             select the LUT technology to be adopted (4-LUT, 6-LUT...), default: 6\n")
     ys.log("    --catalog <filename>       path of the catalog cache\n")
     ys.log("    --timeout <value>          set the maximum timeout for the SMT synthesis of approximate LUTs\n")
@@ -66,7 +65,6 @@ class ALSPass(ys.Pass):
 
   def __cli_parser(self, args):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--threads", type = str, help = "the amount of parallel worker threads", default = "1")
     parser.add_argument("--lut", type = str, help = "Select the LUT technology to be adopted (4-LUT, 6-LUT...)", default = "4")
     parser.add_argument("--catalog", type = str, help = "Path to the catalog.", default = "lut_catalog.db")
     parser.add_argument("--outdir", type = str, help = "Path of the output directory.", default = "output/")
@@ -86,7 +84,6 @@ class ALSPass(ys.Pass):
     self.__args, args = parser.parse_known_args(args)
     ys.log("Executing als-pass with the following parameters:\n")
     ys.log("\tOutput directory:   {}\n".format(str(self.__args.outdir)))
-    ys.log("\tThreads:            {}\n".format(str(self.__args.threads)))
     ys.log("\tLUTs:               {}\n".format(str(self.__args.lut)))
     ys.log("\tcatalog:            {}\n".format(str(self.__args.catalog)))
     ys.log("\ttimeout:            {}\n".format(str(self.__args.timeout)))
