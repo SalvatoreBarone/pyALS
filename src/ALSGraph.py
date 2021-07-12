@@ -30,10 +30,9 @@ class ALSGraph:
     PRIMARY_OUTPUT = 4
 
   def __init__(self, design, weights = None):
-    self.__design = design
     self.__weights = weights
     self.__graph = ig.Graph(directed=True)
-    self.__graph_from_design()
+    self.__graph_from_design(design)
     self.__graph.vs["label"] = self.__graph.vs["name"]
     self.__pinputs = [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.PRIMARY_INPUT]
     self.__const0 = [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.CONSTANT_ZERO]
@@ -80,7 +79,7 @@ class ALSGraph:
     for c in self.__cells:
       input_value = [ cell_values[n] for n in c.neighbors(mode="in") ]
       out_idx = sum ([ 1 * 2** i if input_value[i] else 0 for i in range(len(input_value)) ])
-      cell_spec = c["cell"].parameters[ys.IdString("\LUT")].as_string()[::-1] 
+      cell_spec = c["spec"]
       out_value = cell_spec[out_idx]
       ax_cell_spec = None 
       ax_out_value = None
@@ -109,13 +108,13 @@ class ALSGraph:
   """
   @brief Parse the design to build a local representation of the circuit, which will be employed to evaluate the output of the latter, given an input
   """
-  def __graph_from_design(self):
+  def __graph_from_design(self, design):
     # In Yosys it is very easy to go from cells to wires but hard to go in the other way. The solution is easy: create 
     # a custom indexes that allow you to make fast lookups for the wire-to-cell direction...
     driver_of = dict()
     #* Builds up a new vertex for each LUT in the circuit graph. 
     #* In addition, it keeps track of wires connected to each cell.
-    for module in self.__design.selected_whole_modules_warn():
+    for module in design.selected_whole_modules_warn():
       sigmap = ys.SigMap(module) #! take a look at the line above the driver_of definition!
       for cell in module.selected_cells():
         self.__add_cell_vertex(cell)
@@ -123,7 +122,7 @@ class ALSGraph:
     #* Add driver-driven edges between cells, primary-inputs and constants
     constant_one_vertex = None
     constant_zero_vertex = None
-    for module in self.__design.selected_whole_modules_warn():
+    for module in design.selected_whole_modules_warn():
       sigmap = ys.SigMap(module)
       for cell in module.selected_cells():
         connection_index = 0
@@ -172,7 +171,7 @@ class ALSGraph:
     self.__graph.vs[-1]["type"] = ALSGraph.VertexType.CELL
     self.__graph.vs[-1]["name"] = cell.name.str()
     self.__graph.vs[-1]["hash"] = cell.name.hash()
-    self.__graph.vs[-1]["cell"] = cell
+    self.__graph.vs[-1]["spec"] = cell.parameters[ys.IdString("\LUT")].as_string()[::-1] 
     self.__graph.vs[-1]["weight"] = None
     A = cell.connections_[ys.IdString("\A")]
     Y = cell.connections_[ys.IdString("\Y")]
@@ -203,7 +202,7 @@ class ALSGraph:
     self.__graph.vs[-1]["type"] = ALSGraph.VertexType.PRIMARY_INPUT
     self.__graph.vs[-1]["name"] = input_signal.wire.name.str()
     self.__graph.vs[-1]["hash"] = input_signal.wire.name.hash()
-    self.__graph.vs[-1]["cell"] = None
+    self.__graph.vs[-1]["spec"] = None
     self.__graph.vs[-1]["weight"] = None
     return len( self.__graph.vs) - 1
 
@@ -217,7 +216,7 @@ class ALSGraph:
     self.__graph.vs[-1]["type"] = ALSGraph.VertexType.CONSTANT_ONE
     self.__graph.vs[-1]["name"] = input_signal.wire.name.str()
     self.__graph.vs[-1]["hash"] = input_signal.wire.name.hash()
-    self.__graph.vs[-1]["cell"] = None
+    self.__graph.vs[-1]["spec"] = None
     self.__graph.vs[-1]["weight"] = None
     return len( self.__graph.vs) - 1
 
@@ -231,7 +230,7 @@ class ALSGraph:
     self.__graph.vs[-1]["type"] = ALSGraph.VertexType.CONSTANT_ZERO
     self.__graph.vs[-1]["name"] = input_signal.wire.name.str()
     self.__graph.vs[-1]["hash"] = input_signal.wire.name.hash()
-    self.__graph.vs[-1]["cell"] = None
+    self.__graph.vs[-1]["spec"] = None
     self.__graph.vs[-1]["weight"] = None
     return len( self.__graph.vs) - 1
 
@@ -245,7 +244,7 @@ class ALSGraph:
     self.__graph.vs[-1]["type"] = ALSGraph.VertexType.PRIMARY_OUTPUT
     self.__graph.vs[-1]["name"] = signal.name.str()
     self.__graph.vs[-1]["hash"] = signal.name.hash()
-    self.__graph.vs[-1]["cell"] = None
+    self.__graph.vs[-1]["spec"] = None
     self.__graph.vs[-1]["weight"] = None
     #* check whether there is a weight specification for the signal
     if self.__weights:
