@@ -131,3 +131,10 @@ dmypy.json
 pyALS.code-workspace
 
 *.db
+output/reference.ilang
+output/report.csv
+output/variant_0.ilang
+output/variant_1.ilang
+output/variant_2.ilang
+output/variant_3.ilang
+output/variant_4.ilang
