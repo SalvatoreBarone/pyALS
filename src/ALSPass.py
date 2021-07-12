@@ -57,7 +57,7 @@ class ALSPass(ys.Pass):
     elif len(design.selected_whole_modules_warn()) != 1:
       ys.log_cmd_error("Only one top module must be selected.\n")
       self.__top_module = design.selected_whole_modules_warn()[0]
-    worker = ALSWorker(self.__top_module, self.__args.lut, self.__args.catalog, self.__args.timeout, self.__args.nvectors, self.__args.metric, self.__args.weight, self.__args.popsize, self.__args.iter, self.__args.pcross, self.__args.etac, self.__args.pmut, self.__args.etam)
+    worker = ALSWorker(self.__top_module, self.__args.lut, self.__args.catalog, self.__args.timeout, self.__args.nvectors, self.__args.metric, self.__args.weight, self.__args.popsize, self.__args.iter, self.__args.pcross, self.__args.etac, self.__args.pmut, self.__args.etam, self.__args.outdir)
     worker.run()
     ys.log_pop()
 

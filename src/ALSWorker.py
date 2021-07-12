@@ -18,6 +18,7 @@ from pyosys import libyosys as ys
 
 from .ALSCatalog import *
 from .ALSOptimizer import *
+from .ALSRewriter import *
 
 class ALSWorker:
   """
@@ -37,7 +38,7 @@ class ALSWorker:
   @param [in] pmut        NSGA-II mutation probability
   @param [in] etam        NSGA-II mutation distribution index
   """
-  def __init__(self, module, luts_tech, catalog, es_timeout, nvectors, metric, weights, popsize, iter, pcross, etac, pmut, etam):
+  def __init__(self, module, luts_tech, catalog, es_timeout, nvectors, metric, weights, popsize, iter, pcross, etac, pmut, etam, outdir):
     self.__module = module
     self.__luts_tech = luts_tech
     self.__catalog = ALSCatalog(catalog, es_timeout)
@@ -50,6 +51,7 @@ class ALSWorker:
     self.__etac = etac
     self.__pmut = pmut
     self.__etam = etam
+    self.__outdir = outdir
 
     if self.__metric == "ers":
       self.__metric == ALSEvaluator.ErrorMetric.ErrorFrequency
@@ -100,6 +102,14 @@ class ALSWorker:
       optimizer.print_pareto()
       ys.log_pop()
 
-      ys.log_header(self.__module.design, "Rolling-back all rewrites.\n")
-      #ys.log_pop()
+      ys.log_header(self.__module.design, "Performing rewriting....\n")
+      ys.log_push()
+      rewriter = ALSRewriter(self.__module.design, optimizer.get_axc_configurations(), self.__outdir)
+      rewriter.rewrite()
+      ys.log_pop()
+
+      ys.log_header(self.__module.design, "Generating report.\n")
+      optimizer.report("{dir}/report.csv".format(dir = self.__outdir))
+      
+      ys.log_header(self.__module.design, "All done!.\n")
     

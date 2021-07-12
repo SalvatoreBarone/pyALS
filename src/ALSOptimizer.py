@@ -293,7 +293,7 @@ class ALSOptimizer:
     original_stdout = sys.stdout
     with open(report_file, "w") as file:
       sys.stdout = file
-      print("Error" + separator + "Requirements", end = "")
+      print("Error" + separator + "Requirements"+ separator + "Chromosome", end = "")
       # TODO: how to print LUTs on the report file?
       #for f in self.__evaluator.get_classifier().get_features():
       #  print(separator + f["name"], end = "")
