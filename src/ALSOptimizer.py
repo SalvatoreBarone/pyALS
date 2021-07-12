@@ -93,7 +93,16 @@ class ALSOptimizer:
       self.__design = design
       self.__catalog = catalog
       self.__evaluator = evaluator
-
+      #* Phenotype-to-Genotype encoding:
+      #* k-LUTs nodes of the considered circuit constitute the set of decision variables of the optimization problem,
+      #* therefore, we encode genotype, i.e. a chromosome, so that it consists of a number of genes that is equal to the
+      #* LUT instances within the considered circuit. The domain of each decision variable, i.e. each gene, is given by
+      #* catalog entries for the corresponding LUT.
+      #*
+      #* The value assigned to a given gene governs the Hamming distance between the original (non-approximate) LUT 
+      #* specification at the corresponding circuit node, and the one to be adopted, i.e. a value of 0 determines the 
+      #* non-approximate LUT specification to be used while a value of 1 determines the LUT specification at Hamming
+      #* distance* 1 to be used, and so forth.
       # get the list of LUTs within the given circuit, in order to determine the number of needed genes
       self.__lut_list = [ {"name" : cell.name.str(), "spec" : cell.parameters[ys.IdString("\LUT")].as_string()} for module in self.__design.selected_whole_modules_warn() for cell in module.selected_cells() if ys.IdString("\LUT") in cell.parameters ]
       #print(self.__lut_list)
@@ -114,6 +123,30 @@ class ALSOptimizer:
       # call to the super() class initializer
       # TODO: two more parameters could be added to the constructor, to define two constraints on maximum error and minimum savings
       super().__init__(n_var = ngenes, n_obj = 2, n_constr = 0, xl = lower_bounds, xu = upper_bounds, elementwise_evaluation = True)
+
+    """
+    @brief Converts a genotype, i.e. a chromosome, in a phenotype, i.e. an approximate configuration in this context
+
+    @param [in] X
+                a chromosome
+
+    @returns the equivalent phenotype encoding
+
+    @detaild
+    This function performs genotype to phenotype interpretation: it interprets a chromosome (a vector of decision 
+    variables called genes) as a set of observable characteristics, or traits, of an individual (an approximate
+    configuration, in this context).
+
+    @code
+    phenotype = []
+    for gene, lut in zip(X, self.__lut_list) 
+      for entry in self.__catalog 
+        if entry[0]["spec"] == lut["spec"]
+          phenotype.append({"name" : lut["name"], "spec" : entry[gene]["spec"], "gates" : entry[gene]["gates"]})
+    @endcode
+    """
+    def genotype_to_phenotype(self, X):
+      return [ {"name" : lut["name"], "spec" : entry[gene]["spec"], "gates" : entry[gene]["gates"]}  for gene, lut in zip(X, self.__lut_list) for entry in self.__catalog if entry[0]["spec"] == lut["spec"] ]
 
     """
     @brief Computes fitness and constraint values. This method is called in each iteration for each solution exactly once.
@@ -280,22 +313,13 @@ class ALSOptimizer:
   @param [in] include_non_ax 
               Include the non-approximate configuration, for reference purpose. Default is True.
 
-  @returns A list of dicts, each in the form of ... TODO
+  @returns A list of dicts, each in the form of 
+  {"name" : lut_name, "spec" : lut specification, "gates" : and-gates}
   """
   def get_axc_configurations(self, include_non_ax = True):
     ax_confs = []
-    # TODO implement
-    #features = self.__evaluator.get_classifier().get_features()
-    #if include_non_ax:
-    #  conf = []
-    #  for f in features:
-    #    conf.append({"name" : f["name"], "nab" : 0})
-    #  ax_confs.append(conf)
-    #for chromosome in self.__result.pop.get("X"):
-    #  conf = []
-    #  for c, f in zip(chromosome, features):
-    #    conf.append({"name" : f["name"], "nab" : c})
-    #  ax_confs.append(conf)
+    for chromosome in self.__result.pop.get("X"):
+      ax_confs.append(self.__problem.genotype_to_phenotype(chromosome))
     return ax_confs
   
   def get_result(self):

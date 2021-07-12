@@ -101,5 +101,5 @@ class ALSWorker:
       ys.log_pop()
 
       ys.log_header(self.__module.design, "Rolling-back all rewrites.\n")
-      ys.log_pop()
+      #ys.log_pop()
     
