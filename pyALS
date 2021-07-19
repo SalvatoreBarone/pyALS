@@ -26,21 +26,23 @@ def cli_parser():
   sys.argv = sys.argv[:1] + left
   return args
 
-def read_source(file_name, design):
-  filename, file_extension = os.path.splitext('/path/to/somefile.ext')
-  if file_extension == ".vhd":
-    ys.run_pass("read_vhdl {}".format(str(file_name)), design)
-  elif file_extension == ".sv":
+def read_source(file_name, top_level, design):
+  name, extension = os.path.splitext(file_name)
+  if extension == ".vhd":
+    ys.run_pass("ghdl {} -e".format(file_name), design)
+  elif extension == ".sv":
     ys.run_pass("read_verilog -sv {}".format(str(file_name)), design)
-  elif file_extension == ".sv":
-    ys.run_pass("read_verilog {}".format(str(file_name)), design)
+  elif extension == ".v":
+    ys.run_pass("read_verilog {}".format(str(file_name)), design)  
+  elif extension == ".blif":
+    ys.run_pass("read_blif {}".format(str(file_name)), design)  
+  ys.run_pass("hierarchy -check -top {}".format(top_level), design)
 
 if __name__ == '__main__':
   args = cli_parser()
   design = ys.Design()
-  ys.run_pass("plugin -i vhdl", design)
+  ys.run_pass("plugin -i ghdl", design)
   #ys.run_pass("read_verilog -sv " + str(args.source), design)
-  read_source(str(args.source), design)
-  ys.run_pass("hierarchy -check -top " + args.top, design)
+  read_source(str(args.source), str(args.top), design)
   als = ALSPass()
   als.py_execute(sys.argv[1:], design)
