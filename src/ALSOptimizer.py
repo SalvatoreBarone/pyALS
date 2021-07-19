@@ -106,23 +106,29 @@ class ALSOptimizer:
       # get the list of LUTs within the given circuit, in order to determine the number of needed genes
       self.__lut_list = [ {"name" : cell.name.str(), "spec" : cell.parameters[ys.IdString("\LUT")].as_string()} for module in self.__design.selected_whole_modules_warn() for cell in module.selected_cells() if ys.IdString("\LUT") in cell.parameters ]
       #print(self.__lut_list)
-      ngenes = len (self.__lut_list)
+      self.__ngenes = len (self.__lut_list)
       # the lower bound for genes is always 0 (no approximation)
-      lower_bounds = np.zeros(ngenes, dtype = np.uint32)
+      lower_bounds = np.zeros(self.__ngenes, dtype = np.uint32)
       # the upper bound for genes is given by the amount of catalog entries for a certain function specification (minus one)
       # for each of the LUTs within the circuit, get the amount of catalog entries, i.e. the range [0, N) for each gene
       entries_available = [ len(entry) for lut in self.__lut_list for entry in self.__catalog if entry[0]["spec"] == lut["spec"] ]
       upper_bounds = np.array([ e - 1 for e in entries_available ], dtype = np.uint32)
 
       #ys.log("LUTS:       {}\n".format(self.__lut_list))
-      ys.log("Num. genes: {}\n".format(ngenes))
+      ys.log("Num. genes: {}\n".format(self.__ngenes))
       ys.log("Entries:    {}\n".format(entries_available))
       ys.log("Gene min.:  {}\n".format(lower_bounds))
       ys.log("Gene max.:  {}\n".format(upper_bounds))
 
       # call to the super() class initializer
       # TODO: two more parameters could be added to the constructor, to define two constraints on maximum error and minimum savings
-      super().__init__(n_var = ngenes, n_obj = 2, n_constr = 0, xl = lower_bounds, xu = upper_bounds, elementwise_evaluation = True)
+      super().__init__(n_var = self.__ngenes, n_obj = 2, n_constr = 0, xl = lower_bounds, xu = upper_bounds, elementwise_evaluation = True)
+
+    """
+    @brief Get the all-zero chromosome
+    """
+    def get_zero_chromosome(self):
+      return [0] * self.__ngenes
 
     """
     @brief Converts a genotype, i.e. a chromosome, in a phenotype, i.e. an approximate configuration in this context
@@ -318,6 +324,8 @@ class ALSOptimizer:
   """
   def get_axc_configurations(self, include_non_ax = True):
     ax_confs = []
+    if include_non_ax:
+      ax_confs.append(self.__problem.genotype_to_phenotype(self.__problem.get_zero_chromosome()))
     for chromosome in self.__result.pop.get("X"):
       ax_confs.append(self.__problem.genotype_to_phenotype(chromosome))
     return ax_confs
