@@ -170,7 +170,7 @@ class ALSOptimizer:
     def _evaluate(self, X, out, *args, **kwargs):
       # genotype to phenotype transition: the X chromosome is interpreteted as approximate configuration; each gene is
       # used to pick a function specification from the catalog.
-      picked_entries = [ {"name" : lut["name"], "spec" : entry[gene]["spec"], "gates" : entry[gene]["gates"]}  for gene, lut in zip(X, self.__lut_list) for entry in self.__catalog if entry[0]["spec"] == lut["spec"] ]
+      picked_entries = self.genotype_to_phenotype(X)
       ## Fitness evaluation
       evaluation = self.__evaluator.evaluate(picked_entries)
       # The error function: depending on the selected error metric, an appropriate evaluator should be adopted
