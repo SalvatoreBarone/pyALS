@@ -14,23 +14,16 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import sqlite3
+import random
 from pyosys import libyosys as ys
+from multiprocessing import Pool, cpu_count
+from .ALSCatalogCache import *
 from .ALSSMT import *
 
 class ALSCatalog:
-  def __init__(self, file_name, es_timeout):
-    self.__connection = None
-    self.__es_timeout = es_timeout
-    try:
-      self.__connection = sqlite3.connect(file_name)
-      self.__cursor = self.__connection.cursor()
-      print(sqlite3.version)
-      self.__init_db()
-      print("Database created and successfully connected to SQLite")
-    except sqlite3.Error as e:
-      print(e)
-      exit()
+  def __init__(self, file_name):
+    self.__cache_file = file_name
+    ALSCatalogCache(self.__cache_file).init()
 
   """
   @brief Catalog generation procedure
@@ -57,102 +50,85 @@ class ALSCatalog:
       ...
       {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)}  <-- approx-spec at distance N
     ],
-    # LUT specs
-    [
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)},
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)},
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)},
-      ...
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)}
-    ],
     ...
-    # LUT specs
-    [
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)},
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)},
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)},
-      ...
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)}
-    ]
   ]
 
   @note This class implements LUT caching, so the actual synthesis of a LUT is performed i.f.f. the latter is not yet
   in the database.
   """
-  def generate_catalog(self, design):
-    # Building the set of unique luts
+  def generate_catalog(self, design, es_timeout):
     luts_set = set()
     for module in design.selected_whole_modules_warn():
       for cell in module.selected_cells():
         if ys.IdString("\LUT") in cell.parameters:     
-          luts_set.add(cell.parameters[ys.IdString("\LUT")])
+          luts_set.add(cell.parameters[ys.IdString("\LUT")].as_string()[::-1])
 
-    # TODO: This for loop should be partitioned among multiple threads. 
-    #! Make sure the db connection object can be safely shared among processes
+    # return generate_catalog(self.__cache_file, luts_set, es_timeout)
+    luts_set = list(luts_set)
+    random.shuffle(luts_set)
+    luts_to_be_synthesized = list_partitioning(luts_set, cpu_count())
+    args = [ [self.__cache_file, luts, es_timeout] for luts in luts_to_be_synthesized ]
+    with Pool(cpu_count()) as pool:
+      catalog = pool.starmap(generate_catalog, args)
+    catalog = [ item for sublist in catalog for item in sublist ]
+    return catalog
+
+def generate_catalog(catalog_cache_file, luts_set, smt_timeout):
     catalog = []
     for lut in luts_set:
       lut_specifications = []
       # Sinthesizing the baseline (non-approximate) LUT
-      hamming_distance = 0;
-      synt_spec, gates = self.get_synthesized_lut(lut, hamming_distance)
-      lut_specifications.append({"spec": synt_spec, "gates": gates})
+      hamming_distance = 0
+      synt_spec, S, P, out_p, out = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, smt_timeout)
+      gates = len(S[0])
+      lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out})
       #  and, then, approximate ones
       while gates > 0:
         hamming_distance += 1
-        synt_spec, gates = self.get_synthesized_lut(lut, hamming_distance)
-        lut_specifications.append({"spec": synt_spec, "gates": gates})
+        synt_spec, S, P, out_p, out = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, smt_timeout)
+        gates = len(S[0])
+        lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out})
       catalog.append(lut_specifications)
+      # Speculation...
+      cache = ALSCatalogCache(catalog_cache_file)
+      luts_to_be_added = []
+      for i in range(1, len(lut_specifications)):
+        luts_to_be_added.append((lut_specifications[i]["spec"], 0, lut_specifications[i]["spec"], lut_specifications[i]["S"], lut_specifications[i]["P"], lut_specifications[i]["out_p"], lut_specifications[i]["out"]))
+        for j in range(i+1, len(lut_specifications)):
+          luts_to_be_added.append((lut_specifications[i]["spec"], j-i, lut_specifications[j]["spec"], lut_specifications[j]["S"], lut_specifications[j]["P"], lut_specifications[j]["out_p"], lut_specifications[j]["out"]))
+      cache.add_luts(luts_to_be_added)
     return catalog
 
-  """
-  @brief Queries the database for a particular lut specification. 
+"""
+@brief Queries the database for a particular lut specification. 
 
-  @param [in] lut
-              exact specification of the lut; combined with distance makes up the actual specification of the 
-              synthesized LUT to be searched.
+@param [in] lut
+            exact specification of the lut; combined with distance makes up the actual specification of the 
+            synthesized LUT to be searched.
 
-  @param [in] distance
-              Hamming distance of the LUT to be searched against the exact specification in lut; combined with the 
-              latter makes up the actual specification of the sy thesized to be searched.
+@param [in] distance
+            Hamming distance of the LUT to be searched against the exact specification in lut; combined with the 
+            latter makes up the actual specification of the sy thesized to be searched.
 
-  @details 
-  If the lut exists, it is returned, otherwise the function performs the exact synthesis of the lut and adds it
-  to the catalog before returning it to the caller.
-  
-  @return If the lut exists, it is returned, otherwise the function performs the exact synthesis of the lut and adds it
-  to the catalog before returning it to the caller.
-  """
-  def get_synthesized_lut(self, lut_spec, distance):
-    result = self.__get_lut_at_dist(lut_spec, distance)
-    if result is None:
-      ys.log("Cache miss for {spec}@{dist}\n".format(spec = lut_spec.as_string(), dist = distance))
-      ys.log("Performing SMT-ES for {spec}@{dist} ...".format(spec = lut_spec.as_string(), dist = distance))
-      synth_spec, gates = ALSSMT(lut_spec, distance, self.__es_timeout).synthesize()
-      ys.log(" ...Done! {spec}@{dist} satisfied using {gates} gates. Synth. spec.: {synth_spec}\n".format(spec = lut_spec.as_string(), dist = distance, synth_spec = synth_spec, gates = gates))
-      self.__add_lut(lut_spec, distance, synth_spec, gates)
-      return synth_spec, gates
-    else:
-      ys.log("Cache hit for {spec}@{dist}, which is implemented as {synth_spec} using {gates} gates\n".format(spec = lut_spec.as_string(), dist = distance, synth_spec = result[0], gates = result[1]))
-      return result[0], result[1]
+@details 
+If the lut exists, it is returned, otherwise the function performs the exact synthesis of the lut and adds it
+to the catalog before returning it to the caller.
 
-  """ 
-  @brief Inits the database
-  """
-  def __init_db(self):
-    self.__cursor.execute("create table if not exists luts (spec text not null, distance integer not null, synth_spec text, gates integer, primary key (spec, distance))")
-    self.__connection.commit()
-  
-  """
-  @brief Queries the database for a particular lut specification. 
-  """
-  def __get_lut_at_dist(self, spec, dist):
-    self.__cursor.execute("select synth_spec, gates from luts where spec = '{spec}' and distance = {dist};".format(spec = spec, dist = dist))
-    return self.__cursor.fetchone()
-
-  """
-  @brief Insert a synthesized LUT into the database
-  """
-  def __add_lut(self, spec, dist, synth_spec, gates):
-    self.__cursor.execute("insert into luts (spec, distance, synth_spec, gates) values ('{spec}', {dist}, '{synth_spec}', {gates});".format(spec = spec, dist = dist, synth_spec = synth_spec, gates = gates))
-    self.__connection.commit()
-    
+@return If the lut exists, it is returned, otherwise the function performs the exact synthesis of the lut and adds it
+to the catalog before returning it to the caller.
+"""
+def get_synthesized_lut(cache_file_name, lut_spec, dist, es_timeout):
+  cache = ALSCatalogCache(cache_file_name)
+  result = cache.get_lut_at_dist(lut_spec, dist)
+  if result is None:
+    ys.log(f"Cache miss for {lut_spec}@{dist}\n")
+    synth_spec, S, P, out_p, out = ALSSMT(lut_spec, dist, es_timeout).synthesize()
+    gates = len(S[0])
+    print(f"{lut_spec}@{dist} synthesized as {synth_spec} using {gates} gates.")
+    cache.add_lut(lut_spec, dist, synth_spec, S, P, out_p, out)
+    return synth_spec, S, P, out_p, out
+  else:
+    synth_spec = result[0]
+    gates = len(result[1][0])
+    #print(f"Cache hit for {lut_spec}@{dist}, which is implemented as {synth_spec} using {gates} gates")
+    return result[0], result[1], result[2], result[3], result[4]

@@ -15,34 +15,7 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import sys, os
-from src.ALSPass import *
-
-def cli_parser():
-  parser = argparse.ArgumentParser()
-  parser.add_argument("--source","--input", type = str, dest = "source", help="Select the input source file")
-  parser.add_argument("--top", type = str, dest = "top", help="Select the top-module entity.")
-  args, left = parser.parse_known_args()
-  sys.argv = sys.argv[:1] + left
-  return args
-
-def read_source(file_name, top_level, design):
-  name, extension = os.path.splitext(file_name)
-  if extension == ".vhd":
-    ys.run_pass("ghdl {} -e".format(file_name), design)
-  elif extension == ".sv":
-    ys.run_pass("read_verilog -sv {}".format(str(file_name)), design)
-  elif extension == ".v":
-    ys.run_pass("read_verilog {}".format(str(file_name)), design)  
-  elif extension == ".blif":
-    ys.run_pass("read_blif {}".format(str(file_name)), design)  
-  ys.run_pass("hierarchy -check -top {}".format(top_level), design)
+from src.Worker import *
 
 if __name__ == '__main__':
-  args = cli_parser()
-  design = ys.Design()
-  ys.run_pass("plugin -i ghdl", design)
-  #ys.run_pass("read_verilog -sv " + str(args.source), design)
-  read_source(str(args.source), str(args.top), design)
-  als = ALSPass()
-  als.py_execute(sys.argv[1:], design)
+  Worker().work()

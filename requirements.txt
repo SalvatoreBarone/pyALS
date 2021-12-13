@@ -1,5 +1,7 @@
+igraph
 z3-solver
 python-igraph
 pycairo
 pymoo
 numpy
+configparser

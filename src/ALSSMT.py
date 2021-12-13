@@ -31,16 +31,17 @@ class ALSSMT:
               cannot be solved within the given time budget, the function behaves as if such a problem is unsatisfiable.
   """
   def __init__(self, fun_spec, distance, timeout):
-    self.__fun_spec = fun_spec.as_string()
+    self.__fun_spec = fun_spec
     self.__distance = distance
     self.__solver = z3.Solver()
-    self.__solver.set(timeout = timeout)
-    self.__S = [[],[]]       # Sets of SMT variables which represent indexes
-    self.__P = [[],[]]       # Sets of SMT variables which represent polarities
-    self.__A = [[],[]]       # Sets of SMT variables which represent login-AND gates inputs
-    self.__p = z3.Bool('p')  # SMT variable for the output polarity
-    self.__ax = []           # Set of SMT variable which encodes the approximate function semantic
-
+    self.__solver.set("timeout", timeout)
+    self.__S = [[], []]       # Sets of SMT variables which represent indexes
+    self.__P = [[], []]       # Sets of SMT variables which represent polarities
+    self.__A = [[], []]       # Sets of SMT variables which represent login-AND gates inputs
+    self.__B = []             # Set of SMT variables which represent primary input and logic-AND gates
+    self.__p = z3.Bool('p')   # SMT variable for the output polarity
+    self.__ax = []            # Set of SMT variable which encodes the approximate function semantic
+    self.sel_var = None
 
   """
   @brief Generate single input assignment varying the primary-input i and the input-vector t
@@ -62,11 +63,11 @@ class ALSSMT:
   """
   def __add_ax_function_semantic_constraints(self):
     if self.__distance == 0:
-      self.__solver.add( [ self.__B[-1][t] == z3.Xor(bool(self.__fun_spec[t]), z3.Not(self.__p)) for t in range(len(self.__fun_spec)) ] )
+      self.__solver.add( [ self.__B[-1][t] == z3.Xor(False if self.__fun_spec[t] == "0" else True, z3.Not(self.__p)) for t in range(len(self.__fun_spec)) ] )
       self.__ax = [False for i in range(len(self.__fun_spec)) ]
     else:
       self.__ax = [z3.Bool("ax_{t}".format(t = t )) for t in range(len(self.__fun_spec))]
-      self.__solver.add( [ self.__ax[t] == z3.Xor(self.__B[-1][t], (z3.Xor(z3.Not(self.__p), bool(self.__fun_spec[t])))) for t in range(len(self.__fun_spec)) ])
+      self.__solver.add( [ self.__ax[t] == z3.Xor(self.__B[-1][t], (z3.Xor(z3.Not(self.__p), False if self.__fun_spec[t] == "0" else True))) for t in range(len(self.__fun_spec)) ])
       self.__solver.add(z3.AtMost(*self.__ax, self.__distance))
 
   """
@@ -77,10 +78,8 @@ class ALSSMT:
       original_spec = [ True if self.__fun_spec[i] == "1" else False for i in range(len(self.__fun_spec)) ]
       smt_result = [ self.__solver.model()[self.__ax[i]] for i in range(len(self.__fun_spec)) ]
       final_spec = [ bool(original_spec[i]) != bool(smt_result[i]) for i in range(len(self.__fun_spec)) ]
-      #for o, s, f in zip(original_spec, smt_result, final_spec):
-      #  print ("{o}\t{s}\t{f}".format(o = o, s = s, f = f))
     return "".join(["1" if bool(final_spec[i]) else "0" for i in range(len(self.__fun_spec))]) if self.__distance > 0 else self.__fun_spec
-    
+
   """
   @brief Perform the exact synthesis of a given n-input-1-output Boolean function, using the SMT formulation.
 
@@ -97,16 +96,21 @@ class ALSSMT:
   @returns  the synthesized specification and its corresponding number of AND-gates
   """
   def synthesize(self):
-    # computing the amount of inputs, based on the given function specification
     num_inputs = math.ceil(math.log2(len(self.__fun_spec)))
     assert 2**num_inputs == len(self.__fun_spec), "Incomplete specification"
-    
-    self.__S = [[],[]]       # Sets of SMT variables which represent indexes
-    self.__P = [[],[]]       # Sets of SMT variables which represent polarities
-    self.__A = [[],[]]       # Sets of SMT variables which represent login-AND gates inputs
+    self.__S = [[], []]       # Sets of SMT variables which represent indexes
+    self.__P = [[], []]       # Sets of SMT variables which represent polarities
+    self.__A = [[], []]       # Sets of SMT variables which represent login-AND gates inputs
     self.__B = []            # Set of SMT variables which represent primary input and logic-AND gates
     self.__p = z3.Bool('p')  # SMT variable for the output polarity
     self.__ax = []           # Set of SMT variable which encodes the approximate function semantic
+
+    self.sel_var = single_var(self.__fun_spec, self.__distance)
+    if self.sel_var is not None:
+        self.sel_out = int(self.sel_var / 2)
+        self.sel_out_p = self.sel_var % 2 == 0
+        sel_fun_spec = truth_table_column(self.sel_out, num_inputs, self.sel_out_p)
+        return "".join(["1" if bool(sel_fun_spec[i]) else "0" for i in range(len(self.__fun_spec))]), [[], []], [[], []], self.sel_out_p, self.sel_out
 
     #* Input assignment
     #* This formulation makes use of the explicit function representation -- i.e. the Boolean function is represented in 
@@ -150,4 +154,41 @@ class ALSSMT:
       self.__solver.push() # Create a backtracking point
       #* 5. Encode the function semantic
       self.__add_ax_function_semantic_constraints()
-    return self.__get_synthesized_spec(), len(self.__S[0])
+
+    model = self.__solver.model()
+    S = [ [ model[s].as_long() for s in self.__S[0] ], [ model[s].as_long() for s in self.__S[1] ] ]
+    P = [ [ 1 if model[p] else 0 for p in self.__P[0] ], [ 1 if model[p] else 0 for p in self.__P[1] ] ]
+    p = 1 if model[self.__p] else 0
+    return self.__get_synthesized_spec(), S, P, p, 0
+
+def hamming(s1, s2):
+  result = 0
+  if len(s1) == len(s2):
+    for x, (i, j) in enumerate(zip(s1, s2)):
+      if i != j:
+        result += 1
+  return result
+
+
+def truth_table_value(i, t):
+  if i == 0:
+    return False
+  return t % (1 << i) >= (1 << (i - 1))
+
+
+def truth_table_column(i, num_vars, p):
+  bs = [False] * (1 << num_vars)
+  for t in range(len(bs)):
+    bs[t] = truth_table_value(i, t) == p
+  return bs
+
+
+def single_var(fun_spec, out_distance):
+  num_vars = math.ceil(math.log2(len(fun_spec)))
+  fun_spec = [True if c == "1" else False for c in fun_spec]
+  for i in range(num_vars + 1):
+    if hamming(fun_spec, truth_table_column(i, num_vars, True)) <= out_distance:
+      return i * 2
+    elif hamming(fun_spec, truth_table_column(i, num_vars, False)) <= out_distance:
+      return (i * 2) + 1
+  return None
