@@ -37,6 +37,10 @@ class ERS(AMOSA.Problem):
         cells = [{"name": c["name"], "spec": c["spec"]} for c in graph.get_cells()]
         upper_bound = [len(e) - 1 for c in cells for e in catalog if e[0]["spec"] == c["spec"]]
         AMOSA.Problem.__init__(self, n_vars, [AMOSA.Type.INTEGER] * n_vars, [0] * n_vars, upper_bound, 2, 1)
+        configuration = self._matter_configuration([0] * n_vars)
+        and_gates = sum([c["gates"] for c in configuration])
+        print(f"# vars: {n_vars}, ub:{upper_bound}")
+        print(f"Baseline requirements: {and_gates} AIG-nodes")
 
     def _matter_configuration(self, x):
         return [{"name": l["name"], "dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"],
@@ -49,7 +53,8 @@ class ERS(AMOSA.Problem):
             a[2] = configuration
         with Pool(cpu_count()) as pool:
             error = pool.starmap(evaluate_vectors, self.__args)
-        f1 = sum(error) / self.n_vectors
+        rs = sum(error) / self.n_vectors
+        f1 = rs + 4.5 / self.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.n_vectors * rs * (1-rs)))
         f2 = sum([c["gates"] for c in configuration])
         g1 = f1 - self.threshold
         out["f"] = [f1, f2]
