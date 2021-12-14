@@ -41,8 +41,8 @@ class Worker:
         graph = ALSGraph(design)
         print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
         catalog = ALSCatalog(self.__als_conf.catalog).generate_catalog(design, self.__als_conf.timeout)
-        print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
         problem = ERS(graph, catalog, self.__error_conf.n_vectors, self.__error_conf.threshold)
+        print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
         optimizer = AMOSA(
             self.__amosa_conf.archive_hard_limit,
             self.__amosa_conf.archive_soft_limit,
@@ -53,6 +53,7 @@ class Worker:
             self.__amosa_conf.cooling_factor,
             self.__amosa_conf.annealing_iterations)
         optimizer.minimize(problem)
+        print(f"Took {optimizer.duration} sec.")
         optimizer.save_results(problem, self.__output_dir + self.__report_file)
         optimizer.plot_pareto(problem, self.__output_dir + self.__pareto_view)
         print(f"Performing AIG-rewriting.")
