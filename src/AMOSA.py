@@ -17,6 +17,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 import sys
 import copy
 import random
+import time
 from enum import Enum
 import numpy as np
 import matplotlib.pyplot as plt
@@ -39,14 +40,14 @@ class AMOSA:
             pass
 
     def __init__(self,
-            archive_hard_limit,
-            archive_soft_limit,
-            archive_gamma,
-            hill_climbing_iterations,
-            initial_temperature,
-            final_temperature,
-            cooling_factor,
-            annealing_iterations):
+            archive_hard_limit = 20,
+            archive_soft_limit = 50,
+            archive_gamma = 2,
+            hill_climbing_iterations = 1500,
+            initial_temperature = 500,
+            final_temperature = 0.000001,
+            cooling_factor = 0.9,
+            annealing_iterations = 1500):
         self.archive_hard_limit = archive_hard_limit
         self.archive_soft_limit = archive_soft_limit
         self.archive_gamma = archive_gamma
@@ -57,6 +58,7 @@ class AMOSA:
         self.refinement_iterations = annealing_iterations
         self.__current_temperature = 0
         self.__archive = []
+        self.duration = 0
         self.__n_eval = 0
         self.__ideal = None
         self.__nadir = None
@@ -68,10 +70,10 @@ class AMOSA:
         self.__old_f = None
         self.__ideal = None
         self.__nadir = None
+        self.duration = time.time()
         self.__initialize_archive(problem)
         if len(self.__archive) > self.archive_hard_limit:
-            self.__archive_clustering()
-        self.__n_eval = self.archive_gamma * self.archive_soft_limit * self.initial_refinement_iterations
+            self.__archive_clustering(problem)
         self.__print_header(problem)
         self.__current_temperature = self.initial_temperature
         x = random.choice(self.__archive)
@@ -96,7 +98,7 @@ class AMOSA:
                     elif (k_s_dominating_y == 0 and k_s_dominated_by_y == 0) or k_s_dominated_by_y >= 1:
                         self.__add_to_archive(y)
                         if len(self.__archive) > self.archive_soft_limit:
-                            self.__archive_clustering()
+                            self.__archive_clustering(problem)
                         x = y
                 elif dominates(y, x):
                     if k_s_dominating_y >= 1:
@@ -106,16 +108,16 @@ class AMOSA:
                     elif (k_s_dominating_y == 0 and k_s_dominated_by_y == 0) or k_s_dominated_by_y >= 1:
                         self.__add_to_archive(y)
                         if len(self.__archive) > self.archive_soft_limit:
-                            self.__archive_clustering()
+                            self.__archive_clustering(problem)
                         x = y
                 else:
                     raise RuntimeError(f"Something went wrong\narchive: {self.__archive}\nx:{x}\ny: {y}\n x < y: {dominates(x, y)}\n y < x: {dominates(y, x)}\ny domination rank: {k_s_dominated_by_y}\narchive domination rank: {k_s_dominating_y}")
-            self.__n_eval += self.refinement_iterations
             self.__current_temperature *= self.cooling_factor
         if len(self.__archive) > self.archive_hard_limit:
-            self.__archive_clustering()
+            self.__archive_clustering(problem)
         self.__remove_infeasible(problem)
         self.__print_statistics(problem)
+        self.duration = time.time() - self.duration
 
     def pareto_front(self):
         return np.array([s["f"] for s in self.__archive])
@@ -126,14 +128,14 @@ class AMOSA:
     def constraint_violation(self):
         return np.array([s["g"] for s in self.__archive])
 
-    def plot_pareto(self, problem, pdf_file):
+    def plot_pareto(self, problem, pdf_file, fig_title = "Pareto front", axis_labels = ["f0", "f1"]):
         if problem.num_of_objectives == 2:
             F = self.pareto_front()
             plt.figure(figsize=(10, 10), dpi=300)
             plt.plot(F[:, 0], F[:, 1], 'k.')
-            plt.xlabel("f0")
-            plt.ylabel("f1")
-            plt.title("Pareto front")
+            plt.xlabel(axis_labels[0])
+            plt.ylabel(axis_labels[1])
+            plt.title(fig_title)
             plt.savefig(pdf_file, bbox_inches='tight', pad_inches=0)
 
     def save_results(self, problem, csv_file):
@@ -163,8 +165,10 @@ class AMOSA:
             raise RuntimeError("The cooling factor for the temperature of the matter must be in the (0, 1) range")
 
     def __initialize_archive(self, problem):
-        initial_candidate_solutions = []
-        for i in range(1, self.archive_gamma * self.archive_soft_limit):
+        print("Initializing archive...")
+        self.__n_eval = self.archive_gamma * self.archive_soft_limit * self.initial_refinement_iterations
+        initial_candidate_solutions = [lower_point(problem), upper_point(problem)]
+        for _ in range(self.archive_gamma * self.archive_soft_limit):
             initial_candidate_solutions.append(hill_climbing(problem, random_point(problem), self.initial_refinement_iterations))
         for x in initial_candidate_solutions:
             self.__add_to_archive(x)
@@ -177,14 +181,18 @@ class AMOSA:
             if not any([dominates(y, x) or is_the_same(x, y) for y in self.__archive]):
                 self.__archive.append(x)
 
-    def __archive_clustering(self):
-        while len(self.__archive) > self.archive_hard_limit:
-            x = np.array([s["x"] for s in self.__archive])
-            d = np.array([[np.linalg.norm(i - j) if not np.array_equal(i, j) else np.nan for j in x ] for i in x])
-            i_min = np.nanargmin(d)
-            r = int(i_min / len(x))
-            c = i_min % len(x)
-            del self.__archive[r if np.where(d[r] == np.nanmin(d[r]))[0].size > np.where(d[c] == np.nanmin(d[c]))[0].size else c]
+    def __archive_clustering(self, problem):
+        if problem.num_of_constraints > 0:
+            feasible = [s for s in self.__archive if all([g <= 0 for g in s["g"]])]
+            non_feasible = [s for s in self.__archive if all([g > 0 for g in s["g"]])]
+            if len(feasible) > self.archive_hard_limit:
+                do_clustering(feasible, self.archive_hard_limit)
+                self.__archive = feasible
+            else:
+                do_clustering(non_feasible, self.archive_hard_limit - len(feasible))
+                self.__archive = non_feasible + feasible
+        else:
+            do_clustering(self.__archive, self.archive_hard_limit)
 
     def __remove_infeasible(self, problem):
         if problem.num_of_constraints > 0:
@@ -192,26 +200,28 @@ class AMOSA:
 
     def __print_header(self, problem):
         if problem.num_of_constraints == 0:
-            print("  +-{:>12}-+-{:>10}-+-{:>6}-+-{:>10}-+-{:>10}-+-{:>10}-+".format("-" * 12, "-" * 10, "-" * 6, "-" * 10, "-" * 10, "-" * 10))
+            print("\n  +-{:>12}-+-{:>10}-+-{:>6}-+-{:>10}-+-{:>10}-+-{:>10}-+".format("-" * 12, "-" * 10, "-" * 6, "-" * 10, "-" * 10, "-" * 10))
             print("  | {:>12} | {:>10} | {:>6} | {:>10} | {:>10} | {:>10} |".format("temp.", "# eval", " # nds", "D*", "Dnad", "phi"))
             print("  +-{:>12}-+-{:>10}-+-{:>6}-+-{:>10}-+-{:>10}-+-{:>10}-+".format("-" * 12, "-" * 10, "-" * 6, "-" * 10, "-" * 10, "-" * 10))
         else:
-            print("  +-{:>12}-+-{:>10}-+-{:>6}-+-{:>10}-+-{:>10}-+-{:>10}-+-{:>10}-+-{:>10}-+".format("-" * 12, "-" * 10, "-" * 6, "-" * 10, "-" * 10, "-" * 10, "-" * 10, "-" * 10))
-            print("  | {:>12} | {:>10} | {:>6} | {:>10} | {:>10} | {:>10} | {:>10} | {:>10} |".format("temp.", "# eval", "# nds", "cv min", "cv avg", "D*", "Dnad", "phi"))
-            print("  +-{:>12}-+-{:>10}-+-{:>6}-+-{:>10}-+-{:>10}-+-{:>10}-+-{:>10}-+-{:>10}-+".format("-" * 12, "-" * 10, "-" * 6, "-" * 10, "-" * 10, "-" * 10, "-" * 10, "-" * 10))
+            print("\n  +-{:>12}-+-{:>10}-+-{:>6}-+-{:>6}-+-{:>10}-+-{:>10}-+-{:>10}-+-{:>10}-+-{:>10}-+".format("-" * 12, "-" * 10, "-" * 6, "-" * 6, "-" * 10, "-" * 10, "-" * 10, "-" * 10, "-" * 10))
+            print("  | {:>12} | {:>10} | {:>6} | {:>6} | {:>10} | {:>10} | {:>10} | {:>10} | {:>10} |".format("temp.", "# eval", "# nds", "# feas", "cv min", "cv avg", "D*", "Dnad", "phi"))
+            print("  +-{:>12}-+-{:>10}-+-{:>6}-+-{:>6}-+-{:>10}-+-{:>10}-+-{:>10}-+-{:>10}-+-{:>10}-+".format("-" * 12, "-" * 10, "-" * 6, "-" * 6, "-" * 10, "-" * 10, "-" * 10, "-" * 10, "-" * 10))
 
     def __print_statistics(self, problem):
+        self.__n_eval += self.refinement_iterations
         delta_nad, delta_ideal, phy = self.__compute_deltas()
         if problem.num_of_constraints == 0:
             print("  | {:>12.2e} | {:>10.2e} | {:>6} | {:>10.3e} | {:>10.3e} | {:>10.3e} |".format(self.__current_temperature, self.__n_eval, len(self.__archive), delta_ideal, delta_nad, phy))
         else:
-            cv_min, cv_avg = self.__compute_cv()
-            print("  | {:>12.2e} | {:>10.2e} | {:>6} | {:>10.2e} | {:>10.2e} | {:>10.3e} | {:>10.3e} | {:>10.3e} |".format(self.__current_temperature, self.__n_eval, len(self.__archive), cv_min, cv_avg, delta_ideal, delta_nad, phy))
+            feasible, cv_min, cv_avg = self.__compute_cv()
+            print("  | {:>12.2e} | {:>10.2e} | {:>6} | {:>6} | {:>10.2e} | {:>10.2e} | {:>10.3e} | {:>10.3e} | {:>10.3e} |".format(self.__current_temperature, self.__n_eval, len(self.__archive), feasible, cv_min, cv_avg, delta_ideal, delta_nad, phy))
 
     def __compute_cv(self):
-        g = np.array([s["g"] for s in self.__archive])
+        g = np.array([s["g"] for s in self.__archive ])
+        feasible = np.all(np.less(g, 0), axis=1).sum()
         g = g[np.where(g > 0)]
-        return 0 if len(g) == 0 else np.min(g), 0 if len(g) == 0 else np.average(g)
+        return feasible, 0 if len(g) == 0 else np.min(g), 0 if len(g) == 0 else np.average(g)
 
     def __compute_deltas(self):
         f = np.array([s["f"] for s in self.__archive])
@@ -250,6 +260,22 @@ def hill_climbing(problem, x, max_iterations):
 def random_point(problem):
     x = {
         "x": [ random.randrange(l, u) if t == AMOSA.Type.INTEGER else random.uniform(l, u) for l, u, t in zip(problem.lower_bound, problem.upper_bound, problem.types)],
+        "f": [0] * problem.num_of_objectives,
+        "g": [0] * problem.num_of_constraints if problem.num_of_constraints > 0 else None}
+    get_objectives(problem, x)
+    return x
+
+def lower_point(problem):
+    x = {
+        "x": problem.lower_bound,
+        "f": [0] * problem.num_of_objectives,
+        "g": [0] * problem.num_of_constraints if problem.num_of_constraints > 0 else None}
+    get_objectives(problem, x)
+    return x
+
+def upper_point(problem):
+    x = {
+        "x": problem.upper_bound,
         "f": [0] * problem.num_of_objectives,
         "g": [0] * problem.num_of_constraints if problem.num_of_constraints > 0 else None}
     get_objectives(problem, x)
@@ -299,6 +325,15 @@ def hill_climbing_adaptive_step(problem, s, d, up):
     s["x"][d] += step
     get_objectives(problem, s)
 
+def do_clustering(archive, hard_limit):
+    while len(archive) > hard_limit:
+        x = np.array([s["x"] for s in archive])
+        d = np.array([[np.linalg.norm(i - j) if not np.array_equal(i, j) else np.nan for j in x] for i in x])
+        i_min = np.nanargmin(d)
+        r = int(i_min / len(x))
+        c = i_min % len(x)
+        del archive[r if np.where(d[r] == np.nanmin(d[r]))[0].size > np.where(d[c] == np.nanmin(d[c]))[0].size else c]
+
 def get_objectives(problem, s):
     out = {"f": [0] * problem.num_of_objectives,
            "g": [0] * problem.num_of_constraints if problem.num_of_constraints > 0 else None}
@@ -318,7 +353,7 @@ def dominates(x, y):
     else:
         return  ((all(i <= 0 for i in x["f"]) and any(i > 0 for i in y["g"])) or # x is feasible while y is not
                  (any(i > 0 for i in x["g"]) and any(i > 0 for i in y["g"]) and all([ i <= j for i, j in zip(x["g"], y["g"]) ]) and any([ i < j for i, j in zip(x["g"], y["g"]) ])) or #x and y are both infeasible, but x has a lower constraint violation
-                 (all(i <= 0 for i in x["f"]) and all(i <= 0 for i in y["f"]) and all([ i <= j for i, j in zip(x["f"], y["f"]) ]) and any([ i < j for i, j in zip(x["f"], y["f"]) ]))) # both are feasible, but x dominates y in the usual sense
+                 (all(i <= 0 for i in x["g"]) and all(i <= 0 for i in y["g"]) and all([ i <= j for i, j in zip(x["f"], y["f"]) ]) and any([ i < j for i, j in zip(x["f"], y["f"]) ]))) # both are feasible, but x dominates y in the usual sense
 
 def accept(probability):
     return random.random() < probability
