@@ -34,7 +34,9 @@ class ALSSMT:
     self.__fun_spec = fun_spec
     self.__distance = distance
     self.__solver = z3.Solver()
+    z3.set_param("timeout", timeout)
     self.__solver.set("timeout", timeout)
+    self.__solver.set("solver2_timeout", timeout)
     self.__S = [[], []]       # Sets of SMT variables which represent indexes
     self.__P = [[], []]       # Sets of SMT variables which represent polarities
     self.__A = [[], []]       # Sets of SMT variables which represent login-AND gates inputs
