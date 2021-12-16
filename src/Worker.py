@@ -17,10 +17,9 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 import os, sys, argparse, configparser
 from pyosys import libyosys as ys
 from distutils.dir_util import mkpath
-from .Configs import *
 from .ALSGraph import *
 from .ALSCatalog import *
-from .ERS import *
+from .Error import *
 from .AMOSA import *
 from .ALSRewriter import *
 
@@ -40,18 +39,10 @@ class Worker:
         self.__read_source(design)
         graph = ALSGraph(design)
         print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-        catalog = ALSCatalog(self.__als_conf.catalog).generate_catalog(design, self.__als_conf.timeout)
+        catalog = ALSCatalog(self.__als_conf.catalog, self.__als_conf.solver).generate_catalog(design, self.__als_conf.timeout)
         problem = ERS(graph, catalog, self.__error_conf.n_vectors, self.__error_conf.threshold)
         print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-        optimizer = AMOSA(
-            self.__amosa_conf.archive_hard_limit,
-            self.__amosa_conf.archive_soft_limit,
-            self.__amosa_conf.archive_gamma,
-            self.__amosa_conf.hill_climbing_iterations,
-            self.__amosa_conf.initial_temperature,
-            self.__amosa_conf.final_temperature,
-            self.__amosa_conf.cooling_factor,
-            self.__amosa_conf.annealing_iterations)
+        optimizer = AMOSA(self.__amosa_conf)
         optimizer.minimize(problem)
         print(f"Took {optimizer.duration} sec.")
         optimizer.save_results(problem, self.__output_dir + self.__report_file)
@@ -82,6 +73,7 @@ class Worker:
         self.__als_conf = ALSConfig(
             config["als"]["luttech"] if "luttech" in config["als"] else "6",
             config["als"]["catalog"] if "catalog" in config["als"] else "lut_catalog.db",
+            config["als"]["solver"] if "solver" in config["als"] else "boolector",
             int(config["als"]["timeout"]) if "timeout" in config["als"] else 60000)
         self.__error_conf = ErrorConfig(
             config["error"]["metric"] if "metric" in config["error"] else "ers",

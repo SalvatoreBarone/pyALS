@@ -1,5 +1,6 @@
 igraph
 z3-solver
+pyboolector
 python-igraph
 pycairo
 pymoo

@@ -16,9 +16,25 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import random
 from multiprocessing import cpu_count, Pool
+from enum import Enum
 from .AMOSA import *
 from .ALSGraph import *
 from .Utility import *
+
+class ErrorConfig:
+    class Metric(Enum):
+        ERS = 1
+        AWCE = 2
+
+    def __init__(self, metric, threshold, vectors):
+        error_metrics = {"ers": ErrorConfig.Metric.ERS, "awce": ErrorConfig.Metric.AWCE}
+        if metric not in ["ers", "awce"]:
+            raise ValueError(f"{metric}: error-metric not recognized")
+        else:
+            self.technique = error_metrics[metric]
+        self.threshold = threshold
+        self.n_vectors = vectors
+
 
 class ERS(AMOSA.Problem):
     def __init__(self, graph, catalog, n_vectors, threshold):

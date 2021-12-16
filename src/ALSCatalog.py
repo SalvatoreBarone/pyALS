@@ -21,8 +21,9 @@ from .ALSCatalogCache import *
 from .ALSSMT import *
 
 class ALSCatalog:
-  def __init__(self, file_name):
+  def __init__(self, file_name, solver):
     self.__cache_file = file_name
+    self.__solver = solver
     ALSCatalogCache(self.__cache_file).init()
 
   """
@@ -67,25 +68,25 @@ class ALSCatalog:
     luts_set = list(luts_set)
     random.shuffle(luts_set)
     luts_to_be_synthesized = list_partitioning(luts_set, cpu_count())
-    args = [ [self.__cache_file, luts, es_timeout] for luts in luts_to_be_synthesized ]
+    args = [ [self.__cache_file, luts, es_timeout, self.__solver] for luts in luts_to_be_synthesized ]
     with Pool(cpu_count()) as pool:
       catalog = pool.starmap(generate_catalog, args)
     catalog = [ item for sublist in catalog for item in sublist ]
     return catalog
 
-def generate_catalog(catalog_cache_file, luts_set, smt_timeout):
+def generate_catalog(catalog_cache_file, luts_set, smt_timeout, solver):
     catalog = []
     for lut in luts_set:
       lut_specifications = []
       # Sinthesizing the baseline (non-approximate) LUT
       hamming_distance = 0
-      synt_spec, S, P, out_p, out = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, smt_timeout)
+      synt_spec, S, P, out_p, out = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
       gates = len(S[0])
       lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out})
       #  and, then, approximate ones
       while gates > 0:
         hamming_distance += 1
-        synt_spec, S, P, out_p, out = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, smt_timeout)
+        synt_spec, S, P, out_p, out = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
         gates = len(S[0])
         lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out})
       catalog.append(lut_specifications)
@@ -117,18 +118,16 @@ to the catalog before returning it to the caller.
 @return If the lut exists, it is returned, otherwise the function performs the exact synthesis of the lut and adds it
 to the catalog before returning it to the caller.
 """
-def get_synthesized_lut(cache_file_name, lut_spec, dist, es_timeout):
+def get_synthesized_lut(cache_file_name, lut_spec, dist, solver, es_timeout):
   cache = ALSCatalogCache(cache_file_name)
   result = cache.get_lut_at_dist(lut_spec, dist)
   if result is None:
     ys.log(f"Cache miss for {lut_spec}@{dist}\n")
-    synth_spec, S, P, out_p, out = ALSSMT(lut_spec, dist, es_timeout).synthesize()
+    synth_spec, S, P, out_p, out = ALSSMT_Z3(lut_spec, dist, es_timeout).synthesize() if solver == ALSConfig.Solver.Z3 else ALSSMT_Boolector(lut_spec, dist, es_timeout).synthesize()
     gates = len(S[0])
     print(f"{lut_spec}@{dist} synthesized as {synth_spec} using {gates} gates.")
     cache.add_lut(lut_spec, dist, synth_spec, S, P, out_p, out)
     return synth_spec, S, P, out_p, out
   else:
-    synth_spec = result[0]
-    gates = len(result[1][0])
-    #print(f"Cache hit for {lut_spec}@{dist}, which is implemented as {synth_spec} using {gates} gates")
+    #print(f"Cache hit for {lut_spec}@{dist}, which is implemented as {result[0]} using {len(result[1][0])} gates")
     return result[0], result[1], result[2], result[3], result[4]
