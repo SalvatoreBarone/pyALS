@@ -109,4 +109,4 @@ class AWCE(ErrorEvaluator, AMOSA.Problem):
 
 def evaluate_awce(graph, samples, configuration, weights):
     current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return np.max([ sum([weights[o["name"]] if sample["output"][o["name"]] != current[o["name"]] else 0 for o in graph.get_po() ]) for sample, current in zip(samples, current_outputs) ])
+    return np.max([ sum([weights[o] if sample["output"][o] != current[o] else 0 for o in weights.keys() ]) for sample, current in zip(samples, current_outputs) ])

@@ -106,10 +106,10 @@ class Worker:
         raw_data = "".join(raw_data)
         weights = eval(raw_data)
         po_names = [o["name"] for o in graph.get_po()]
-        for po in po_names:
-            if po not in weights.keys():
+        for k in weights.keys():
+            if k not in po_names:
                 graph.plot()
-                raise ValueError(f"{po} not found in weight specification for POs {po_names}")
+                raise ValueError(f"{k} not found in POs {po_names}")
         return weights
 
     def __read_source(self, design):
