@@ -27,8 +27,7 @@ class ALSGraph:
     CELL = 3,
     PRIMARY_OUTPUT = 4
 
-  def __init__(self, design = None, weights = None):
-    self.__weights = weights
+  def __init__(self, design = None):
     if design:
       self.__graph = ig.Graph(directed=True)
       self.__graph_from_design(design)
@@ -38,12 +37,14 @@ class ALSGraph:
 
   def __deepcopy__(self, memo = None):
     graph = ALSGraph()
-    graph.__weights = copy.deepcopy(self.__weights)
     graph.__graph = copy.deepcopy(self.__graph)
     return graph 
 
   def get_pi(self):
     return [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.PRIMARY_INPUT]
+
+  def get_po(self):
+    return [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.PRIMARY_OUTPUT]
 
   def get_cells(self):
     return [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.CELL]
@@ -235,7 +236,6 @@ class ALSGraph:
       self.__graph.vs[-1]["hash"] = cell.name.hash()
       self.__graph.vs[-1]["spec"] = cell.parameters[ys.IdString("\LUT")].as_string()[::-1]
       self.__graph.vs[-1]["in"] = []
-      self.__graph.vs[-1]["weight"] = None
       self.__graph.vs[-1]["color"] = "mediumspringgreen"
       return len( self.__graph.vs) - 1
     else: return index[0]
@@ -257,7 +257,6 @@ class ALSGraph:
       self.__graph.vs[-1]["hash"] = wire.name.hash()
       self.__graph.vs[-1]["spec"] = None
       self.__graph.vs[-1]["in"] = []
-      self.__graph.vs[-1]["weight"] = None
       self.__graph.vs[-1]["color"] = "grey"
       return len( self.__graph.vs) - 1
     else: return index[0]
@@ -271,7 +270,6 @@ class ALSGraph:
       self.__graph.vs[-1]["hash"] = None
       self.__graph.vs[-1]["spec"] = None
       self.__graph.vs[-1]["in"] = []
-      self.__graph.vs[-1]["weight"] = None
       self.__graph.vs[-1]["color"] = "red"
       return len( self.__graph.vs) - 1
     else: return index[0]
@@ -285,7 +283,6 @@ class ALSGraph:
       self.__graph.vs[-1]["hash"] = None
       self.__graph.vs[-1]["spec"] = None
       self.__graph.vs[-1]["in"] = []
-      self.__graph.vs[-1]["weight"] = None
       self.__graph.vs[-1]["color"] = "red"
       return len( self.__graph.vs) - 1
     else: return index[0]
@@ -300,17 +297,6 @@ class ALSGraph:
       self.__graph.vs[-1]["hash"] = wire.name.hash()
       self.__graph.vs[-1]["spec"] = None
       self.__graph.vs[-1]["in"] = []
-      self.__graph.vs[-1]["weight"] = None
       self.__graph.vs[-1]["color"] = "whitesmoke"
-      #* check whether there is a weight specification for the signal
-      if self.__weights:
-        #* search for the cell name in the weights list, in order to get the corresponding weight
-        weight_spec = [ i for i in self.__weights if i[0] == wire.name.str().replace("\\","") ]
-        if bool(weight_spec): #* if the list is not empty, i.e. there is a weight specification for the signal...
-          self.__graph.vs[-1]["weight"] = 2**int(weight_spec[0][1]) #* we pick the weight field (as an integer). Note the weight is converted in power of two.
-        else: #* partial weights specification is not allowed
-          # TODO raise an exception
-          print("partial weights specification is not allowed")
-          exit()
       return len( self.__graph.vs) - 1
     else: return index[0]
