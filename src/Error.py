@@ -98,9 +98,9 @@ class AWCE(ErrorEvaluator, AMOSA.Problem):
         configuration = self._matter_configuration(x)
         for a in self.__args:
             a[2] = configuration
-        # with Pool(cpu_count()) as pool:
-        #     error = pool.starmap(evaluate_awce, self.__args)
-        error = evaluate_awce(self.graph, self.samples, configuration, self.weights)
+        with Pool(cpu_count()) as pool:
+            error = pool.starmap(evaluate_awce, self.__args)
+        #error = evaluate_awce(self.graph, self.samples, configuration, self.weights)
         f1 = np.max(error)
         f2 = self._get_gates(configuration)
         g1 = f1 - self.threshold
