@@ -82,10 +82,10 @@ class ALSGraph:
       cell_values[p] = next((sub for sub in inputs if sub['name'] == p["name"]), None)["value"]
     for cell in [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.CELL]:
       self.__evaluate_cell_output(cell_values, cell, configuration)
-    output = []
+    output = dict()
     for o in [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.PRIMARY_OUTPUT]:
       cell_values[o] = cell_values[o.neighbors(mode="in")[0]]
-      output.append({"name" : o["name"][1:], "value" : cell_values[o]})
+      output[o["name"]] = cell_values[o]
     return output
 
   """
