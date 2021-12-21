@@ -14,7 +14,7 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import random
+import random, itertools
 from multiprocessing import cpu_count, Pool
 from enum import Enum
 from .AMOSA import *
@@ -46,9 +46,18 @@ class ErrorEvaluator:
         self.threshold = threshold
         self.samples = []
         PI = graph.get_pi()
-        for _ in range(self.n_vectors):
-            input = [{"name": i["name"], "value": bool(random.getrandbits(1))} for i in PI]
-            self.samples.append({"input": input, "output": graph.evaluate(input)})
+        if self.n_vectors != 0:
+            for _ in range(self.n_vectors):
+                input = [{"name": i["name"], "value": bool(random.getrandbits(1))} for i in PI]
+                self.samples.append({"input": input, "output": graph.evaluate(input)})
+        else:
+            # exhaustive simulations
+            n_inputs = len(graph.get_pi())
+            self.n_vectors = 2 ** n_inputs
+            permutations = [list(i) for i in itertools.product([False, True], repeat = n_inputs)]
+            for perm in permutations:
+                input = [{"name": i["name"], "value": p} for i, p in zip(PI, perm)]
+                self.samples.append({"input": input, "output": graph.evaluate(input)})
         cells = [{"name": c["name"], "spec": c["spec"]} for c in graph.get_cells()]
         self.upper_bound = [len(e) - 1 for c in cells for e in catalog if e[0]["spec"] == c["spec"]]
         configuration = self._matter_configuration([0] * self.n_vars)
