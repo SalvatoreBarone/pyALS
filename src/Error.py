@@ -48,16 +48,16 @@ class ErrorEvaluator:
         PI = graph.get_pi()
         if self.n_vectors != 0:
             for _ in range(self.n_vectors):
-                input = [{"name": i["name"], "value": bool(random.getrandbits(1))} for i in PI]
-                self.samples.append({"input": input, "output": graph.evaluate(input)})
+                inputs = { i["name"]: bool(random.getrandbits(1)) for i in PI }
+                self.samples.append({"input": inputs, "output": graph.evaluate(inputs)})
         else:
             # exhaustive simulations
             n_inputs = len(graph.get_pi())
             self.n_vectors = 2 ** n_inputs
             permutations = [list(i) for i in itertools.product([False, True], repeat = n_inputs)]
             for perm in permutations:
-                input = [{"name": i["name"], "value": p} for i, p in zip(PI, perm)]
-                self.samples.append({"input": input, "output": graph.evaluate(input)})
+                inputs = { i["name"] : p for i, p in zip(PI, perm) }
+                self.samples.append({"input": inputs, "output": graph.evaluate(inputs)})
         cells = [{"name": c["name"], "spec": c["spec"]} for c in graph.get_cells()]
         self.upper_bound = [len(e) - 1 for c in cells for e in catalog if e[0]["spec"] == c["spec"]]
         configuration = self._matter_configuration([0] * self.n_vars)

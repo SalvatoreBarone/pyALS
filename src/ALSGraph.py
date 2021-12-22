@@ -56,7 +56,7 @@ class ALSGraph:
   @brief Evaluate the circuit output, using its graph representation
 
   @param [in] inputs
-              circuit inputs: it must be a list of Boolean values, each to be assigned to a primary-input
+              circuit inputs: it must be a dict assigning a Boolean values to each primary-input
 
   @param [in] configuration
               Approximate configuration: list of picked luts implementations, with corresponding required AND-gates. 
@@ -77,9 +77,8 @@ class ALSGraph:
       cell_values[c] = False
     for c in [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.CONSTANT_ONE]:
       cell_values[c] = True
-    
     for p in [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.PRIMARY_INPUT]:
-      cell_values[p] = next((sub for sub in inputs if sub['name'] == p["name"]), None)["value"]
+      cell_values[p] = inputs[p["name"]]
     for cell in [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.CELL]:
       self.__evaluate_cell_output(cell_values, cell, configuration)
     output = dict()
