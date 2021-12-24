@@ -240,7 +240,7 @@ class ALSSMT_Boolector:
             self.__ax = [False for _ in range(len(self.__fun_spec))]
         else:
             self.__ax = [self.__solver.Xor(self.__B[-1][t], (self.__solver.Xor(self.__solver.Not(self.__p), self.__false_var if self.__fun_spec[t] == "0" else self.__true_var))) for t in range(len(self.__fun_spec))]
-            all_the_xors = [self.__solver.Uext(ax, self.__BITVEC_SIZE) for ax in self.__ax]
+            all_the_xors = [self.__solver.Uext(ax, self.__BITVEC_SIZE - ax.width) for ax in self.__ax]
             all_the_sums = []
             if len(all_the_xors) > 0:
                 all_the_sums.append(all_the_xors[0])
@@ -256,8 +256,7 @@ class ALSSMT_Boolector:
             original_spec = [True if self.__fun_spec[i] == "1" else False for i in range(len(self.__fun_spec))]
             smt_result = [self.__ax[i].assignment for i in range(len(self.__fun_spec))]
             final_spec = [bool(original_spec[i]) != bool(smt_result[i]) for i in range(len(self.__fun_spec))]
-        return "".join(["1" if bool(final_spec[i]) else "0" for i in
-                        range(len(self.__fun_spec))]) if self.__distance > 0 else self.__fun_spec
+        return "".join(["1" if bool(final_spec[i]) else "0" for i in range(len(self.__fun_spec))]) if self.__distance > 0 else self.__fun_spec
 
     """
     @brief Perform the exact synthesis of a given n-input-1-output Boolean function, using the SMT formulation.
@@ -304,7 +303,7 @@ class ALSSMT_Boolector:
         # * The first time the solver is called, no element has yet been added in B that encodes the
         # * logic-AND behavior, so it is as if synthesis is attempted with zero nodes, i.e. using a constant value.
         while self.__solver.Sat() != self.__solver.SAT:
-            print(f" {len(self.__S[0])}", end = "\r", flush = True)
+            #print(f" {len(self.__S[0])}", end = "\r", flush = True)
             nodes = len(self.__B)
             gates = nodes - num_inputs - 1
 
