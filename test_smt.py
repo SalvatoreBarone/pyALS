@@ -75,17 +75,14 @@ def main():
         if c not in ['0', '1']:
             print("Error: only '0' and '1' are allowed in function specification")
             exit()
-    start = time.time()
-    aig = ALSSMT_Boolector(fun_spec, 0, 120)
+    aig = ALSSMT_Boolector(fun_spec, 2, 120)
     tup = aig.synthesize()
-    duration = time.time() - start
-    print(duration)
+    print(*tup)
+
 
     d = ys.Design()
-
     miter = create_smt_miter(*tup)
     d.add(miter)
-
     ys.run_pass("hierarchy -check -top miter", d)
     ys.run_pass("clean -purge", d)
     ys.run_pass("sat -prove miter_xor_out 0", d)
