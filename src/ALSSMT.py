@@ -254,8 +254,8 @@ class ALSSMT_Boolector:
     def __get_synthesized_spec(self):
         if self.__distance > 0:
             original_spec = [True if self.__fun_spec[i] == "1" else False for i in range(len(self.__fun_spec))]
-            smt_result = [self.__ax[i].assignment for i in range(len(self.__fun_spec))]
-            final_spec = [bool(original_spec[i]) != bool(smt_result[i]) for i in range(len(self.__fun_spec))]
+            smt_result = [True if self.__ax[i].assignment == "1" else False for i in range(len(self.__fun_spec))]
+            final_spec = [original_spec[i] != smt_result[i] for i in range(len(self.__fun_spec))]
         return "".join(["1" if bool(final_spec[i]) else "0" for i in range(len(self.__fun_spec))]) if self.__distance > 0 else self.__fun_spec
 
     """
