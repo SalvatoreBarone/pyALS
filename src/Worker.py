@@ -42,11 +42,14 @@ class Worker:
         catalog = ALSCatalog(self.__als_conf.catalog, self.__als_conf.solver).generate_catalog(design, self.__als_conf.timeout)
         print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
         problem = None
-        if self.__error_conf.metric == ErrorConfig.Metric.ERS:
-            problem = ERS(graph, catalog, self.__error_conf.n_vectors, self.__error_conf.threshold)
+        if self.__error_conf.metric == ErrorConfig.Metric.EPROB:
+            problem = ErrorProbability(graph, catalog, self.__error_conf.n_vectors, self.__error_conf.threshold)
         elif self.__error_conf.metric == ErrorConfig.Metric.AWCE:
             self.__error_conf.weights = self.__parse_weights(graph)
             problem = AWCE(graph, catalog, self.__error_conf.n_vectors, self.__error_conf.threshold, self.__error_conf.weights)
+        elif self.__error_conf.metric == ErrorConfig.Metric.MED:
+            self.__error_conf.weights = self.__parse_weights(graph)
+            problem = MED(graph, catalog, self.__error_conf.n_vectors, self.__error_conf.threshold, self.__error_conf.weights)
 
         optimizer = AMOSA(self.__amosa_conf)
         optimizer.minimize(problem)
