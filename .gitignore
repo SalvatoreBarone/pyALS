@@ -142,3 +142,7 @@ output/variant_4.ilang
 prova/
 
 Evaluation/
+
+run.sh
+
+run_experiments.sh

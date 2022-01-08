@@ -1,3 +1,0 @@
-./pyALS --config config_adder_awce_full_64.ini --source Evaluation/chandrasekaran/HommaArith/UBHCA_7_0_7_0.v --top UBHCA_7_0_7_0 --output UBHCA_7_0_7_0  --weights Evaluation/chandrasekaran/HommaArith/adder_7_weights.txt
-./pyALS --config config_adder_awce_full_64.ini --source Evaluation/chandrasekaran/HommaArith/UBRCL_7_0_7_0.v --top UBRCL_7_0_7_0 --output UBRCL_7_0_7_0  --weights Evaluation/chandrasekaran/HommaArith/adder_7_weights.txt
-./pyALS --config config_adder_awce_full_64.ini --source Evaluation/chandrasekaran/HommaArith/UBRCA_7_0_7_0.v --top UBRCA_7_0_7_0 --output UBRCA_7_0_7_0  --weights Evaluation/chandrasekaran/HommaArith/adder_7_weights.txt
