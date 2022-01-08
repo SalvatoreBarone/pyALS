@@ -125,9 +125,5 @@ class Worker:
             ys.run_pass(f"read_verilog {self.__source_file}", design)
         elif extension == ".blif":
             ys.run_pass(f"read_blif {self.__source_file}", design)
-        ys.run_pass(f"hierarchy -check -top {self.__top_module}", design)
-        ys.run_pass("prep", design)
-        ys.run_pass("flatten", design)
-        ys.run_pass("splitnets -ports", design)
-        ys.run_pass(f"synth -lut {str(self.__als_conf.luttech)}", design)
+        ys.run_pass(f"hierarchy -check -top {self.__top_module}; prep; flatten; splitnets -ports; synth -top {self.__top_module}; flatten; clean -purge; synth -lut {str(self.__als_conf.luttech)}", design)
         ys.run_pass("design -save original", design)
