@@ -32,7 +32,8 @@ class ALSRewriter:
                     self.__cell_to_aig(configuration, module, cell)
         ys.run_pass("clean -purge", design)
         ys.run_pass("opt", design)
-        ys.run_pass(f"write_verilog {destination}.v", design)
+        ys.run_pass(f"write_verilog -noattr {destination}.v", design)
+        ys.run_pass(f"write_ilang {destination}.ilang", design)
 
     def __configuration(self, x):
         return [{"name": l["name"], "dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"],
