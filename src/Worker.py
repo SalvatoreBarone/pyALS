@@ -83,7 +83,7 @@ class Worker:
         config.read(self.__config_file)
 
         self.__als_conf = ALSConfig(
-            config["als"]["luttech"] if "luttech" in config["als"] else "6",
+            config["als"]["cut_size"] if "cut_size" in config["als"] else "4",
             config["als"]["catalog"] if "catalog" in config["als"] else "lut_catalog.db",
             config["als"]["solver"] if "solver" in config["als"] else "boolector",
             int(config["als"]["timeout"]) if "timeout" in config["als"] else 60000)
