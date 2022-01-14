@@ -96,7 +96,7 @@ optional arguments:
 Here, I report the basic structure of a configuration file. You will find it within the pyALS root directory.
 ```
 [als]
-luttech = 4              ; specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration
+cut_size = 4              ; specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration
 catalog = lut_catalog.db ; This is the path of the file where synthesized Boolean functions are stored. You can find a ready to use cache at git@github.com:SalvatoreBarone/LUTCatalog.git
 solver = btor            ; SAT-solver to be used. It can be either btor (Boolector) or z3 (Z3-solver)
 timeout = 60000          ; Timeout (in ms) for the Exact synthesis process. You don't need to change its default value.
