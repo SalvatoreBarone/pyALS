@@ -74,7 +74,7 @@ class HwConfig:
             else:
                 library = parse_liberty(open(self.liberty).read())
                 self.cell_area = {cell_group.args[0]: float(cell_group['area']) for cell_group in library.get_groups('cell')}
-                self.cell_power = {cell_group.args[0]: float(cell_group['cell_leakage_power']) for cell_group in library.get_groups('cell')}
+                self.cell_power = { cell_group.args[0] : float(cell_group['cell_leakage_power'] if cell_group['cell_leakage_power'] is not None else cell_group['drive_strength'] ) for cell_group in library.get_groups('cell') }
         else:
             self.cell_area = None
             self.cell_power = None
