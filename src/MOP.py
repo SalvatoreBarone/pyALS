@@ -16,10 +16,12 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import random, itertools, collections, functools, operator
 from multiprocessing import cpu_count, Pool
+from liberty.parser import parse_liberty
 from enum import Enum
 from .AMOSA import *
 from .ALSGraph import *
 from .Utility import *
+from .ALSRewriter import *
 
 class ErrorConfig:
     class Metric(Enum):
@@ -44,14 +46,49 @@ class ErrorConfig:
         self.n_vectors = vectors
         self.weights = weights
 
-class ErrorEvaluator:
-    def __init__(self, graph, catalog, n_vectors, threshold):
+class HwConfig:
+    class Metric(Enum):
+        GATES = 1,
+        AREA = 2
+        POWER = 3
+        AREA_AND_POWER = 4
+
+    def __init__(self, metric, liberty = None):
+        hw_metrics = {
+            "gate": HwConfig.Metric.GATES,
+            "gates" : HwConfig.Metric.GATES,
+            "area"  : HwConfig.Metric.AREA,
+            "power" : HwConfig.Metric.POWER,
+            "ap": HwConfig.Metric.AREA_AND_POWER,
+            "all": HwConfig.Metric.AREA_AND_POWER,
+            "both": HwConfig.Metric.AREA_AND_POWER
+        }
+        if metric not in hw_metrics.keys():
+            raise ValueError(f"{metric}: hw-metric not recognized")
+        else:
+            self.metric = hw_metrics[metric]
+        self.liberty = liberty
+        if self.metric != HwConfig.Metric.GATES:
+            if self.liberty == None:
+                raise ValueError(f"you need to specify a technology library for {metric}")
+            else:
+                library = parse_liberty(open(self.liberty).read())
+                self.cell_area = {cell_group.args[0]: float(cell_group['area']) for cell_group in library.get_groups('cell')}
+                self.cell_power = {cell_group.args[0]: float(cell_group['cell_leakage_power']) for cell_group in library.get_groups('cell')}
+        else:
+            self.cell_area = None
+            self.cell_power = None
+
+class MOP(AMOSA.Problem):
+    def __init__(self, top_module, graph, catalog, error_config, hw_config):
+        self.top_module = top_module
         self.graph = graph
         self.graphs = [copy.deepcopy(graph)] * cpu_count()
+        self.rewriter = ALSRewriter(graph, catalog)
         self.n_vars = graph.get_num_cells()
         self.catalog = catalog
-        self.n_vectors = n_vectors
-        self.threshold = threshold
+        self.error_config = error_config
+        self.hw_config = hw_config
         self.samples = []
         self._generate_samples()
         self.__args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
@@ -59,15 +96,39 @@ class ErrorEvaluator:
         self.baseline_and_gates = self._get_baseline_gates()
         print(f"# vars: {self.n_vars}, ub:{self.upper_bound}")
         print(f"Baseline requirements: {self.baseline_and_gates} AIG-nodes")
+        AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, 3 if self.hw_config.metric == HwConfig.Metric.AREA_AND_POWER else 2, 1)
+
+    def evaluate(self, x, out):
+        configuration = self._matter_configuration(x)
+        outputs = self._get_outputs(configuration)
+        f1 = None
+        f2 = None
+        f3 = None
+        if self.error_config.metric == ErrorConfig.Metric.EPROB:
+            f1 = compute_ep(outputs)
+        elif self.error_config.metric == ErrorConfig.Metric.AWCE:
+            f1 = compute_awce(outputs, self.error_config.weights)
+        elif self.error_config.metric == ErrorConfig.Metric.MED:
+            f1 = compute_med(outputs, self.error_config.weights)
+        g1 = f1 - self.error_config.threshold
+        if self.hw_config.metric == HwConfig.Metric.GATES:
+            f2 = get_gates(configuration)
+        else:
+            design = self.rewriter.rewrite("original", x)
+            ys.run_pass(f"tee -q synth -flatten -top {self.top_module}; tee -q clean -purge; tee -q read_liberty -lib {self.hw_config.liberty}; tee -q abc -liberty {self.hw_config.liberty};", design)
+            f2 = get_area(design, self.hw_config.cell_area)
+            f3 = get_power(design, self.hw_config.cell_power)
+        out["f"] = [f1, f2, f3] if self.hw_config.metric == HwConfig.Metric.AREA_AND_POWER else [f1, f2]
+        out["g"] = [g1]
 
     def _generate_samples(self):
         PI = self.graph.get_pi()
-        if self.n_vectors != 0:
-            for _ in range(self.n_vectors):
+        if self.error_config.n_vectors != 0:
+            for _ in range(self.error_config.n_vectors):
                 inputs = {i["name"]: bool(random.getrandbits(1)) for i in PI}
                 self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
         else:
-            self.n_vectors = 2 ** len(PI)
+            self.error_config.n_vectors = 2 ** len(PI)
             permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
             for perm in permutations:
                 inputs = {i["name"]: p for i, p in zip(PI, perm)}
@@ -116,47 +177,3 @@ def get_area(design, cell_area):
 
 def get_power(design, cell_power):
     return sum([cell_power[cell.type.str()[1:]] for module in design.selected_whole_modules_warn() for cell in module.selected_cells()])
-
-class ErrorProbability(ErrorEvaluator, AMOSA.Problem):
-    def __init__(self, graph, catalog, n_vectors, threshold):
-        ErrorEvaluator.__init__(self, graph, catalog, n_vectors, threshold)
-        AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, 2, 1)
-
-    def evaluate(self, x, out):
-        configuration = self._matter_configuration(x)
-        outputs = self._get_outputs(configuration)
-        f1 = compute_ep(outputs)
-        f2 = get_gates(configuration)
-        g1 = f1 - self.threshold
-        out["f"] = [f1, f2]
-        out["g"] = [g1]
-
-class AWCE(ErrorEvaluator, AMOSA.Problem):
-    def __init__(self, graph, catalog, n_vectors, threshold, weights):
-        self.weights = weights
-        ErrorEvaluator.__init__(self, graph, catalog, n_vectors, threshold)
-        AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, 2, 1)
-
-    def evaluate(self, x, out):
-        configuration = self._matter_configuration(x)
-        outputs = self._get_outputs(configuration)
-        f1 = compute_awce(outputs, self.weights)
-        f2 = get_gates(configuration)
-        g1 = f1 - self.threshold
-        out["f"] = [f1, f2]
-        out["g"] = [g1]
-
-class MED(ErrorEvaluator, AMOSA.Problem):
-    def __init__(self, graph, catalog, n_vectors, threshold, weights):
-        self.weights = weights
-        ErrorEvaluator.__init__(self, graph, catalog, n_vectors, threshold)
-        AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, 2, 1)
-
-    def evaluate(self, x, out):
-        configuration = self._matter_configuration(x)
-        outputs = self._get_outputs(configuration)
-        f1 = compute_med(outputs, self.weights)
-        f2 = get_gates(configuration)
-        g1 = f1 - self.threshold
-        out["f"] = [f1, f2]
-        out["g"] = [g1]

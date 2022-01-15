@@ -44,6 +44,20 @@ PYTHON_DESTDIR=/usr/local/lib/python3.9/dist-packages
 BOOST_PYTHON_LIB=/usr/lib/x86_64-linux-gnu/libboost_python.so -lpython3.9
 ```
 Please, kindly note you are required to amend any differences concerning the python version. I'm using python 3.9 here.
+Now you need to a little quick fix to yosys: edit the ```kernel/yosys.cc``` file, searching for the definition of the 
+```run_pass``` function. Comment the call to the ```log``` function as follows.
+```
+void run_pass(std::string command, RTLIL::Design *design)
+{
+	if (design == nullptr)
+		design = yosys_design;
+
+	//log("\n-- Running command `%s' --\n", command.c_str());
+
+	Pass::call(design, command);
+}
+```
+This will remove redundant logs while running the optimizer.
 Ok, now you are ready.
 ```
 $ make -j `nproc`
@@ -92,6 +106,11 @@ optional arguments:
 
 ```
 
+For instance, if you want to run ALS on ```mult_2bit.sv```
+```
+./pyALS --config config.ini --source mult_2_bit.sv --top mult_2_bit --output prova --weights output_weights.txt
+```
+
 ### The configuration file
 Here, I report the basic structure of a configuration file. You will find it within the pyALS root directory.
 ```
@@ -105,6 +124,10 @@ timeout = 60000          ; Timeout (in ms) for the Exact synthesis process. You 
 metric = med             ; Error metric to be used during Design-Space exploration. It can be "eprob", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively
 threshold = 1            ; The error threshold
 vectors = 0              ; The number of test vectors for error assessment. "0" will unlock exhaustive evaluation.
+
+[hardware]
+metric = area            ; hardware metric to be optimized (gates, area, power, both)
+liberty = gscl45nm.lib   ; liberty file for technology mapping (if area, power, both)
 
 [amosa]
 archive_hard_limit = 30         ; Archive hard limit for the AMOSA optimization heuristic, see [1]

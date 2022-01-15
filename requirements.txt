@@ -6,3 +6,4 @@ pycairo
 pymoo
 numpy
 configparser
+liberty-parser

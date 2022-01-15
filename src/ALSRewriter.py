@@ -21,19 +21,30 @@ class ALSRewriter:
         self.graph = graph
         self.catalog = catalog
 
-
-    def rewrite(self, design_name, solution, destination):
+    def rewrite(self, design_name, solution):
         design = ys.Design()
         configuration = self.__configuration(solution)
-        ys.run_pass(f"design -load {design_name}", design)
+        ys.run_pass(f"tee -q design -load {design_name}", design)
         for module in design.selected_whole_modules_warn():
             for cell in module.selected_cells():
                 if ys.IdString("\LUT") in cell.parameters:
                     self.__cell_to_aig(configuration, module, cell)
-        ys.run_pass("clean -purge", design)
-        ys.run_pass("opt", design)
-        ys.run_pass(f"write_verilog -noattr {destination}.v", design)
-        ys.run_pass(f"write_ilang {destination}.ilang", design)
+        ys.run_pass("tee -q clean -purge", design)
+        ys.run_pass("tee -q opt", design)
+        return design
+
+    def rewrite_and_save(self, design_name, solution, destination):
+        design = ys.Design()
+        configuration = self.__configuration(solution)
+        ys.run_pass(f"tee -q design -load {design_name}", design)
+        for module in design.selected_whole_modules_warn():
+            for cell in module.selected_cells():
+                if ys.IdString("\LUT") in cell.parameters:
+                    self.__cell_to_aig(configuration, module, cell)
+        ys.run_pass("tee -q clean -purge", design)
+        ys.run_pass("tee -q opt", design)
+        ys.run_pass(f"tee -q write_verilog -noattr {destination}.v", design)
+        ys.run_pass(f"tee -q write_ilang {destination}.ilang", design)
 
     def __configuration(self, x):
         return [{"name": l["name"], "dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"],

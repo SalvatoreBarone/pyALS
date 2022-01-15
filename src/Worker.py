@@ -19,7 +19,7 @@ from pyosys import libyosys as ys
 from distutils.dir_util import mkpath
 from .ALSGraph import *
 from .ALSCatalog import *
-from .Error import *
+from .MOP import *
 from .AMOSA import *
 from .ALSRewriter import *
 
@@ -38,19 +38,12 @@ class Worker:
         ys.run_pass("plugin -i ghdl", design)
         self.__read_source(design)
         graph = ALSGraph(design)
+        if self.__error_conf.metric != ErrorConfig.Metric.EPROB:
+            self.__error_conf.weights = self.__parse_weights(graph)
         print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
         catalog = ALSCatalog(self.__als_conf.catalog, self.__als_conf.solver).generate_catalog(design, self.__als_conf.timeout)
         print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-        problem = None
-        if self.__error_conf.metric == ErrorConfig.Metric.EPROB:
-            problem = ErrorProbability(graph, catalog, self.__error_conf.n_vectors, self.__error_conf.threshold)
-        elif self.__error_conf.metric == ErrorConfig.Metric.AWCE:
-            self.__error_conf.weights = self.__parse_weights(graph)
-            problem = AWCE(graph, catalog, self.__error_conf.n_vectors, self.__error_conf.threshold, self.__error_conf.weights)
-        elif self.__error_conf.metric == ErrorConfig.Metric.MED:
-            self.__error_conf.weights = self.__parse_weights(graph)
-            problem = MED(graph, catalog, self.__error_conf.n_vectors, self.__error_conf.threshold, self.__error_conf.weights)
-
+        problem = MOP(self.__top_module, graph, catalog, self.__error_conf, self.__hw_conf)
         optimizer = AMOSA(self.__amosa_conf)
         optimizer.minimize(problem)
         print(f"Took {optimizer.duration} sec.")
@@ -60,7 +53,7 @@ class Worker:
         rewriter = ALSRewriter(graph, catalog)
         pareto_set = optimizer.pareto_set()
         for c, n in zip(pareto_set, range(len(pareto_set))):
-            rewriter.rewrite("original", c, self.__output_dir + "/variant_" + str(n))
+            rewriter.rewrite_and_save("original", c, self.__output_dir + "/variant_" + str(n))
         print(f"All done! Take a look at {self.__output_dir}!")
 
     def __cli_parser(self):
@@ -81,18 +74,18 @@ class Worker:
     def __config_parser(self):
         config = configparser.ConfigParser()
         config.read(self.__config_file)
-
         self.__als_conf = ALSConfig(
             config["als"]["cut_size"] if "cut_size" in config["als"] else "4",
             config["als"]["catalog"] if "catalog" in config["als"] else "lut_catalog.db",
             config["als"]["solver"] if "solver" in config["als"] else "boolector",
             int(config["als"]["timeout"]) if "timeout" in config["als"] else 60000)
-
         self.__error_conf = ErrorConfig(
             config["error"]["metric"] if "metric" in config["error"] else "ers",
             float(config["error"]["threshold"]) if "threshold" in config["error"] else .5,
             int(config["error"]["vectors"] if "vectors" in config["error"] else 1000))
-
+        self.__hw_conf = HwConfig(
+            config["hardware"]["metric"] if "metric" in config["hardware"] else "gates",
+            config["hardware"]["liberty"] if "liberty" in config["hardware"] else None)
         self.__amosa_conf = AMOSAConfig(
             int(config["amosa"]["archive_hard_limit"]) if "archive_hard_limit" in config["amosa"] else 50,
             int(config["amosa"]["archive_soft_limit"]) if "archive_soft_limit" in config["amosa"] else 100,
@@ -115,15 +108,15 @@ class Worker:
                 raise ValueError(f"{k} not found in POs {po_names}")
         return weights
 
-    def __read_source(self, design):
+    def __read_source(self, design, design_name_save = "original"):
         name, extension = os.path.splitext(self.__source_file)
         if extension == ".vhd":
-            ys.run_pass(f"ghdl {self.__source_file} -e {self.__top_module}", design)
+            ys.run_pass(f"tee -q ghdl {self.__source_file} -e {self.__top_module}", design)
         elif extension == ".sv":
-            ys.run_pass(f"read_verilog -sv {self.__source_file}", design)
+            ys.run_pass(f"tee -q read_verilog -sv {self.__source_file}", design)
         elif extension == ".v":
-            ys.run_pass(f"read_verilog {self.__source_file}", design)
+            ys.run_pass(f"tee -q read_verilog {self.__source_file}", design)
         elif extension == ".blif":
-            ys.run_pass(f"read_blif {self.__source_file}", design)
-        ys.run_pass(f"hierarchy -check -top {self.__top_module}; prep; flatten; splitnets -ports; synth -top {self.__top_module}; flatten; clean -purge; synth -lut {str(self.__als_conf.luttech)}", design)
-        ys.run_pass("design -save original", design)
+            ys.run_pass(f"tee -q read_blif {self.__source_file}", design)
+        ys.run_pass(f"tee -q hierarchy -check -top {self.__top_module}; tee -q prep; tee -q flatten; tee -q splitnets -ports; tee -q synth -top {self.__top_module}; tee -q flatten; tee -q clean -purge; tee -q synth -lut {str(self.__als_conf.luttech)}", design)
+        ys.run_pass(f"tee -q design -save {design_name_save}", design)
