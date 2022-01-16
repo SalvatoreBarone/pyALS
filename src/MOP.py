@@ -91,7 +91,10 @@ class MOP(AMOSA.Problem):
         self.hw_config = hw_config
         self.samples = []
         self._generate_samples()
-        self.__args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
+        if self.error_config.metric == ErrorConfig.Metric.EPROB:
+            self.__args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
+        else:
+            self.__args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
         self.upper_bound = self._get_upper_bound()
         self.baseline_and_gates = self._get_baseline_gates()
         print(f"# vars: {self.n_vars}, ub:{self.upper_bound}")
@@ -100,16 +103,15 @@ class MOP(AMOSA.Problem):
 
     def evaluate(self, x, out):
         configuration = self._matter_configuration(x)
-        outputs = self._get_outputs(configuration)
         f1 = None
         f2 = None
         f3 = None
         if self.error_config.metric == ErrorConfig.Metric.EPROB:
-            f1 = compute_ep(outputs)
+            f1 = self._get_eprob(configuration)
         elif self.error_config.metric == ErrorConfig.Metric.AWCE:
-            f1 = compute_awce(outputs, self.error_config.weights)
+            f1 = self._get_awce(configuration)
         elif self.error_config.metric == ErrorConfig.Metric.MED:
-            f1 = compute_med(outputs, self.error_config.weights)
+            f1 = self._get_med(configuration)
         g1 = f1 - self.error_config.threshold
         if self.hw_config.metric == HwConfig.Metric.GATES:
             f2 = get_gates(configuration)
@@ -118,6 +120,7 @@ class MOP(AMOSA.Problem):
             ys.run_pass(f"tee -q synth -flatten -top {self.top_module}; tee -q clean -purge; tee -q read_liberty -lib {self.hw_config.liberty}; tee -q abc -liberty {self.hw_config.liberty};", design)
             f2 = get_area(design, self.hw_config.cell_area)
             f3 = get_power(design, self.hw_config.cell_power)
+            ys.run_pass("delete", design)
         out["f"] = [f1, f2, f3] if self.hw_config.metric == HwConfig.Metric.AREA_AND_POWER else [f1, f2]
         out["g"] = [g1]
 
@@ -148,26 +151,63 @@ class MOP(AMOSA.Problem):
             outputs = pool.starmap(evaluate_output, self.__args)
         return [ o for output in outputs for o in output ]
 
+    def _get_eprob(self, configuration):
+        for a in self.__args:
+            a[2] = configuration
+        with Pool(cpu_count()) as pool:
+            error = pool.starmap(evaluate_eprob, self.__args)
+        rs = sum(error) / self.error_config.n_vectors
+        return rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))
+
+    def _get_awce(self, configuration):
+        for a in self.__args:
+            a[2] = configuration
+        with Pool(cpu_count()) as pool:
+            error = pool.starmap(evaluate_awce, self.__args)
+        return np.max(error)
+
+    def _get_med(self, configuration):
+        for a in self.__args:
+            a[2] = configuration
+        with Pool(cpu_count()) as pool:
+            hystogram = pool.starmap(evaluate_med, self.__args)
+        return sum([i[0] * i[1] / (2 ** len(self.error_config.weights)) for i in dict(functools.reduce(operator.add, map(collections.Counter, hystogram))).items()])
+
     def _get_baseline_gates(self):
         return get_gates(self._matter_configuration([0] * self.n_vars))
 
 def evaluate_output(graph, samples, configuration):
     return [{"e" : s["output"], "a" : graph.evaluate(s["input"], configuration)} for s in samples]
 
-def compute_ep(outputs):
-    ns = len(outputs)
-    rs = sum([0 if o["e"] == o["a"] else 1 for o in outputs]) / ns
-    return rs + 4.5 / ns * (1 + np.sqrt(1 + 4 / 9 * ns * rs * (1 - rs)))
+# def compute_ep(outputs):
+#     ns = len(outputs)
+#     rs = sum([0 if o["e"] == o["a"] else 1 for o in outputs]) / ns
+#     return rs + 4.5 / ns * (1 + np.sqrt(1 + 4 / 9 * ns * rs * (1 - rs)))
+#
+# def compute_awce(outputs, weights):
+#     return np.max([ sum([weights[po] if o["e"][po] != o["a"][po] else 0 for po in weights.keys() ]) for o in outputs ])
+#
+# def compute_med(outputs, weights):
+#     error_hystogram = { i: 0 for i in range(2**len(weights)) }
+#     for o in outputs:
+#         error = sum([weights[po] if o["e"][po] != o["a"][po] else 0 for po in weights.keys()])
+#         error_hystogram[error] += 1
+#     return sum([i[0] * i[1] / (2 ** len(weights)) for i in error_hystogram.items()])
 
-def compute_awce(outputs, weights):
-    return np.max([ sum([weights[po] if o["e"][po] != o["a"][po] else 0 for po in weights.keys() ]) for o in outputs ])
+def evaluate_eprob(graph, samples, configuration):
+    return sum([0 if sample["output"] == graph.evaluate(sample["input"], configuration) else 1 for sample in samples])
 
-def compute_med(outputs, weights):
+def evaluate_awce(graph, samples, configuration, weights):
+    current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
+    return np.max([ sum([weights[o] if sample["output"][o] != current[o] else 0 for o in weights.keys() ]) for sample, current in zip(samples, current_outputs) ])
+
+def evaluate_med(graph, samples, configuration, weights):
     error_hystogram = { i: 0 for i in range(2**len(weights)) }
-    for o in outputs:
-        error = sum([weights[po] if o["e"][po] != o["a"][po] else 0 for po in weights.keys()])
+    for sample in samples:
+        current_output = graph.evaluate(sample["input"], configuration)
+        error = sum([weights[o] if sample["output"][o] != current_output[o] else 0 for o in weights.keys()])
         error_hystogram[error] += 1
-    return sum([i[0] * i[1] / (2 ** len(weights)) for i in error_hystogram.items()])
+    return error_hystogram
 
 def get_gates(configuration):
     return sum([c["gates"] for c in configuration])

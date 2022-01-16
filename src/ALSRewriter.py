@@ -45,6 +45,7 @@ class ALSRewriter:
         ys.run_pass("tee -q opt", design)
         ys.run_pass(f"tee -q write_verilog -noattr {destination}.v", design)
         ys.run_pass(f"tee -q write_ilang {destination}.ilang", design)
+        ys.run_pass("delete", design)
 
     def __configuration(self, x):
         return [{"name": l["name"], "dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"],
