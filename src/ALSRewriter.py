@@ -14,6 +14,7 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
+import gc
 from pyosys import libyosys as ys
 
 class ALSRewriter:
@@ -21,9 +22,19 @@ class ALSRewriter:
         self.graph = graph
         self.catalog = catalog
 
-    def rewrite(self, design_name, solution):
-        design = ys.Design()
+    def load_and_rewrite(self, design, design_name, solution):
         configuration = self.__configuration(solution)
+        ys.run_pass(f"tee -q design -load {design_name}", design)
+        for module in design.selected_whole_modules_warn():
+            for cell in module.selected_cells():
+                if ys.IdString("\LUT") in cell.parameters:
+                    self.__cell_to_aig(configuration, module, cell)
+        ys.run_pass("tee -q clean -purge", design)
+        ys.run_pass("tee -q opt", design)
+
+    def rewrite(self, design_name, solution):
+        configuration = self.__configuration(solution)
+        design = ys.Design()
         ys.run_pass(f"tee -q design -load {design_name}", design)
         for module in design.selected_whole_modules_warn():
             for cell in module.selected_cells():
@@ -45,7 +56,10 @@ class ALSRewriter:
         ys.run_pass("tee -q opt", design)
         ys.run_pass(f"tee -q write_verilog -noattr {destination}.v", design)
         ys.run_pass(f"tee -q write_ilang {destination}.ilang", design)
+        ys.run_pass("design -reset", design)
         ys.run_pass("delete", design)
+        del design
+        gc.collect()
 
     def __configuration(self, x):
         return [{"name": l["name"], "dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"],
@@ -59,11 +73,9 @@ class ALSRewriter:
         P = ax_cell_conf["P"]
         out_p = ax_cell_conf["out_p"]
         out = ax_cell_conf["out"]
-
         aig_vars = [[], [ys.SigSpec(ys.State.S0, 1)]]
         Y = cell.connections_[ys.IdString("\Y")]
         aig_out = ys.SigSpec(sigmap(Y).to_sigbit_vector()[0].wire)
-
         A = cell.connections_[ys.IdString("\A")]
         if cell.input(ys.IdString("\A")):
             for sig in sigmap(A).to_sigbit_vector():
@@ -71,7 +83,6 @@ class ALSRewriter:
                     aig_vars[1].append(ys.SigSpec(sig.wire))
                 else:
                     aig_vars[1].append(ys.SigSpec(sig, 1))
-
         aig_a_and_b = [[], []]
         for i in range(len(S[0])):
             a = module.addWire(ys.IdString(f"\\{cell.name.str()}_a_{i}"))
@@ -81,12 +92,10 @@ class ALSRewriter:
             aig_a_and_b[0].append(ys.SigSpec(a))
             aig_a_and_b[1].append(ys.SigSpec(b))
             aig_vars[1].append(ys.SigSpec(y))
-
         for i, w in zip(range(len(aig_vars[1])), aig_vars[1]):
             not_w = module.addWire(ys.IdString(f"\\{cell.name.str()}_not_{i}"))
             module.addNot(ys.IdString(f"\\{cell.name.str()}_not_gate_{i}"), w, ys.SigSpec(not_w))
             aig_vars[0].append(ys.SigSpec(not_w))
-
         if len(S[0]) == 0:
             module.connect(aig_out, aig_vars[out_p][out])
         else:

@@ -14,7 +14,7 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import random, itertools, collections, functools, operator
+import random, itertools, collections, functools, operator, gc
 from multiprocessing import cpu_count, Pool
 from liberty.parser import parse_liberty
 from enum import Enum
@@ -22,6 +22,7 @@ from .AMOSA import *
 from .ALSGraph import *
 from .Utility import *
 from .ALSRewriter import *
+from pympler.tracker import SummaryTracker
 
 class ErrorConfig:
     class Metric(Enum):
@@ -116,11 +117,7 @@ class MOP(AMOSA.Problem):
         if self.hw_config.metric == HwConfig.Metric.GATES:
             f2 = get_gates(configuration)
         else:
-            design = self.rewriter.rewrite("original", x)
-            ys.run_pass(f"tee -q synth -flatten -top {self.top_module}; tee -q clean -purge; tee -q read_liberty -lib {self.hw_config.liberty}; tee -q abc -liberty {self.hw_config.liberty};", design)
-            f2 = get_area(design, self.hw_config.cell_area)
-            f3 = get_power(design, self.hw_config.cell_power)
-            ys.run_pass("delete", design)
+            f2, f3 = self._get_hw(x)
         out["f"] = [f1, f2, f3] if self.hw_config.metric == HwConfig.Metric.AREA_AND_POWER else [f1, f2]
         out["g"] = [g1]
 
@@ -176,23 +173,20 @@ class MOP(AMOSA.Problem):
     def _get_baseline_gates(self):
         return get_gates(self._matter_configuration([0] * self.n_vars))
 
+    def _get_hw(self, x):
+        design = self.rewriter.rewrite("original", x)
+        ys.run_pass(f"tee -q synth -flatten -top {self.top_module}; tee -q clean -purge; tee -q read_liberty -lib {self.hw_config.liberty}; tee -q abc -liberty {self.hw_config.liberty};", design)
+        f2 = get_area(design, self.hw_config.cell_area)
+        f3 = get_power(design, self.hw_config.cell_power)
+        ys.run_pass("tee -q clean", design)
+        ys.run_pass("tee -q design -reset", design)
+        ys.run_pass("tee -q delete", design)
+        del design
+        gc.collect()
+        return f2, f3
+
 def evaluate_output(graph, samples, configuration):
     return [{"e" : s["output"], "a" : graph.evaluate(s["input"], configuration)} for s in samples]
-
-# def compute_ep(outputs):
-#     ns = len(outputs)
-#     rs = sum([0 if o["e"] == o["a"] else 1 for o in outputs]) / ns
-#     return rs + 4.5 / ns * (1 + np.sqrt(1 + 4 / 9 * ns * rs * (1 - rs)))
-#
-# def compute_awce(outputs, weights):
-#     return np.max([ sum([weights[po] if o["e"][po] != o["a"][po] else 0 for po in weights.keys() ]) for o in outputs ])
-#
-# def compute_med(outputs, weights):
-#     error_hystogram = { i: 0 for i in range(2**len(weights)) }
-#     for o in outputs:
-#         error = sum([weights[po] if o["e"][po] != o["a"][po] else 0 for po in weights.keys()])
-#         error_hystogram[error] += 1
-#     return sum([i[0] * i[1] / (2 ** len(weights)) for i in error_hystogram.items()])
 
 def evaluate_eprob(graph, samples, configuration):
     return sum([0 if sample["output"] == graph.evaluate(sample["input"], configuration) else 1 for sample in samples])
