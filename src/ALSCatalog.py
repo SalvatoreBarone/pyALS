@@ -14,6 +14,7 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
+import math
 import random
 from pyosys import libyosys as ys
 from multiprocessing import Pool, cpu_count
@@ -80,23 +81,23 @@ def generate_catalog(catalog_cache_file, luts_set, smt_timeout, solver):
       lut_specifications = []
       # Sinthesizing the baseline (non-approximate) LUT
       hamming_distance = 0
-      synt_spec, S, P, out_p, out = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
+      synt_spec, S, P, out_p, out, depth = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
       gates = len(S[0])
-      lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out})
+      lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out, "depth": depth})
       #  and, then, approximate ones
       while gates > 0:
         hamming_distance += 1
-        synt_spec, S, P, out_p, out = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
+        synt_spec, S, P, out_p, out, depth = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
         gates = len(S[0])
-        lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out})
+        lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out, "depth": depth})
       catalog.append(lut_specifications)
       # Speculation...
       cache = ALSCatalogCache(catalog_cache_file)
       luts_to_be_added = []
       for i in range(1, len(lut_specifications)):
-        luts_to_be_added.append((lut_specifications[i]["spec"], 0, lut_specifications[i]["spec"], lut_specifications[i]["S"], lut_specifications[i]["P"], lut_specifications[i]["out_p"], lut_specifications[i]["out"]))
+        luts_to_be_added.append((lut_specifications[i]["spec"], 0, lut_specifications[i]["spec"], lut_specifications[i]["S"], lut_specifications[i]["P"], lut_specifications[i]["out_p"], lut_specifications[i]["out"], lut_specifications[i]["depth"]))
         for j in range(i+1, len(lut_specifications)):
-          luts_to_be_added.append((lut_specifications[i]["spec"], j-i, lut_specifications[j]["spec"], lut_specifications[j]["S"], lut_specifications[j]["P"], lut_specifications[j]["out_p"], lut_specifications[j]["out"]))
+          luts_to_be_added.append((lut_specifications[i]["spec"], j-i, lut_specifications[j]["spec"], lut_specifications[j]["S"], lut_specifications[j]["P"], lut_specifications[j]["out_p"], lut_specifications[j]["out"], lut_specifications[i]["depth"]))
       cache.add_luts(luts_to_be_added)
     return catalog
 
@@ -125,9 +126,14 @@ def get_synthesized_lut(cache_file_name, lut_spec, dist, solver, es_timeout):
     ys.log(f"Cache miss for {lut_spec}@{dist}\n")
     synth_spec, S, P, out_p, out = ALSSMT_Z3(lut_spec, dist, es_timeout).synthesize() if solver == ALSConfig.Solver.Z3 else ALSSMT_Boolector(lut_spec, dist, es_timeout).synthesize()
     gates = len(S[0])
-    print(f"{lut_spec}@{dist} synthesized as {synth_spec} using {gates} gates.")
-    cache.add_lut(lut_spec, dist, synth_spec, S, P, out_p, out)
-    return synth_spec, S, P, out_p, out
+    num_ins = int(math.log2(len(synth_spec))) + 1
+    num_nodes = num_ins + gates
+    depth = [0] * num_nodes
+    for i, gate in zip(range(num_ins, num_nodes), zip(*S)):
+      depth[i] = max(depth[gate[0]], depth[gate[1]]) + 1
+    print(f"{lut_spec}@{dist} synthesized as {synth_spec} using {gates} gates at depth {depth[-1]}.")
+    cache.add_lut(lut_spec, dist, synth_spec, S, P, out_p, out, depth[-1])
+    return synth_spec, S, P, out_p, out, depth[-1]
   else:
     #print(f"Cache hit for {lut_spec}@{dist}, which is implemented as {result[0]} using {len(result[1][0])} gates")
-    return result[0], result[1], result[2], result[3], result[4]
+    return result[0], result[1], result[2], result[3], result[4], result[5]

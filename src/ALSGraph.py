@@ -52,6 +52,16 @@ class ALSGraph:
   def get_num_cells(self):
     return len([v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.CELL])
 
+  def get_depth(self, configuration):
+    top_ord = self.__graph.topological_sorting()
+    depths = [0] * len(top_ord)
+
+    for i, v in zip(range(len(top_ord), top_ord)):
+      if v["type"] in (ALSGraph.VertexType.CELL, ALSGraph.VertexType.PRIMARY_OUTPUT):
+        depths[i] = max(configuration[p["name"]]["depth"] for p in v.predecessors()) + configuration[v["name"]["depth"]]
+
+    return max(depths)
+
   """
   @brief Evaluate the circuit output, using its graph representation
 
@@ -121,7 +131,7 @@ class ALSGraph:
     if configuration == None:
       cell_values[cell] = True if out_value == "1" else False
     else:
-      cell_conf = [ conf for conf in configuration if conf["name"] == cell["name"] ][0]
+      cell_conf = configuration[cell["name"]]
       cell_values[cell] = True if cell_conf["axspec"][out_idx] == "1" else False
     #print("name: {name} Spec: {spec}, Dist.: {dist}, AxSpec: {axspec}, Inputs: {inputs} = {I} (Index: {i}) -> Output: {o} ({O}) AxOutput: {axo})".format(name = cell["name"], spec = cell_spec, dist = dist, axspec = ax_cell_spec, inputs = input_names, I = input_values, i = out_idx, o=out_value, O = cell_values[cell], axo =  ax_out_value))
     return cell_values[cell]

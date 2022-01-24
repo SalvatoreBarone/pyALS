@@ -135,7 +135,7 @@ class MOP(AMOSA.Problem):
                 self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
     def _matter_configuration(self, x):
-        return [{"name": l["name"], "dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": e[c]["out_p"], "out": e[c]["out"]} for c, l in zip(x, self.graph.get_cells()) for e in self.catalog if e[0]["spec"] == l["spec"]]
+        return {l["name"]: {"dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]} for c, l in zip(x, self.graph.get_cells()) for e in self.catalog if e[0]["spec"] == l["spec"]}
 
     def _get_upper_bound(self):
         cells = [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()]
@@ -173,6 +173,9 @@ class MOP(AMOSA.Problem):
     def _get_baseline_gates(self):
         return get_gates(self._matter_configuration([0] * self.n_vars))
 
+    def _get_baseline_depth(self):
+        return get_depth(self._matter_configuration([0] * self.n_vars))
+
     def _get_hw(self, x):
         design = self.rewriter.rewrite("original", x)
         ys.run_pass(f"tee -q synth -flatten -top {self.top_module}; tee -q clean -purge; tee -q read_liberty -lib {self.hw_config.liberty}; tee -q abc -liberty {self.hw_config.liberty};", design)
@@ -204,7 +207,10 @@ def evaluate_med(graph, samples, configuration, weights):
     return error_hystogram
 
 def get_gates(configuration):
-    return sum([c["gates"] for c in configuration])
+    return sum([c["gates"] for c in configuration.values()])
+
+def get_depth(configuration, graph):
+    return graph.get_depth(configuration)
 
 def get_area(design, cell_area):
     return sum([cell_area[cell.type.str()[1:]] for module in design.selected_whole_modules_warn() for cell in module.selected_cells()])
