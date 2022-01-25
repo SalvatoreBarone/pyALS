@@ -22,7 +22,6 @@ from .AMOSA import *
 from .ALSGraph import *
 from .Utility import *
 from .ALSRewriter import *
-from pympler.tracker import SummaryTracker
 
 class ErrorConfig:
     class Metric(Enum):
@@ -49,29 +48,29 @@ class ErrorConfig:
 
 class HwConfig:
     class Metric(Enum):
-        GATES = 1,
+        GATES = 1
         AREA = 2
         POWER = 3
-        AREA_AND_POWER = 4
+        DEPTH = 5
 
-    def __init__(self, metric, liberty = None):
+    def __init__(self, metrics, liberty = None):
         hw_metrics = {
-            "gate": HwConfig.Metric.GATES,
             "gates" : HwConfig.Metric.GATES,
             "area"  : HwConfig.Metric.AREA,
             "power" : HwConfig.Metric.POWER,
-            "ap": HwConfig.Metric.AREA_AND_POWER,
-            "all": HwConfig.Metric.AREA_AND_POWER,
-            "both": HwConfig.Metric.AREA_AND_POWER
+            "depth": HwConfig.Metric.DEPTH,
         }
-        if metric not in hw_metrics.keys():
-            raise ValueError(f"{metric}: hw-metric not recognized")
-        else:
-            self.metric = hw_metrics[metric]
+        self.metrics = []
+        print(metrics)
+        for metric in metrics:
+            if metric not in hw_metrics.keys():
+                raise ValueError(f"{metric}: hw-metric not recognized")
+            else:
+                self.metrics.append(hw_metrics[metric])
         self.liberty = liberty
-        if self.metric != HwConfig.Metric.GATES:
+        if HwConfig.Metric.AREA in self.metrics or HwConfig.Metric.POWER in self.metrics:
             if self.liberty == None:
-                raise ValueError(f"you need to specify a technology library for {metric}")
+                raise ValueError(f"you need to specify a technology library for area or power optimization")
             else:
                 library = parse_liberty(open(self.liberty).read())
                 self.cell_area = {cell_group.args[0]: float(cell_group['area']) for cell_group in library.get_groups('cell')}
@@ -100,26 +99,32 @@ class MOP(AMOSA.Problem):
         self.baseline_and_gates = self._get_baseline_gates()
         print(f"# vars: {self.n_vars}, ub:{self.upper_bound}")
         print(f"Baseline requirements: {self.baseline_and_gates} AIG-nodes")
-        AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, 3 if self.hw_config.metric == HwConfig.Metric.AREA_AND_POWER else 2, 1)
+        AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.hw_config.metrics) + 1, 1)
 
     def evaluate(self, x, out):
         configuration = self._matter_configuration(x)
-        f1 = None
-        f2 = None
-        f3 = None
+        out["f"] = []
+        out["g"] = []
         if self.error_config.metric == ErrorConfig.Metric.EPROB:
-            f1 = self._get_eprob(configuration)
+            out["f"].append(self._get_eprob(configuration))
         elif self.error_config.metric == ErrorConfig.Metric.AWCE:
-            f1 = self._get_awce(configuration)
+            out["f"].append(self._get_awce(configuration))
         elif self.error_config.metric == ErrorConfig.Metric.MED:
-            f1 = self._get_med(configuration)
-        g1 = f1 - self.error_config.threshold
-        if self.hw_config.metric == HwConfig.Metric.GATES:
-            f2 = get_gates(configuration)
-        else:
-            f2, f3 = self._get_hw(x)
-        out["f"] = [f1, f2, f3] if self.hw_config.metric == HwConfig.Metric.AREA_AND_POWER else [f1, f2]
-        out["g"] = [g1]
+            out["f"].append(self._get_med(configuration))
+        out["g"].append(out["f"][-1] - self.error_config.threshold)
+
+        area, power = 0, 0
+        if HwConfig.Metric.AREA in self.hw_config.metrics or HwConfig.Metric.POWER in self.hw_config.metrics:
+            area, power = self._get_hw(x)
+        for metric in self.hw_config.metrics:
+            if metric == HwConfig.Metric.GATES:
+                out["f"].append(get_gates(configuration))
+            elif metric == HwConfig.Metric.DEPTH:
+                out["f"].append(get_depth(configuration, self.graph))
+            elif metric == HwConfig.Metric.AREA:
+                out["f"].append(area)
+            elif metric == HwConfig.Metric.POWER:
+                out["f"].append(power)
 
     def _generate_samples(self):
         PI = self.graph.get_pi()
@@ -135,7 +140,7 @@ class MOP(AMOSA.Problem):
                 self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
     def _matter_configuration(self, x):
-        return [{"name": l["name"], "dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": e[c]["out_p"], "out": e[c]["out"]} for c, l in zip(x, self.graph.get_cells()) for e in self.catalog if e[0]["spec"] == l["spec"]]
+        return {l["name"]: {"dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]} for c, l in zip(x, self.graph.get_cells()) for e in self.catalog if e[0]["spec"] == l["spec"]}
 
     def _get_upper_bound(self):
         cells = [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()]
@@ -173,6 +178,9 @@ class MOP(AMOSA.Problem):
     def _get_baseline_gates(self):
         return get_gates(self._matter_configuration([0] * self.n_vars))
 
+    def _get_baseline_depth(self):
+        return get_depth(self._matter_configuration([0] * self.n_vars))
+
     def _get_hw(self, x):
         design = self.rewriter.rewrite("original", x)
         ys.run_pass(f"tee -q synth -flatten -top {self.top_module}; tee -q clean -purge; tee -q read_liberty -lib {self.hw_config.liberty}; tee -q abc -liberty {self.hw_config.liberty};", design)
@@ -204,7 +212,10 @@ def evaluate_med(graph, samples, configuration, weights):
     return error_hystogram
 
 def get_gates(configuration):
-    return sum([c["gates"] for c in configuration])
+    return sum([c["gates"] for c in configuration.values()])
+
+def get_depth(configuration, graph):
+    return graph.get_depth(configuration)
 
 def get_area(design, cell_area):
     return sum([cell_area[cell.type.str()[1:]] for module in design.selected_whole_modules_warn() for cell in module.selected_cells()])

@@ -74,7 +74,7 @@ class Worker:
         self.__output_dir = args.output
 
     def __config_parser(self):
-        config = configparser.ConfigParser()
+        config = configparser.ConfigParser(converters={'list': lambda x: [i.strip() for i in x.split(',')]})
         config.read(self.__config_file)
         self.__als_conf = ALSConfig(
             config["als"]["cut_size"] if "cut_size" in config["als"] else "4",
@@ -86,7 +86,7 @@ class Worker:
             float(config["error"]["threshold"]) if "threshold" in config["error"] else .5,
             int(config["error"]["vectors"] if "vectors" in config["error"] else 1000))
         self.__hw_conf = HwConfig(
-            config["hardware"]["metric"] if "metric" in config["hardware"] else "gates",
+            list(map(str, config.getlist('hardware', 'metric'))) if "metric" in config["hardware"] else ["gates"],
             config["hardware"]["liberty"] if "liberty" in config["hardware"] else None)
         self.__amosa_conf = AMOSAConfig(
             int(config["amosa"]["archive_hard_limit"]) if "archive_hard_limit" in config["amosa"] else 50,
