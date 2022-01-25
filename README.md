@@ -126,8 +126,8 @@ threshold = 1            ; The error threshold
 vectors = 0              ; The number of test vectors for error assessment. "0" will unlock exhaustive evaluation.
 
 [hardware]
-metric = area            ; hardware metric to be optimized (gates, area, power, both)
-liberty = gscl45nm.lib   ; liberty file for technology mapping (if area, power, both)
+metric = gates, depth    ; hardware metric(s) to be optimized (gates, depth, area, power). Note that area and power refer to ASIC, and require the user to specify a liberty file for tech-map. 
+liberty = gscl45nm.lib   ; liberty file for technology mapping (if area and/or power metric are to be minimizer)
 
 [amosa]
 archive_hard_limit = 30         ; Archive hard limit for the AMOSA optimization heuristic, see [1]
