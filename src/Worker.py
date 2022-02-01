@@ -82,7 +82,7 @@ class Worker:
             config["als"]["solver"] if "solver" in config["als"] else "boolector",
             int(config["als"]["timeout"]) if "timeout" in config["als"] else 60000)
         self.__error_conf = ErrorConfig(
-            config["error"]["metric"] if "metric" in config["error"] else "ers",
+            config["error"]["metric"] if "metric" in config["error"] else "eprob",
             float(config["error"]["threshold"]) if "threshold" in config["error"] else .5,
             int(config["error"]["vectors"] if "vectors" in config["error"] else 1000))
         self.__hw_conf = HwConfig(
@@ -120,5 +120,5 @@ class Worker:
             ys.run_pass(f"tee -q read_verilog {self.__source_file}", design)
         elif extension == ".blif":
             ys.run_pass(f"tee -q read_blif {self.__source_file}", design)
-        ys.run_pass(f"tee -q hierarchy -check -top {self.__top_module}; tee -q prep; tee -q flatten; tee -q splitnets -ports; tee -q synth -top {self.__top_module}; tee -q flatten; tee -q clean -purge; tee -q synth -lut {str(self.__als_conf.luttech)}", design)
+        ys.run_pass(f"tee -q hierarchy -check -top {self.__top_module}; tee -q prep; tee -q flatten; tee -q splitnets -ports; tee -q synth -top {self.__top_module}; tee -q flatten; tee -q clean -purge; tee -q synth -lut {str(self.__als_conf.cut_size)}", design)
         ys.run_pass(f"tee -q design -save {design_name_save}", design)
