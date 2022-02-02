@@ -61,7 +61,6 @@ class HwConfig:
             "depth": HwConfig.Metric.DEPTH,
         }
         self.metrics = []
-        print(metrics)
         for metric in metrics:
             if metric not in hw_metrics.keys():
                 raise ValueError(f"{metric}: hw-metric not recognized")
