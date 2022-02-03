@@ -158,7 +158,10 @@ class MOP(AMOSA.Problem):
         with Pool(cpu_count()) as pool:
             error = pool.starmap(evaluate_eprob, self.__args)
         rs = sum(error) / self.error_config.n_vectors
-        return rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))
+        if self.error_config.n_vectors != 0:
+            return rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))
+        else:
+            return rs
 
     def _get_awce(self, configuration):
         for a in self.__args:
