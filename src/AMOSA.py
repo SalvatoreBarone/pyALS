@@ -195,8 +195,8 @@ class AMOSA:
     def __parameters_check(self):
         if self.__archive_hard_limit > self.__archive_soft_limit:
             raise RuntimeError("Hard limit must be greater than the soft one")
-        if self.__hill_climbing_iterations < 1:
-            raise RuntimeError("Initial hill-climbing refinement iterations must be greater or equal to 1")
+        if self.__hill_climbing_iterations < 0:
+            raise RuntimeError("Initial hill-climbing refinement iterations must be greater or equal than 0")
         if self.__archive_gamma < 1:
             raise RuntimeError("Gamma for initial hill-climbing refinement must be greater than 1")
         if self.__annealing_iterations < 1:
@@ -213,9 +213,10 @@ class AMOSA:
         self.__n_eval = self.__archive_gamma * self.__archive_soft_limit * self.__hill_climbing_iterations
         num_of_initial_candidate_solutions = self.__archive_gamma * self.__archive_soft_limit
         initial_candidate_solutions = [lower_point(problem), upper_point(problem)]
-        for i in range(num_of_initial_candidate_solutions):
-            print(f"  {i + 1}/{num_of_initial_candidate_solutions}", end = "\r", flush = True)
-            initial_candidate_solutions.append(hill_climbing(problem, random_point(problem), self.__hill_climbing_iterations))
+        if self.__hill_climbing_iterations > 0:
+            for i in range(num_of_initial_candidate_solutions):
+                print(f"  {i + 1}/{num_of_initial_candidate_solutions}                                                  ", end = "\r", flush = True)
+                initial_candidate_solutions.append(hill_climbing(problem, random_point(problem), self.__hill_climbing_iterations))
         for x in initial_candidate_solutions:
             self.__add_to_archive(x)
 

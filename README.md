@@ -94,10 +94,11 @@ pip3 install -r requirements.txt
 ## Running pyALS
 In order to run pyALS, only a few cli parameters must be specified, since most of the configuration is done through a configuration file.
 ```
-pyALS [-h] [--config CONFIG] [--source SOURCE] [--weights WEIGHTS] [--top TOP] [--output OUTPUT]
+pyALS [-h] [--exhaustive] [--config CONFIG] [--source SOURCE] [--weights WEIGHTS] [--top TOP] [--output OUTPUT]
 
 optional arguments:
   -h, --help         show this help message and exit
+  --exhaustive       enables exhaustive design-space exploration
   --config CONFIG    path of the configuration file
   --source SOURCE    specify the input HDL source file
   --weights WEIGHTS  specify weights for AWCE evaluation
