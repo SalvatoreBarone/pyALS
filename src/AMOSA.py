@@ -29,7 +29,9 @@ class AMOSAConfig:
             initial_temperature = 500,
             final_temperature = 0.000001,
             cooling_factor = 0.9,
-            annealing_iterations = 500):
+            annealing_iterations = 500,
+            early_termination_window = 0
+            ):
         self.archive_hard_limit = archive_hard_limit
         self.archive_soft_limit = archive_soft_limit
         self.archive_gamma = archive_gamma
@@ -38,6 +40,7 @@ class AMOSAConfig:
         self.final_temperature = final_temperature
         self.cooling_factor = cooling_factor
         self.annealing_iterations = annealing_iterations
+        self.early_terminator_window = early_termination_window
 
 class AMOSA:
     class Type(Enum):
@@ -64,7 +67,8 @@ class AMOSA:
             initial_temperature,
             final_temperature,
             cooling_factor,
-            annealing_iterations):
+            annealing_iterations,
+            early_termination_window):
         self.__archive_hard_limit = archive_hard_limit
         self.__archive_soft_limit = archive_soft_limit
         self.__archive_gamma = archive_gamma
@@ -73,6 +77,7 @@ class AMOSA:
         self.__final_temperature = final_temperature
         self.__cooling_factor = cooling_factor
         self.__annealing_iterations = annealing_iterations
+        self.__early_termination_window = early_termination_window
         self.__current_temperature = 0
         self.__archive = []
         self.duration = 0
@@ -80,6 +85,7 @@ class AMOSA:
         self.__ideal = None
         self.__nadir = None
         self.__old_f = []
+        self.__phy = []
 
     def __init__(self, config):
         self.__archive_hard_limit = config.archive_hard_limit
@@ -90,6 +96,7 @@ class AMOSA:
         self.__final_temperature = config.final_temperature
         self.__cooling_factor = config.cooling_factor
         self.__annealing_iterations = config.annealing_iterations
+        self.__early_termination_window = config.annealing_iterations
         self.__current_temperature = 0
         self.__archive = []
         self.duration = 0
@@ -97,11 +104,13 @@ class AMOSA:
         self.__ideal = None
         self.__nadir = None
         self.__old_f = []
+        self.__phy = []
 
     def minimize(self, problem):
         self.__parameters_check()
         self.__archive = []
         self.__old_f = None
+        self.__phy = []
         self.__ideal = None
         self.__nadir = None
         self.duration = time.time()
@@ -111,8 +120,8 @@ class AMOSA:
         self.__print_header(problem)
         self.__current_temperature = self.__initial_temperature
         x = random.choice(self.__archive)
+        self.__print_statistics(problem)
         while self.__current_temperature > self.__final_temperature:
-            self.__print_statistics(problem)
             for i in range(self.__annealing_iterations):
                 y = random_perturbation(problem, x)
                 fitness_range = self.__compute_fitness_range(x, y)
@@ -146,7 +155,15 @@ class AMOSA:
                         x = y
                 else:
                     raise RuntimeError(f"Something went wrong\narchive: {self.__archive}\nx:{x}\ny: {y}\n x < y: {dominates(x, y)}\n y < x: {dominates(y, x)}\ny domination rank: {k_s_dominated_by_y}\narchive domination rank: {k_s_dominating_y}")
-            self.__current_temperature *= self.__cooling_factor
+            self.__print_statistics(problem)
+            if self.__early_termination_window == 0:
+                self.__current_temperature *= self.__cooling_factor
+            else:
+                if self.__phy[-self.__early_termination_window:] == 0:
+                    print("Earlytermination criterion has been met!")
+                    self.__current_temperature = self.__final_temperature
+                else:
+                    self.__current_temperature *= self.__cooling_factor
         if len(self.__archive) > self.__archive_hard_limit:
             self.__archive_clustering(problem)
         self.__remove_infeasible(problem)
@@ -258,6 +275,7 @@ class AMOSA:
     def __print_statistics(self, problem):
         self.__n_eval += self.__annealing_iterations
         delta_nad, delta_ideal, phy = self.__compute_deltas()
+        self.__phy.append(phy)
         if problem.num_of_constraints == 0:
             print("  | {:>12.2e} | {:>10.2e} | {:>6} | {:>10.3e} | {:>10.3e} | {:>10.3e} |".format(self.__current_temperature, self.__n_eval, len(self.__archive), delta_ideal, delta_nad, phy))
         else:

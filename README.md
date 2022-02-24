@@ -139,6 +139,7 @@ initial_temperature = 500       ; Initial temperature of the matter for the AMOS
 final_temperature = 0.000001    ; Final temperature of the matter for the AMOSA optimization heuristic, see [1]
 cooling_factor =  0.9           ; It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
 annealing_iterations = 600      ; The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
+early_termination = 20          ; Early termination window. See [2]. Set it to zero in order to disable early-termination
 ```
 
 Please kindly note you have to specify the path of the file where synthesized Boolean functions are stored. You can find a ready to use cache at ```git@github.com:SalvatoreBarone/LUTCatalog.git```.
@@ -146,3 +147,4 @@ If you do not want to use the one I mentioned, pyALS will perform exact synthesi
 
 ## References
 1. Bandyopadhyay, S., Saha, S., Maulik, U., & Deb, K. (2008). A simulated annealing-based multiobjective optimization algorithm: AMOSA. IEEE transactions on evolutionary computation, 12(3), 269-283.
+2. Blank, Julian, and Kalyanmoy Deb. "A running performance metric and termination criterion for evaluating evolutionary multi-and many-objective optimization algorithms." 2020 IEEE Congress on Evolutionary Computation (CEC). IEEE, 2020.

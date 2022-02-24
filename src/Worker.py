@@ -114,7 +114,8 @@ class Worker:
             float(config["amosa"]["initial_temperature"]) if "initial_temperature" in config["amosa"] else 500,
             float(config["amosa"]["final_temperature"]) if "final_temperature" in config["amosa"] else 0.0000001,
             float(config["amosa"]["cooling_factor"]) if "cooling_factor" in config["amosa"] else 0.8,
-            int(config["amosa"]["annealing_iterations"]) if "annealing_iterations" in config["amosa"] else 100)
+            int(config["amosa"]["annealing_iterations"]) if "annealing_iterations" in config["amosa"] else 100,
+            int(config["amosa"]["early_termination"]) if "early_termination" in config["amosa"] else 100)
 
     def __parse_weights(self, graph):
         with open(self.__weights_file, "r") as weights_file:
