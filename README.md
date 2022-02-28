@@ -3,7 +3,10 @@ Python implementation of the "Catalog-based Aig-rewriting Approximate Logic Synt
 
 ## Installation
 pyALS has quite a lot of dependencies. You need to install Yosys (and its dependencies), GHDL (and, again, its dependencies), and so forth.
-Before you get a headache, follow this guide step by step. I'm sure it will be very helpful.
+Before you get a headache, ***you can use the Docker image I have made available to you [here](https://github.com/SalvatoreBarone/pyALS-docker).***  
+
+If, on the other hand, you really feel the need to install everything by hand, follow this guide step by step. 
+I'm sure it will be very helpful.
 The guide has been tested on Debian 11.
 
 ### Preliminaries
@@ -139,10 +142,10 @@ initial_temperature = 500       ; Initial temperature of the matter for the AMOS
 final_temperature = 0.000001    ; Final temperature of the matter for the AMOSA optimization heuristic, see [1]
 cooling_factor =  0.9           ; It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
 annealing_iterations = 600      ; The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
-early_termination = 20          ; Early termination window. See [2]. Set it to zero in order to disable early-termination
+early_termination = 20          ; Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
 ```
 
-Please kindly note you have to specify the path of the file where synthesized Boolean functions are stored. You can find a ready to use cache at ```git@github.com:SalvatoreBarone/LUTCatalog.git```.
+Please kindly note you have to specify the path of the file where synthesized Boolean functions are stored. You can find a ready to use cache at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
 If you do not want to use the one I mentioned, pyALS will perform exact synthesis as needed.
 
 ## References
