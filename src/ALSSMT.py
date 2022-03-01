@@ -34,19 +34,6 @@ class ALSConfig:
         self.timeout = timeout
 
 class ALSSMT_Z3:
-    """
-    @brief Builds a new Exact-Syntesis engine for the synthesis of approximate logic.
-
-    @param[in]  fun_spec
-                Exact (non-approximate) n-input-1-output Boolean function specification to be synthesized
-
-    @param[in]  distance
-                Maximum allowed Hamming distance from the exact (non-approximate) specification in fun_spec
-
-    @param[in]  timeout
-                Timeout for the solver to circumvent time-consuming unsatisfiability trials: if an SMT problem instance
-                cannot be solved within the given time budget, the function behaves as if such a problem is unsatisfiable.
-    """
     def __init__(self, fun_spec, distance, smt_timeout):
         self.__fun_spec = fun_spec
         self.__distance = distance
@@ -65,24 +52,9 @@ class ALSSMT_Z3:
         self.__ax = []            # Set of SMT variable which encodes the approximate function semantic
         self.sel_var = None
 
-    """
-    @brief Generate single input assignment varying the primary-input i and the input-vector t
-  
-    @note Please kindly note that primary-inputs indexes start at 1. Input with index 0 is the constant-zero expression.
-  
-    @param [in] i primary input
-    @param [in] t input vector
-    """
     def __input_assignment(self, i, t):
         return False if i == 0 else bool(t & (1<<(i-1)))
 
-    """
-    @brief Add constraints to the solver context in order to encode the approximate function semantic 
-  
-    @details
-    The function semantic encoded is that at least \a distance input-output correspondences of the exact behavior are 
-    preserved.
-    """
     def __add_ax_function_semantic_constraints(self):
         if self.__distance == 0:
             self.__solver.add( [ self.__B[-1][t] == z3.Xor(False if self.__fun_spec[t] == "0" else True, z3.Not(self.__p)) for t in range(len(self.__fun_spec)) ] )
@@ -92,9 +64,6 @@ class ALSSMT_Z3:
             self.__solver.add( [ self.__ax[t] == z3.Xor(self.__B[-1][t], (z3.Xor(z3.Not(self.__p), False if self.__fun_spec[t] == "0" else True))) for t in range(len(self.__fun_spec)) ])
             self.__solver.add(z3.AtMost(*self.__ax, self.__distance))
 
-    """
-    @brief Get the synthetisez function specification, as a string
-    """
     def __get_synthesized_spec(self):
         if self.__distance > 0:
             original_spec = [ True if self.__fun_spec[i] == "1" else False for i in range(len(self.__fun_spec)) ]
@@ -102,21 +71,6 @@ class ALSSMT_Z3:
             final_spec = [ bool(original_spec[i]) != bool(smt_result[i]) for i in range(len(self.__fun_spec)) ]
         return "".join(["1" if bool(final_spec[i]) else "0" for i in range(len(self.__fun_spec))]) if self.__distance > 0 else self.__fun_spec
 
-    """
-    @brief Perform the exact synthesis of a given n-input-1-output Boolean function, using the SMT formulation.
-  
-    @param[in] fun_spec
-              Exact (non-approximate) n-input-1-output Boolean function specification to be synthesized
-  
-    @param[in] distance
-              Maximum allowed Hamming distance from the exact (non-approximate) specification in fun_spec
-  
-    @param[in] timeout
-              Timeout for the solver to circumvent time-consuming unsatisfiability trials: if an SMT problem instance 
-              cannot be solved within the given time budget, the function behaves as if such a problem is unsatisfiable.
-  
-    @returns  the synthesized specification and its corresponding number of AND-gates
-    """
     def synthesize(self):
         num_inputs = math.ceil(math.log2(len(self.__fun_spec)))
         assert 2**num_inputs == len(self.__fun_spec), "Incomplete specification"
@@ -186,16 +140,6 @@ class ALSSMT_Z3:
 class ALSSMT_Boolector:
     __BITVEC_SIZE = 8
 
-    """
-    @brief Builds a new Exact-Syntesis engine for the synthesis of approximate logic.
-    @param[in]  fun_spec
-                Exact (non-approximate) n-input-1-output Boolean function specification to be synthesized
-    @param[in]  distance
-                Maximum allowed Hamming distance from the exact (non-approximate) specification in fun_spec
-    @param[in]  timeout
-                Timeout for the solver to circumvent time-consuming unsatisfiability trials: if an SMT problem instance
-                cannot be solved within the given time budget, the function behaves as if such a problem is unsatisfiable.
-    """
     def __init__(self, fun_spec, distance, smt_timeout):
         self.__fun_spec = fun_spec
         self.__distance = distance
@@ -218,21 +162,9 @@ class ALSSMT_Boolector:
         self.__ax = []  # Set of SMT variable which encodes the approximate function semantic
         self.__sel_var = None
 
-    """
-    @brief Generate single input assignment varying the primary-input i and the input-vector t
-    @note Please kindly note that primary-inputs indexes start at 1. Input with index 0 is the constant-zero expression.
-    @param [in] i primary input
-    @param [in] t input vector
-    """
     def __input_assignment(self, i, t):
         return self.__false_var if i == 0 else self.__true_var if bool(t & (1 << (i - 1))) else self.__false_var
 
-    """
-    @brief Add constraints to the solver context in order to encode the approximate function semantic 
-    @details
-    The function semantic encoded is that at least \a distance input-output correspondences of the exact behavior are 
-    preserved.
-    """
     def __add_ax_function_semantic_constraints(self):
         if self.__distance == 0:
             for t in range(len(self.__fun_spec)):
@@ -248,9 +180,6 @@ class ALSSMT_Boolector:
                 all_the_sums.append(self.__solver.Add(x, all_the_sums[-1]))
             self.__solver.Assume(self.__solver.Ulte(all_the_sums[-1], self.__solver.Const(self.__distance, self.__BITVEC_SIZE)))
 
-    """
-    @brief Get the synthesizes function specification, as a string
-    """
     def __get_synthesized_spec(self):
         if self.__distance > 0:
             original_spec = [True if self.__fun_spec[i] == "1" else False for i in range(len(self.__fun_spec))]
@@ -258,17 +187,6 @@ class ALSSMT_Boolector:
             final_spec = [original_spec[i] != smt_result[i] for i in range(len(self.__fun_spec))]
         return "".join(["1" if bool(final_spec[i]) else "0" for i in range(len(self.__fun_spec))]) if self.__distance > 0 else self.__fun_spec
 
-    """
-    @brief Perform the exact synthesis of a given n-input-1-output Boolean function, using the SMT formulation.
-    @param[in] fun_spec
-              Exact (non-approximate) n-input-1-output Boolean function specification to be synthesized
-    @param[in] distance
-              Maximum allowed Hamming distance from the exact (non-approximate) specification in fun_spec
-    @param[in] timeout
-              Timeout for the solver to circumvent time-consuming unsatisfiability trials: if an SMT problem instance 
-              cannot be solved within the given time budget, the function behaves as if such a problem is unsatisfiable.
-    @returns  the synthesized specification and its corresponding number of AND-gates
-    """
     def synthesize(self):
         num_inputs = math.ceil(math.log2(len(self.__fun_spec)))
         assert 2 ** num_inputs == len(self.__fun_spec), "Incomplete specification"

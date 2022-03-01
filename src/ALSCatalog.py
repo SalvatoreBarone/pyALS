@@ -27,37 +27,6 @@ class ALSCatalog:
     self.__solver = solver
     ALSCatalogCache(self.__cache_file).init()
 
-  """
-  @brief Catalog generation procedure
-
-  @details
-  Starting from the exact specification of each unique LUT in the considered circuit, we progressively increase the
-  Hamming distance between the function being implemented by original LUT (cut) and the approximate one, while 
-  performing Exact Synthesis. 
-  
-  The procedure stops when, due to the approximation itself, the synthesis becomes trivial, i.e. it results in a catalog
-  entry of size zero.
-  @returns An appropriate set of catolog entries, as a list of list. The catalog is structured as follows:
-   - Each element of the returned list is a list containing catalog entries for a given LUT specification
-   - Each entry of the 2nd-level list is a function specification at a determined Hamming distance from the original
-     non-approximate specification i.e. the element position within the list gives the Hamming distance from the 
-     original specification; therefore, elements in position [0] represent non-approximate function specification.
-  Example:
-  [
-    # LUT specs
-    [
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)}, <-- non-approx. specification
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)}, <-- approx-spec at distance 1
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)}, <-- approx-spec at distance 2
-      ...
-      {"spec": function specification (string), "gates" : AND-gates required to synthesize the spec (integer)}  <-- approx-spec at distance N
-    ],
-    ...
-  ]
-
-  @note This class implements LUT caching, so the actual synthesis of a LUT is performed i.f.f. the latter is not yet
-  in the database.
-  """
   def generate_catalog(self, design, es_timeout):
     luts_set = set()
     for module in design.selected_whole_modules_warn():
@@ -101,24 +70,6 @@ def generate_catalog(catalog_cache_file, luts_set, smt_timeout, solver):
       cache.add_luts(luts_to_be_added)
     return catalog
 
-"""
-@brief Queries the database for a particular lut specification. 
-
-@param [in] lut
-            exact specification of the lut; combined with distance makes up the actual specification of the 
-            synthesized LUT to be searched.
-
-@param [in] distance
-            Hamming distance of the LUT to be searched against the exact specification in lut; combined with the 
-            latter makes up the actual specification of the sy thesized to be searched.
-
-@details 
-If the lut exists, it is returned, otherwise the function performs the exact synthesis of the lut and adds it
-to the catalog before returning it to the caller.
-
-@return If the lut exists, it is returned, otherwise the function performs the exact synthesis of the lut and adds it
-to the catalog before returning it to the caller.
-"""
 def get_synthesized_lut(cache_file_name, lut_spec, dist, solver, es_timeout):
   cache = ALSCatalogCache(cache_file_name)
   result = cache.get_lut_at_dist(lut_spec, dist)
@@ -135,5 +86,4 @@ def get_synthesized_lut(cache_file_name, lut_spec, dist, solver, es_timeout):
     cache.add_lut(lut_spec, dist, synth_spec, S, P, out_p, out, depth[-1])
     return synth_spec, S, P, out_p, out, depth[-1]
   else:
-    #print(f"Cache hit for {lut_spec}@{dist}, which is implemented as {result[0]} using {len(result[1][0])} gates")
     return result[0], result[1], result[2], result[3], result[4], result[5]

@@ -62,25 +62,6 @@ class ALSGraph:
 
     return max(depths)
 
-  """
-  @brief Evaluate the circuit output, using its graph representation
-
-  @param [in] inputs
-              circuit inputs: it must be a dict assigning a Boolean values to each primary-input
-
-  @param [in] configuration
-              Approximate configuration: list of picked luts implementations, with corresponding required AND-gates. 
-              The list MUST be in the 
-              following form:
-              [
-                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
-                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
-                ...
-                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
-              ]
-
-  @return the circuit output vector, i.e. a list of Boolean values, each corresponding to a primary-output
-  """
   def evaluate(self, inputs, configuration = None):
     cell_values = dict()
     for c in [v for v in self.__graph.vs if v["type"] == ALSGraph.VertexType.CONSTANT_ZERO]:
@@ -97,26 +78,6 @@ class ALSGraph:
       output[o["name"]] = cell_values[o]
     return output
 
-  """
-  @brief Evaluate the output of a cell.
-
-  @param [in, out] cell_values
-                   a cell-indexed dictionary, which, for each cell, the current cell output is specified
-
-  @param [in] c
-              a cell of the circuit (a vertex of the graph)
-
-  @param [in] configuration
-              Approximate configuration: list of picked luts implementations, with corresponding required AND-gates. 
-              The list MUST be in the 
-              following form:
-              [
-                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
-                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
-                ...
-                {"name" : lut_name, "spec" : lut_spec, "gates" : AND_gates},
-              ]
-  """
   def __evaluate_cell_output(self, cell_values, cell, configuration):
     input_values = []
     input_names = []

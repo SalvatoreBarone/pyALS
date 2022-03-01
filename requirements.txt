@@ -2,8 +2,6 @@ igraph
 z3-solver
 pyboolector
 python-igraph
-pycairo
-pymoo
 numpy
 configparser
 liberty-parser

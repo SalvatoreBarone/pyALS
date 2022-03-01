@@ -30,7 +30,7 @@ class AMOSAConfig:
             final_temperature = 0.000001,
             cooling_factor = 0.9,
             annealing_iterations = 500,
-            early_termination_window = 0
+            early_termination_window = 10
             ):
         self.archive_hard_limit = archive_hard_limit
         self.archive_soft_limit = archive_soft_limit
