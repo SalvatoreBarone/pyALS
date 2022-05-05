@@ -31,6 +31,18 @@ If, on the other hand, you really feel the need to install everything by hand, f
 I'm sure it will be very helpful.
 The guide has been tested on Debian 11.
 
+### Cloning the repo
+pyALS uses git submodules, so you have to clone this repository as follows
+```
+git clone git@github.com:SalvatoreBarone/pyALS.git
+git submodule init
+git submodule update
+```
+or
+```
+git clone --recursive git@github.com:SalvatoreBarone/pyALS.git
+```
+
 ### Preliminaries
 You need to install some basic dependencies. So, run
 ```

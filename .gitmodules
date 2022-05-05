@@ -1,0 +1,3 @@
+[submodule "pyAMOSA"]
+	path = pyAMOSA
+	url = https://github.com/SalvatoreBarone/pyAMOSA.git 

@@ -14,14 +14,17 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import itertools, collections, functools, operator
+import sys, os, itertools, collections, functools, operator
 from multiprocessing import cpu_count, Pool
 from .HwMetrics import *
 from .ErrorMetrics import *
-from .AMOSA import *
 from .ALSGraph import *
 from .Utility import *
 from .ALSRewriter import *
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pyAMOSA.AMOSA import *
+
 
 class MOP(AMOSA.Problem):
     def __init__(self, top_module, graph, catalog, error_config, hw_config):

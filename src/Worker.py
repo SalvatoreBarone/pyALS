@@ -14,14 +14,12 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import os, argparse, configparser
+import sys, os, argparse, configparser
 from pyosys import libyosys as ys
 from distutils.dir_util import mkpath
 from .ALSCatalog import *
 from .MOP import *
-from .AMOSA import *
 from .ALSRewriter import *
-from .ExhExpl import *
 
 class Worker:
     __report_file = "/pareto_front.csv"
@@ -36,38 +34,26 @@ class Worker:
             mkpath(self.__output_dir)
         design = ys.Design()
         ys.run_pass("plugin -i ghdl", design)
+        print("GHDL plugin loaded successfully")
         self.__read_source(design)
+        print(f"{self.__source_file} read successfully")
         graph = ALSGraph(design)
+        print(f"Graph generation completed")
         if self.__error_conf.metric != ErrorConfig.Metric.EPROB:
             self.__error_conf.weights = self.__parse_weights(graph)
+            print("Output-weight parsing completed")
         print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
         catalog = ALSCatalog(self.__als_conf.catalog, self.__als_conf.solver).generate_catalog(design, self.__als_conf.timeout)
-        pareto_set = None
-        if self.__exhaustive_exploration:
-            print(f"Performing exhaustive exploration using {cpu_count()} threads. Please wait patiently. This may take time.")
-            explorer = ExhaustiveExploration(self.__top_module, graph, catalog, self.__error_conf, self.__hw_conf)
-            hours = int(explorer.comb_generation_time / 3600)
-            minutes = int((explorer.comb_generation_time - hours * 3600) / 60)
-            print(f"Generating combination took {hours} hours, {minutes} minutes")
-            explorer.explore()
-            hours = int(explorer.duration / 3600)
-            minutes = int((explorer.duration - hours * 3600) / 60)
-            print(f"Took {hours} hours, {minutes} minutes")
-            explorer.save_results(self.__output_dir + self.__report_file)
-            explorer.plot_pareto(self.__output_dir + self.__pareto_view)
-            pareto_set = explorer.pareto_set()
-        else:
-            print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-            problem = MOP(self.__top_module, graph, catalog, self.__error_conf, self.__hw_conf)
-            optimizer = AMOSA(self.__amosa_conf)
-            optimizer.minimize(problem)
-            hours = int(optimizer.duration / 3600)
-            minutes = int((optimizer.duration - hours * 3600) / 60)
-            print(f"Took {hours} hours, {minutes} minutes")
-            optimizer.save_results(problem, self.__output_dir + self.__report_file)
-            optimizer.plot_pareto(problem, self.__output_dir + self.__pareto_view)
-            pareto_set = optimizer.pareto_set()
-
+        print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
+        problem = MOP(self.__top_module, graph, catalog, self.__error_conf, self.__hw_conf)
+        optimizer = AMOSA(self.__amosa_conf)
+        optimizer.minimize(problem)
+        hours = int(optimizer.duration / 3600)
+        minutes = int((optimizer.duration - hours * 3600) / 60)
+        print(f"Took {hours} hours, {minutes} minutes")
+        optimizer.save_results(problem, self.__output_dir + self.__report_file)
+        optimizer.plot_pareto(problem, self.__output_dir + self.__pareto_view)
+        pareto_set = optimizer.pareto_set()
         print(f"Performing AIG-rewriting.")
         rewriter = ALSRewriter(graph, catalog)
         for c, n in zip(pareto_set, range(len(pareto_set))):
@@ -76,7 +62,6 @@ class Worker:
 
     def __cli_parser(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument("--exhaustive", help="enable exhaustive exploration of the design space", action='store_true')
         parser.add_argument("--config", type=str, help="path of the configuration file", default="config.ini")
         parser.add_argument("--source", type=str, help="specify the input HDL source file")
         parser.add_argument("--weights", type=str, help="specify weights for AWCE evaluation")
@@ -89,7 +74,6 @@ class Worker:
         self.__weights_file = args.weights
         self.__top_module = args.top
         self.__output_dir = args.output
-        self.__exhaustive_exploration = args.exhaustive
 
     def __config_parser(self):
         config = configparser.ConfigParser(converters={'list': lambda x: [i.strip() for i in x.split(',')]})
@@ -132,12 +116,13 @@ class Worker:
     def __read_source(self, design, design_name_save = "original"):
         name, extension = os.path.splitext(self.__source_file)
         if extension == ".vhd":
-            ys.run_pass(f"tee -q ghdl {self.__source_file} -e {self.__top_module}", design)
+            ys.run_pass(f"ghdl {self.__source_file} -e {self.__top_module}", design)
         elif extension == ".sv":
-            ys.run_pass(f"tee -q read_verilog -sv {self.__source_file}", design)
+            ys.run_pass(f"read_verilog -sv {self.__source_file}", design)
         elif extension == ".v":
-            ys.run_pass(f"tee -q read_verilog {self.__source_file}", design)
+            ys.run_pass(f"read_verilog {self.__source_file}", design)
         elif extension == ".blif":
-            ys.run_pass(f"tee -q read_blif {self.__source_file}", design)
-        ys.run_pass(f"tee -q hierarchy -check -top {self.__top_module}; tee -q prep; tee -q flatten; tee -q splitnets -ports; tee -q synth -top {self.__top_module}; tee -q flatten; tee -q clean -purge; tee -q synth -lut {str(self.__als_conf.cut_size)}", design)
+            ys.run_pass(f"read_blif {self.__source_file}", design)
+        ys.run_pass(f"hierarchy -check -top {self.__top_module}", design)
+        ys.run_pass(f"prep; flatten; splitnets -ports; synth -top {self.__top_module}; flatten; clean -purge; synth -lut {str(self.__als_conf.cut_size)}", design)
         ys.run_pass(f"tee -q design -save {design_name_save}", design)
