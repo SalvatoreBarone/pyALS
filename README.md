@@ -1,6 +1,28 @@
 # pyALS
 Python implementation of the "Catalog-based Aig-rewriting Approximate Logic Synthesis" technique.
 
+The technique is described in full details in 
+> [M. Barbareschi, S. Barone, N. Mazzocca and A. Moriconi, "A Catalog-based AIG-Rewriting Approach to the Design of Approximate Components" in IEEE Transactions on Emerging Topics in Computing, vol. , no. , pp. , 2022. doi: 10.1109/TETC.2022.3170502](https://doi.ieeecomputersociety.org/10.1109/TETC.2022.3170502)
+
+Please, cite us!
+```
+@ARTICLE {9766079,
+author = {M. Barbareschi and S. Barone and N. Mazzocca and A. Moriconi},
+journal = {IEEE Transactions on Emerging Topics in Computing},
+title = {A Catalog-based AIG-Rewriting Approach to the Design of Approximate Components},
+year = {2022},
+volume = {},
+number = {},
+issn = {2168-6750},
+pages = {},
+keywords = {hardware;systematics;silicon;power demand;optimization;integrated circuit modeling;boolean functions},
+doi = {10.1109/TETC.2022.3170502},
+publisher = {IEEE Computer Society},
+address = {Los Alamitos, CA, USA},
+month = {apr}
+}
+```
+
 ## Installation
 pyALS has quite a lot of dependencies. You need to install Yosys (and its dependencies), GHDL (and, again, its dependencies), and so forth.
 Before you get a headache, ***you can use the Docker image I have made available to you [here](https://github.com/SalvatoreBarone/pyALS-docker).***  
