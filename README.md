@@ -7,19 +7,19 @@ The technique is described in full details in
 Please, cite us!
 ```
 @ARTICLE {9766079,
-author = {M. Barbareschi and S. Barone and N. Mazzocca and A. Moriconi},
-journal = {IEEE Transactions on Emerging Topics in Computing},
-title = {A Catalog-based AIG-Rewriting Approach to the Design of Approximate Components},
-year = {2022},
-volume = {},
-number = {},
-issn = {2168-6750},
-pages = {},
-keywords = {hardware;systematics;silicon;power demand;optimization;integrated circuit modeling;boolean functions},
-doi = {10.1109/TETC.2022.3170502},
-publisher = {IEEE Computer Society},
-address = {Los Alamitos, CA, USA},
-month = {apr}
+	author = {M. Barbareschi and S. Barone and N. Mazzocca and A. Moriconi},
+	journal = {IEEE Transactions on Emerging Topics in Computing},
+	title = {A Catalog-based AIG-Rewriting Approach to the Design of Approximate Components},
+	year = {2022},
+	volume = {},
+	number = {},
+	issn = {2168-6750},
+	pages = {},
+	keywords = {hardware;systematics;silicon;power demand;optimization;integrated circuit modeling;boolean functions},
+	doi = {10.1109/TETC.2022.3170502},
+	publisher = {IEEE Computer Society},
+	address = {Los Alamitos, CA, USA},
+	month = {apr}
 }
 ```
 
