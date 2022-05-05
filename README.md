@@ -25,7 +25,7 @@ Please, cite us!
 
 ## Installation
 pyALS has quite a lot of dependencies. You need to install Yosys (and its dependencies), GHDL (and, again, its dependencies), and so forth.
-Before you get a headache, ***you can use the Docker image I have made available to you [here](https://github.com/SalvatoreBarone/pyALS-docker).***  
+Before you get a headache, ***you can use the Docker image I have made available to you [here](https://hub.docker.com/r/salvatorebarone/pyals-docker-image).***  
 
 If, on the other hand, you really feel the need to install everything by hand, follow this guide step by step. 
 I'm sure it will be very helpful.
