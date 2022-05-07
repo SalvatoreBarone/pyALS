@@ -1,5 +1,5 @@
 """
-Copyright 2021 Salvatore Barone <salvatore.barone@unina.it>
+Copyright 2021-2022 Salvatore Barone <salvatore.barone@unina.it>
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -101,6 +101,11 @@ class ALSGraph:
     layout = self.__graph.layout("sugiyama")
     layout.rotate(270)
     ig.plot(self.__graph, layout = layout, bbox=(2000, 2000), margin=120, hovermode='closest', vertex_label_dist = 1)
+
+  def save(self, file_name):
+    layout = self.__graph.layout("sugiyama")
+    layout.rotate(270)
+    ig.plot(self.__graph, layout = layout, bbox=(2000, 2000), margin=120, hovermode='closest', vertex_label_dist = 1, target = file_name)
 
   def __graph_from_design(self, design):
     driver_of = dict()

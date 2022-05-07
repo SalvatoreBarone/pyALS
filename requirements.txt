@@ -1,3 +1,4 @@
+click
 igraph
 z3-solver
 pyboolector

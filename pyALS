@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Copyright 2021 Salvatore Barone <salvatore.barone@unina.it>
+Copyright 2021-2022 Salvatore Barone <salvatore.barone@unina.it>
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -15,7 +15,215 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-from src.Worker import *
+
+import sys, os, click, configparser
+from pyosys import libyosys as ys
+from distutils.dir_util import mkpath
+from src.ALSCatalog import *
+from src.MOP import *
+from src.ALSRewriter import *
+
+
+def read_source(source_file, top_module, ys_design):
+	name, extension = os.path.splitext(source_file)
+	if extension == ".vhd":
+		ys.run_pass(f"ghdl {source_file} -e {top_module}", ys_design)
+	elif extension == ".sv":
+		ys.run_pass(f"read_verilog -sv {source_file}", ys_design)
+	elif extension == ".v":
+		ys.run_pass(f"read_verilog {source_file}", ys_design)
+	elif extension == ".blif":
+		ys.run_pass(f"read_blif {source_file}", ys_design)
+	ys.run_pass(f"hierarchy -check -top {top_module}", ys_design)
+
+
+def synth_design(ys_design, top_module, cut_size, design_name_save="original"):
+	ys.run_pass(f"prep; flatten; splitnets -ports; synth -top {top_module}; flatten; clean -purge; synth -lut {str(cut_size)}", ys_design)
+	ys.run_pass(f"tee -q design -save {design_name_save}", ys_design)
+
+
+def config_parser(config_file):
+	config = configparser.ConfigParser(converters={'list': lambda x: [i.strip() for i in x.split(',')]})
+	config.read(config_file)
+	als_conf = ALSConfig(
+		config["als"]["cut_size"] if "cut_size" in config["als"] else "4",
+		config["als"]["catalog"] if "catalog" in config["als"] else "lut_catalog.db",
+		config["als"]["solver"] if "solver" in config["als"] else "boolector",
+		int(config["als"]["timeout"]) if "timeout" in config["als"] else 60000)
+	error_conf = ErrorConfig(
+		config["error"]["metric"] if "metric" in config["error"] else "eprob",
+		float(config["error"]["threshold"]) if "threshold" in config["error"] else .5,
+		int(config["error"]["vectors"] if "vectors" in config["error"] else 1000))
+	hw_conf = HwConfig(
+		list(map(str, config.getlist('hardware', 'metric'))) if "metric" in config["hardware"] else ["gates"],
+		config["hardware"]["liberty"] if "liberty" in config["hardware"] else None)
+	amosa_conf = AMOSAConfig(
+		int(config["amosa"]["archive_hard_limit"]) if "archive_hard_limit" in config["amosa"] else 50,
+		int(config["amosa"]["archive_soft_limit"]) if "archive_soft_limit" in config["amosa"] else 100,
+		int(config["amosa"]["archive_gamma"]) if "archive_gamma" in config["amosa"] else 3,
+		int(config["amosa"]["hill_climbing_iterations"]) if "hill_climbing_iterations" in config["amosa"] else 100,
+		float(config["amosa"]["initial_temperature"]) if "initial_temperature" in config["amosa"] else 500,
+		float(config["amosa"]["final_temperature"]) if "final_temperature" in config["amosa"] else 0.0000001,
+		float(config["amosa"]["cooling_factor"]) if "cooling_factor" in config["amosa"] else 0.8,
+		int(config["amosa"]["annealing_iterations"]) if "annealing_iterations" in config["amosa"] else 100,
+		int(config["amosa"]["annealing_strength"]) if "annealing_strength" in config["amosa"] else 1,
+		int(config["amosa"]["early_termination"]) if "early_termination" in config["amosa"] else 20)
+	return als_conf, error_conf, hw_conf, amosa_conf
+
+
+def weights_parser(weights_file, graph):
+	with open(weights_file, "r") as file:
+		raw_data = file.readlines()
+	raw_data = "".join(raw_data)
+	weights = eval(raw_data)
+	po_names = [o["name"] for o in graph.get_po()]
+	for k in weights.keys():
+		if k not in po_names:
+			graph.plot()
+			raise ValueError(f"{k} not found in POs {po_names}")
+	return weights
+
+
+@click.group()
+def cli():
+	pass
+
+@click.command("plot")
+@click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
+@click.option("-t", "--top",     type=str, required=True, help="specify the top-module name")
+@click.option("-l", "--lut",     type=str, required=True, help="specify the LUT size")
+@click.option("-o", "--output",  type=str, required=True, help="Output file.")
+def plot(source, top, lut, output):
+	"""
+	Draws a k-LUT map of the given circuit
+	"""
+	design = ys.Design()
+	ys.run_pass("plugin -i ghdl", design)
+	print("GHDL plugin loaded successfully")
+	read_source(source, top, design)
+	print(f"{source} read successfully")
+	synth_design(design, top, lut)
+	print(f"{lut}-LUT synthesis successful")
+	graph = ALSGraph(design)
+	print(f"Graph generation completed")
+	graph.save(output)
+
+
+@click.command("es")
+@click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
+@click.option("-t", "--top",     type=str, required=True, help="specify the top-module name ")
+@click.option("-c", "--config",  type=str, help="path of the configuration file", default="config.ini")
+def es_synth(source, top, config):
+	"""
+	Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and
+	exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
+	"""
+	als_conf, error_conf, hw_conf, amosa_conf = config_parser(config)
+	design = ys.Design()
+	ys.run_pass("plugin -i ghdl", design)
+	print("GHDL plugin loaded successfully")
+	read_source(source, top, design)
+	print(f"{source} read successfully")
+	synth_design(design, top, als_conf.cut_size)
+	print(f"{als_conf.cut_size}-LUT synthesis successful")
+	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+	ALSCatalog(als_conf.catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
+	print("Done!")
+
+
+@click.command("als")
+@click.option("-s", "--source",  type=str,     required=True, help="specify the input HDL source file")
+@click.option("-t", "--top",     type=str,     required=True, help="specify the top-module name ")
+@click.option("-w", "--weights", type=str,     help="specify weights for AWCE evaluation", default=None)
+@click.option("-c", "--config",  type=str,     help="path of the configuration file", default="config.ini")
+@click.option("-o", "--output",  type=str,     help="Output directory. Everything will be placed there.", default="output/")
+@click.option("-i", "--improve", type=str,     help="Run again the workflow  using previous Pareto set as initial archive", default=None)
+@click.option("-r", "--hdl",     is_flag=True, help="Enables rewriting and HDL generation")
+def als(source, top, weights, config, output, improve, hdl):
+	"""
+	Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
+	cuts, design space exploration and rewriting.
+	"""
+	if output != ".":
+		mkpath(output)
+	als_conf, error_conf, hw_conf, amosa_conf = config_parser(config)
+	design = ys.Design()
+	ys.run_pass("plugin -i ghdl", design)
+	print("GHDL plugin loaded successfully")
+	read_source(source, top, design)
+	print(f"{source} read successfully")
+	synth_design(design, top, als_conf.cut_size)
+	print(f"{als_conf.cut_size}-LUT synthesis successful")
+	graph = ALSGraph(design)
+	print(f"Graph generation completed")
+	if error_conf.metric != ErrorConfig.Metric.EPROB:
+		error_conf.weights = weights_parser(weights, graph)
+		print("Output-weight parsing completed")
+	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+	catalog = ALSCatalog(als_conf.catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
+	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
+	problem = MOP(top, graph, catalog, error_conf, hw_conf)
+	optimizer = AMOSA(amosa_conf)
+	if improve is None:
+		optimizer.random_archive(problem)
+	else:
+		optimizer.seeded_archive(problem, improve)
+	optimizer.minimize(problem)
+	hours = int(optimizer.duration / 3600)
+	minutes = int((optimizer.duration - hours * 3600) / 60)
+	print(f"Took {hours} hours, {minutes} minutes")
+	optimizer.save_results(problem, output + "/report.csv")
+	optimizer.save_pareto_set(problem, output + "/pareto_set.csv")
+	optimizer.plot_pareto(problem, output + "/pareto_front.pdf")
+	if hdl:
+		pareto_set = optimizer.pareto_set()
+		print(f"Performing AIG-rewriting.")
+		rewriter = ALSRewriter(graph, catalog)
+		for c, n in zip(pareto_set, range(len(pareto_set))):
+			rewriter.rewrite_and_save("original", c, output + "/variant_" + str(n))
+	print(f"All done! Take a look at {output}!")
+
+
+@click.command("rewrite")
+@click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
+@click.option("-t", "--top",     type=str, required=True, help="specify the top-module name ")
+@click.option("-r", "--results", type=str, required=True, help="Pareto-set resulting from previous als runs")
+@click.option("-c", "--config",  type=str, help="path of the configuration file", default="config.ini")
+@click.option("-o", "--output",  type=str, help="Output directory. Everything will be placed there.", default="output/")
+def rewrite(source, top, results, config, output):
+	"""
+	Given a Pareto-set resulting from previous als runs, this command allows generating HDL implementation of
+	approximate circuits.
+	"""
+	if output != ".":
+		mkpath(output)
+	als_conf, error_conf, hw_conf, amosa_conf = config_parser(config)
+	design = ys.Design()
+	ys.run_pass("plugin -i ghdl", design)
+	print("GHDL plugin loaded successfully")
+	read_source(source, top, design)
+	print(f"{source} read successfully")
+	synth_design(design, top, als_conf.cut_size)
+	print(f"{als_conf.cut_size}-LUT synthesis successful")
+	graph = ALSGraph(design)
+	print(f"Graph generation completed")
+	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+	catalog = ALSCatalog(als_conf.catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
+	print(f"Performing AIG-rewriting.")
+	rewriter = ALSRewriter(graph, catalog)
+	file = open(results, "r")
+	n = 0
+	for row in file:
+		c = [int(r) for r in row.replace("\n","").split(";")]
+		rewriter.rewrite_and_save("original", c, output + "/variant_" + str(n))
+		n += 1
+	print(f"All done! Take a look at {output}!")
+
+
+cli.add_command(plot)
+cli.add_command(es_synth)
+cli.add_command(als)
+cli.add_command(rewrite)
 
 if __name__ == '__main__':
-  Worker().work()
+	cli()
