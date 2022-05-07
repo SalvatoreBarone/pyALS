@@ -214,7 +214,7 @@ def rewrite(source, top, results, config, output):
 	file = open(results, "r")
 	n = 0
 	for row in file:
-		c = [int(r) for r in row.replace("\n","").split(";")]
+		c = [int(r) for r in list(filter(None, row.replace("\n", "").split(";")))]
 		rewriter.rewrite_and_save("original", c, output + "/variant_" + str(n))
 		n += 1
 	print(f"All done! Take a look at {output}!")
