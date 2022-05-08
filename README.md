@@ -129,28 +129,86 @@ pip3 install -r requirements.txt
 ```
 
 ## Running pyALS
-In order to run pyALS, only a few cli parameters must be specified, since most of the configuration is done through a configuration file.
-```
-pyALS [-h] [--exhaustive] [--config CONFIG] [--source SOURCE] [--weights WEIGHTS] [--top TOP] [--output OUTPUT]
+pyALS supports the following main commands, each with its own set of options:
+  - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
+  - ```es```: performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting;
+  - ```plot```: only draws the k-LUT map of the given circuit;
+  - ```rewrite```: given a Pareto-set resulting from previous als runs, this command allows generating HDL implementation of approximate circuits.
 
-optional arguments:
-  -h, --help         show this help message and exit
-  --exhaustive       enables exhaustive design-space exploration
-  --config CONFIG    path of the configuration file
-  --source SOURCE    specify the input HDL source file
-  --weights WEIGHTS  specify weights for AWCE evaluation
-  --top TOP          specify the top-module name
-  --output OUTPUT    Output directory. Everything will be placed there.
-
+### The ```als``` command
+Usage: 
+```
+pyALS als [OPTIONS]
+```
+Options:
+```
+  -s, --source TEXT   specify the input HDL source file  [required]
+  -t, --top TEXT      specify the top-module name   [required]
+  -w, --weights TEXT  specify weights for AWCE evaluation
+  -c, --config TEXT   path of the configuration file
+  -o, --output TEXT   Output directory. Everything will be placed there.
+  -i, --improve TEXT  Run again the workflow  using previous Pareto set as initial archive
+  -r, --hdl           Enables rewriting and HDL generation
+```
+Example:
+```
+./pyALS als --source example/mult_2_bit.sv --top mult_2_bit --weights example/output_weights.txt --config example/config.ini --output prova --hdl 
 ```
 
-For instance, if you want to run ALS on ```mult_2bit.sv```
+### The ```es``` command
+Usage: 
 ```
-./pyALS --config config.ini --source mult_2_bit.sv --top mult_2_bit --output prova --weights output_weights.txt
+pyALS es [OPTIONS]
 ```
+Options:
+```
+  -s, --source TEXT  specify the input HDL source file  [required]
+  -t, --top TEXT     specify the top-module name   [required]
+  -c, --config TEXT  path of the configuration file
+```
+Example:
+```
+./pyALS es --source example/mult_2_bit.sv --top mult_2_bit --config example/config.ini 
+```
+
+### The ```rewrite``` command
+Usage: 
+```
+pyALS rewrite [OPTIONS]
+```
+Options:
+```
+  -s, --source TEXT   specify the input HDL source file  [required]
+  -t, --top TEXT      specify the top-module name   [required]
+  -r, --results TEXT  Pareto-set resulting from previous als runs  [required]
+  -c, --config TEXT   path of the configuration file
+  -o, --output TEXT   Output directory. Everything will be placed there.
+```
+Example:
+```
+./pyALS rewrite --source example/mult_2_bit.sv --top mult_2_bit --config example/config.ini --output prova --results results/pareto_set.csv
+```
+### The ```plot``` command
+Usage: 
+```
+pyALS plot [OPTIONS]
+```
+Options:
+```
+  -s, --source TEXT  specify the input HDL source file  [required]
+  -t, --top TEXT     specify the top-module name  [required]
+  -l, --lut TEXT     specify the LUT size  [required]
+  -o, --output TEXT  Output file.  [required]
+```
+Example:
+```
+./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit -lut 4 -output mult_2_bit.pdf 
+```
+
 
 ### The configuration file
-Here, I report the basic structure of a configuration file. You will find it within the pyALS root directory.
+Several of the mentioned commands require a configuration file that defines parameters governing the behavior of pyALS.
+Here, I report the basic structure of a configuration file.
 ```
 [als]
 cut_size = 4              ; specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration
@@ -176,7 +234,9 @@ initial_temperature = 500       ; Initial temperature of the matter for the AMOS
 final_temperature = 0.000001    ; Final temperature of the matter for the AMOSA optimization heuristic, see [1]
 cooling_factor =  0.9           ; It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
 annealing_iterations = 600      ; The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
+annealing_strength = 1          ; Governs the strength of random perturbations during the annealing phase; specifically, the number of variables whose value is affected by perturbation.
 early_termination = 20          ; Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
+
 ```
 
 Please kindly note you have to specify the path of the file where synthesized Boolean functions are stored. You can find a ready to use cache at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
