@@ -43,18 +43,16 @@ class MOP(AMOSA.Problem):
             self.__args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
         self.upper_bound = self._get_upper_bound()
         self.baseline_and_gates = self._get_baseline_gates()
+        self.baseline_depth = self._get_baseline_depth()
+        self.baseline_switching = self._get_baseline_switching()
         print(f"#vars: {self.n_vars}, ub:{self.upper_bound}, #conf.s {np.prod([ x + 1 for x in self.upper_bound ])}.")
-        print(f"Baseline requirements: {self.baseline_and_gates} AIG-nodes")
+        print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
         AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.hw_config.metrics) + 1, 1)
 
     def evaluate(self, x, out):
         configuration = self._matter_configuration(x)
         out["f"] = []
         out["g"] = []
-        area, power = 0, 0
-        if HwConfig.Metric.AREA in self.hw_config.metrics or HwConfig.Metric.POWER in self.hw_config.metrics:
-            # this should be performed by a different process, in order to prevent memory leaks
-            area, power = self._get_hw(x)
         if self.error_config.metric == ErrorConfig.Metric.EPROB:
             out["f"].append(self._get_eprob(configuration))
         elif self.error_config.metric == ErrorConfig.Metric.AWCE:
@@ -62,20 +60,13 @@ class MOP(AMOSA.Problem):
         elif self.error_config.metric == ErrorConfig.Metric.MED:
             out["f"].append(self._get_med(configuration))
         out["g"].append(out["f"][-1] - self.error_config.threshold)
-
-        if HwConfig.Metric.AREA in self.hw_config.metrics or HwConfig.Metric.POWER in self.hw_config.metrics:
-            # join
-            pass
-
         for metric in self.hw_config.metrics:
             if metric == HwConfig.Metric.GATES:
                 out["f"].append(get_gates(configuration))
             elif metric == HwConfig.Metric.DEPTH:
                 out["f"].append(get_depth(configuration, self.graph))
-            elif metric == HwConfig.Metric.AREA:
-                out["f"].append(area)
-            elif metric == HwConfig.Metric.POWER:
-                out["f"].append(power)
+            elif metric == HwConfig.Metric.SWITCHING:
+                out["f"].append(get_switching(configuration))
 
     def _generate_samples(self):
         PI = self.graph.get_pi()
@@ -134,17 +125,8 @@ class MOP(AMOSA.Problem):
         return get_gates(self._matter_configuration([0] * self.n_vars))
 
     def _get_baseline_depth(self):
-        return get_depth(self._matter_configuration([0] * self.n_vars))
+        return get_depth(self._matter_configuration([0] * self.n_vars,), self.graph)
 
-    def _get_hw(self, x):
-        design = self.rewriter.rewrite("original", x)
-        ys.run_pass(f"tee -q synth -flatten -top {self.top_module}; tee -q clean -purge; tee -q read_liberty -lib {self.hw_config.liberty}; tee -q abc -liberty {self.hw_config.liberty};", design)
-        f2 = get_area(design, self.hw_config.cell_area)
-        f3 = get_power(design, self.hw_config.cell_power)
-        ys.run_pass("tee -q clean", design)
-        ys.run_pass("tee -q design -reset", design)
-        ys.run_pass("tee -q delete", design)
-        del design
-        gc.collect()
-        return f2, f3
+    def _get_baseline_switching(self):
+        return get_switching(self._matter_configuration([0] * self.n_vars))
 

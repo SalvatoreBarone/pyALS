@@ -55,8 +55,7 @@ def config_parser(config_file):
 		float(config["error"]["threshold"]) if "threshold" in config["error"] else .5,
 		int(config["error"]["vectors"] if "vectors" in config["error"] else 1000))
 	hw_conf = HwConfig(
-		list(map(str, config.getlist('hardware', 'metric'))) if "metric" in config["hardware"] else ["gates"],
-		config["hardware"]["liberty"] if "liberty" in config["hardware"] else None)
+		list(map(str, config.getlist('hardware', 'metric'))) if "metric" in config["hardware"] else ["gates"])
 	amosa_conf = AMOSAConfig(
 		int(config["amosa"]["archive_hard_limit"]) if "archive_hard_limit" in config["amosa"] else 50,
 		int(config["amosa"]["archive_soft_limit"]) if "archive_soft_limit" in config["amosa"] else 100,
