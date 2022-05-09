@@ -6,20 +6,12 @@ The technique is described in full details in
 
 Please, cite us!
 ```
-@ARTICLE {9766079,
-	author = {M. Barbareschi and S. Barone and N. Mazzocca and A. Moriconi},
-	journal = {IEEE Transactions on Emerging Topics in Computing},
-	title = {A Catalog-based AIG-Rewriting Approach to the Design of Approximate Components},
-	year = {2022},
-	volume = {},
-	number = {},
-	issn = {2168-6750},
-	pages = {},
-	keywords = {hardware;systematics;silicon;power demand;optimization;integrated circuit modeling;boolean functions},
-	doi = {10.1109/TETC.2022.3170502},
-	publisher = {IEEE Computer Society},
-	address = {Los Alamitos, CA, USA},
-	month = {apr}
+@article{barbareschi2022catalog,
+  title={A Catalog-based AIG-Rewriting Approach to the Design of Approximate Components},
+  author={Barbareschi, Mario and Barone, Salvatore and Mazzocca, Nicola and Moriconi, Alberto},
+  journal={IEEE Transactions on Emerging Topics in Computing},
+  year={2022},
+  publisher={IEEE}
 }
 ```
 
@@ -135,6 +127,9 @@ pyALS supports the following main commands, each with its own set of options:
   - ```plot```: only draws the k-LUT map of the given circuit;
   - ```rewrite```: given a Pareto-set resulting from previous als runs, this command allows generating HDL implementation of approximate circuits.
 
+Please kindly note you have to specify the path of the file where synthesized Boolean functions are stored. You can find a ready to use cache at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
+If you do not want to use the one I mentioned, pyALS will perform exact synthesis as needed.
+
 ### The ```als``` command
 Usage: 
 ```
@@ -238,8 +233,7 @@ early_termination = 20          ; Early termination window. See [2]. Set it to z
 
 ```
 
-Please kindly note you have to specify the path of the file where synthesized Boolean functions are stored. You can find a ready to use cache at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
-If you do not want to use the one I mentioned, pyALS will perform exact synthesis as needed.
+
 
 ## References
 1. Bandyopadhyay, S., Saha, S., Maulik, U., & Deb, K. (2008). A simulated annealing-based multiobjective optimization algorithm: AMOSA. IEEE transactions on evolutionary computation, 12(3), 269-283.

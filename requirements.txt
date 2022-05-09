@@ -5,4 +5,3 @@ pyboolector
 python-igraph
 numpy
 configparser
-liberty-parser

@@ -16,12 +16,23 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 
-import sys, os, click, configparser
+import sys, os, click, configparser, git
 from pyosys import libyosys as ys
 from distutils.dir_util import mkpath
 from src.ALSCatalog import *
 from src.MOP import *
 from src.ALSRewriter import *
+
+
+def git_updater():
+	repo = git.Repo('.')
+	local_head = repo.heads.master.commit
+	repo.remotes.origin.fetch()
+	remote_head = repo.remotes.origin.refs.master.commit
+	if remote_head != local_head:
+		print("Updating the tool is needed, that will stop the current execution. Please, run it again.")
+		repo.remotes.origin.pull()
+		exit()
 
 
 def read_source(source_file, top_module, ys_design):
@@ -86,6 +97,7 @@ def weights_parser(weights_file, graph):
 @click.group()
 def cli():
 	pass
+
 
 @click.command("plot")
 @click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
@@ -225,4 +237,5 @@ cli.add_command(als)
 cli.add_command(rewrite)
 
 if __name__ == '__main__':
+	git_updater()
 	cli()
