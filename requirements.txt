@@ -5,3 +5,4 @@ pyboolector
 python-igraph
 numpy
 configparser
+GitPython
