@@ -22,6 +22,7 @@ from distutils.dir_util import mkpath
 from src.ALSCatalog import *
 from src.MOP import *
 from src.ALSRewriter import *
+from src.ALSCatalogCache import *
 
 
 def git_updater():
@@ -97,6 +98,26 @@ def weights_parser(weights_file, graph):
 @click.group()
 def cli():
 	pass
+
+
+@click.command('clean')
+@click.option('-c', '--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
+def clean(catalog):
+	"""Performs a sanity check of the catalog """
+	cache = ALSCatalogCache(catalog)
+	specs = cache.get_all_exact_luts()
+	count = 0
+	for s in specs:
+		exact_synth_spec, exact_S, exact_P, exact_out_p, exact_out, exact_depth = s
+		distance = 1
+		while spec := cache.get_lut_at_dist(exact_synth_spec, distance):
+			ax_synth_spec, ax_S, ax_P, ax_out_p, ax_out, ax_depth = spec
+			if hamming(exact_synth_spec, ax_synth_spec) > distance:
+				print(f"{exact_synth_spec} {distance}\n{ax_synth_spec}\n\n")
+				cache.del_lut(exact_synth_spec, distance)
+				count += 1
+			distance += 1
+	print(f"Deleted {count} instances")
 
 
 @click.command("plot")
@@ -235,6 +256,7 @@ cli.add_command(plot)
 cli.add_command(es_synth)
 cli.add_command(als)
 cli.add_command(rewrite)
+cli.add_command(clean)
 
 if __name__ == '__main__':
 	git_updater()

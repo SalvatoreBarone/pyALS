@@ -17,6 +17,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 import sqlite3
 from .Utility import *
 
+
 class ALSCatalogCache:
     def __init__(self, file_name):
         self.__file_name = file_name
@@ -28,6 +29,19 @@ class ALSCatalogCache:
             cursor.execute("create table if not exists luts (spec text not null, distance integer not null, synth_spec text, S text, P text, out_p integer, out integer, depth integer, primary key (spec, distance))")
             connection.commit()
             connection.close()
+        except sqlite3.Error as e:
+            print(e)
+            exit()
+
+    def get_all_exact_luts(self):
+        try:
+            connection = sqlite3.connect(self.__file_name)
+            cursor = connection.cursor()
+            cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where distance = 0;")
+            specs = []
+            while item := cursor.fetchone():
+                specs.append((item[0], string_to_nested_list_int(item[1]), string_to_nested_list_int(item[2]), item[3], item[4], item[5]))
+            return specs
         except sqlite3.Error as e:
             print(e)
             exit()
@@ -63,6 +77,17 @@ class ALSCatalogCache:
             cursor = connection.cursor()
             for lut in luts:
                 cursor.execute(f"insert or ignore into luts (spec, distance, synth_spec, S, P, out_p, out, depth) values ('{lut[0]}', {lut[1]}, '{lut[2]}', '{lut[3]}', '{lut[4]}', {lut[5]}, {lut[6]}, {lut[7]});")
+            connection.commit()
+            connection.close()
+        except sqlite3.Error as e:
+            print(e)
+            exit()
+
+    def del_lut(self, spec, dist):
+        try:
+            connection = sqlite3.connect(self.__file_name)
+            cursor = connection.cursor()
+            cursor.execute(f"delete from luts where spec = '{spec}' and distance =  {dist}")
             connection.commit()
             connection.close()
         except sqlite3.Error as e:
