@@ -61,13 +61,13 @@ def generate_catalog(catalog_cache_file, luts_set, smt_timeout, solver):
         lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out, "depth": depth})
       catalog.append(lut_specifications)
       # Speculation...
-      cache = ALSCatalogCache(catalog_cache_file)
-      luts_to_be_added = []
-      for i in range(1, len(lut_specifications)):
-        luts_to_be_added.append((lut_specifications[i]["spec"], 0, lut_specifications[i]["spec"], lut_specifications[i]["S"], lut_specifications[i]["P"], lut_specifications[i]["out_p"], lut_specifications[i]["out"], lut_specifications[i]["depth"]))
-        for j in range(i+1, len(lut_specifications)):
-          luts_to_be_added.append((lut_specifications[i]["spec"], j-i, lut_specifications[j]["spec"], lut_specifications[j]["S"], lut_specifications[j]["P"], lut_specifications[j]["out_p"], lut_specifications[j]["out"], lut_specifications[i]["depth"]))
-      cache.add_luts(luts_to_be_added)
+      # cache = ALSCatalogCache(catalog_cache_file)
+      # luts_to_be_added = []
+      # for i in range(1, len(lut_specifications)):
+      #   luts_to_be_added.append((lut_specifications[i]["spec"], 0, lut_specifications[i]["spec"], lut_specifications[i]["S"], lut_specifications[i]["P"], lut_specifications[i]["out_p"], lut_specifications[i]["out"], lut_specifications[i]["depth"]))
+      #   for j in range(i+1, len(lut_specifications)):
+      #     luts_to_be_added.append((lut_specifications[i]["spec"], j-i, lut_specifications[j]["spec"], lut_specifications[j]["S"], lut_specifications[j]["P"], lut_specifications[j]["out_p"], lut_specifications[j]["out"], lut_specifications[i]["depth"]))
+      # cache.add_luts(luts_to_be_added)
     return catalog
 
 def get_synthesized_lut(cache_file_name, lut_spec, dist, solver, es_timeout):
