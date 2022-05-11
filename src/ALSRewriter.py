@@ -55,7 +55,6 @@ class ALSRewriter:
         ys.run_pass("tee -q clean -purge", design)
         ys.run_pass("tee -q opt", design)
         ys.run_pass(f"tee -q write_verilog -noattr {destination}.v", design)
-        ys.run_pass(f"tee -q write_ilang {destination}.ilang", design)
         ys.run_pass("design -reset", design)
         ys.run_pass("delete", design)
         del design

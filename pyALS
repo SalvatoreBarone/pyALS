@@ -240,7 +240,7 @@ def als(source, top, weights, config, output, improve, hdl):
 		print(f"Performing AIG-rewriting.")
 		rewriter = ALSRewriter(graph, catalog)
 		for c, n in zip(pareto_set, range(len(pareto_set))):
-			rewriter.rewrite_and_save("original", c, output + "/variant_" + str(n))
+			rewriter.rewrite_and_save("original", c, f"{output}/variant_{n:05d}")
 	print(f"All done! Take a look at {output}!")
 
 
@@ -281,7 +281,7 @@ def rewrite(source, top, results, config, output):
 	n = 0
 	for row in file:
 		c = [int(r) for r in list(filter(None, row.replace("\n", "").split(";")))]
-		rewriter.rewrite_and_save("original", c, output + "/variant_" + str(n))
+		rewriter.rewrite_and_save("original", c, f"{output}/variant_{n:05d}")
 		n += 1
 	print(f"All done! Take a look at {output}!")
 
