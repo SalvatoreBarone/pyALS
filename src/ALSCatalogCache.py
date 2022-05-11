@@ -33,6 +33,19 @@ class ALSCatalogCache:
             print(e)
             exit()
 
+    def get_all_luts(self):
+        try:
+            connection = sqlite3.connect(self.__file_name)
+            cursor = connection.cursor()
+            cursor.execute(f"select spec, distance, synth_spec, S, P, out_p, out, depth from luts;")
+            specs = []
+            while item := cursor.fetchone():
+                specs.append((item[0], item[1], item[2], string_to_nested_list_int(item[3]), string_to_nested_list_int(item[4]), item[5], item[6], item[7]))
+            return specs
+        except sqlite3.Error as e:
+            print(e)
+            exit()
+
     def get_all_exact_luts(self):
         try:
             connection = sqlite3.connect(self.__file_name)

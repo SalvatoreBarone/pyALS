@@ -127,6 +127,49 @@ def clean(catalog):
 	print(f"Deleted {count} instances")
 
 
+@click.command("expand")
+@click.option('-c', '--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
+def expand(catalog):
+	""" Attempts catalog expansion """
+	if not os.path.exists(catalog):
+		print(f"{catalog}: no such file.")
+		exit()
+	cache = ALSCatalogCache(catalog)
+	# for each lut in the catalog, we add the synthesized approximate lut as exact lut at distance 0, if they do not belong to the catalog
+	# this improves the hit-rate for exact luts
+	exact_added = 0
+	for x in cache.get_all_luts():
+		x_spec, x_dist, x_synth_spec, x_S, x_P, x_p, x_out, x_depth = x
+		if cache.get_lut_at_dist(x_synth_spec, 0) is None:
+			#cache.add_lut(x_synth_spec, 0, x_synth_spec, x_S, x_P, x_p, x_out, x_depth)
+			print(f"Inserting {x_synth_spec}")
+			exact_added += 1
+	print(f"{exact_added} new exact LUTs inserted in the catalog cache")
+	# for each exact lut, we try to fill the catalog cache with suitable approximate lut specifications
+	ax_added = 0
+	for x in cache.get_all_exact_luts():
+		x_synth_spec, x_S, x_P, x_p, x_out, x_depth = x
+		x_gates = len(x_S[0])
+		distance = 0
+		while x_gates > 0:
+			distance += 1
+			y = cache.get_lut_at_dist(x_synth_spec, distance)
+			if y is not None:
+				y_synth_spec, y_S, y_P, y_out_p, y_out, y_depth = y
+				x_gates = len(y_S[0])
+			else:
+				for z in cache.get_all_luts():
+					z_spec, z_dist, z_synth_spec, z_S, z_P, z_p, z_out, z_depth = z
+					z_gates = len(z_S[0])
+					if x_synth_spec != z_spec:
+						if hamming(x_synth_spec, z_spec) == distance and z_gates < x_gates:
+							print(f"\n{x_synth_spec}\t{x_gates}\n{z_spec}\t{z_gates}\nDistance: {distance} ")
+							x_gates = z_gates
+							ax_added += 1
+							break
+	print(f"{ax_added} new approximate LUTs inserted in the catalog cache")
+
+
 @click.command("plot")
 @click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
 @click.option("-t", "--top",     type=str, required=True, help="specify the top-module name")
@@ -291,6 +334,7 @@ cli.add_command(es_synth)
 cli.add_command(als)
 cli.add_command(rewrite)
 cli.add_command(clean)
+cli.add_command(expand)
 
 if __name__ == '__main__':
 	git_updater()

@@ -19,6 +19,7 @@ import igraph as ig
 from pyosys import libyosys as ys
 from enum import Enum
 
+
 class ALSGraph:
   class VertexType(Enum):
     CONSTANT_ZERO = 0, 
