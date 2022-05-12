@@ -26,7 +26,7 @@ from pyAMOSA.AMOSA import *
 
 
 class MOP(AMOSA.Problem):
-    def __init__(self, top_module, graph, catalog, error_config, hw_config):
+    def __init__(self, top_module, graph, catalog, error_config, hw_config, dataset):
         self.top_module = top_module
         self.graph = graph
         self.graphs = [copy.deepcopy(graph)] * cpu_count()
@@ -36,7 +36,10 @@ class MOP(AMOSA.Problem):
         self.error_config = error_config
         self.hw_config = hw_config
         self.samples = []
-        self._generate_samples()
+        if dataset is None:
+            self._generate_samples()
+        else:
+            self._read_samples(dataset)
         if self.error_config.metric == ErrorConfig.Metric.EPROB:
             self.__args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
         else:
@@ -67,6 +70,22 @@ class MOP(AMOSA.Problem):
                 out["f"].append(get_depth(configuration, self.graph))
             elif metric == HwConfig.Metric.SWITCHING:
                 out["f"].append(get_switching(configuration))
+
+    def _read_samples(self, dataset):
+        PI = self.graph.get_pi()
+        file = open(dataset, "r")
+        header = list(filter(None, file.readline().replace("\n", "").split(";")))
+        assert len(header) == len(PI), "Wrong amount of inputs"
+        input_dict = {h : [] for h in header}
+
+        for row in file:
+            input = list(filter(None, row.replace("\n", "").split(";")))
+            assert len(input) == len(PI), "Wrong amount of inputs"
+            for i, v in zip(input, input_dict.values()):
+                v.append(i)
+        print(input_dict)
+        pi = [ i["name"][1:] for i in PI ]
+        exit()
 
     def _generate_samples(self):
         PI = self.graph.get_pi()

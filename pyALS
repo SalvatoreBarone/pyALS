@@ -208,7 +208,6 @@ def expand(catalog, ax, es):
 		print(f"{ax_added} new approximate LUTs inserted in the catalog cache")
 
 
-
 @click.command("plot")
 @click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
 @click.option("-t", "--top",     type=str, required=True, help="specify the top-module name")
@@ -263,13 +262,14 @@ def es_synth(source, top, config):
 
 @click.command("als")
 @click.option("-s", "--source",  type=str,     required=True, help="specify the input HDL source file")
-@click.option("-t", "--top",     type=str,     required=True, help="specify the top-module name ")
-@click.option("-w", "--weights", type=str,     help="specify weights for AWCE evaluation", default=None)
-@click.option("-c", "--config",  type=str,     help="path of the configuration file", default="config.ini")
-@click.option("-o", "--output",  type=str,     help="Output directory. Everything will be placed there.", default="output/")
-@click.option("-i", "--improve", type=str,     help="Run again the workflow  using previous Pareto set as initial archive", default=None)
-@click.option("-r", "--hdl",     is_flag=True, help="Enables rewriting and HDL generation")
-def als(source, top, weights, config, output, improve, hdl):
+@click.option("-t", "--top",     type=str,     required=True, help="specify the top-module name")
+@click.option("-d", "--dataset", type=str,                    help="specify input vectors for error estimation", default=None)
+@click.option("-w", "--weights", type=str,                    help="specify weights for AWCE evaluation", default=None)
+@click.option("-c", "--config",  type=str,                    help="path of the configuration file", default="config.ini")
+@click.option("-o", "--output",  type=str,                    help="Output directory. Everything will be placed there.", default="output/")
+@click.option("-i", "--improve", type=str,                    help="Run again the workflow  using previous Pareto set as initial archive", default=None)
+@click.option("-r", "--hdl",     is_flag=True,                help="Enables rewriting and HDL generation")
+def als(source, top, dataset, weights, config, output, improve, hdl):
 	"""
 	Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
 	cuts, design space exploration and rewriting.
@@ -279,6 +279,9 @@ def als(source, top, weights, config, output, improve, hdl):
 		exit()
 	if not os.path.exists(weights):
 		print(f"{weights}: no such file.")
+		exit()
+	if dataset is not None and not os.path.exists(dataset):
+		print(f"{dataset}: no such file.")
 		exit()
 	if not os.path.exists(config):
 		print(f"{config}: no such file.")
@@ -304,7 +307,7 @@ def als(source, top, weights, config, output, improve, hdl):
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	catalog = ALSCatalog(als_conf.catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-	problem = MOP(top, graph, catalog, error_conf, hw_conf)
+	problem = MOP(top, graph, catalog, error_conf, hw_conf, dataset)
 	optimizer = AMOSA(amosa_conf)
 	if improve is None:
 		optimizer.random_archive(problem)
