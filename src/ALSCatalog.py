@@ -66,7 +66,7 @@ def get_synthesized_lut(cache_file_name, lut_spec, dist, solver, es_timeout):
   cache = ALSCatalogCache(cache_file_name)
   result = cache.get_lut_at_dist(lut_spec, dist)
   if result is None:
-    ys.log(f"Cache miss for {lut_spec}@{dist}\n")
+    print(f"Cache miss for {lut_spec}@{dist}\n")
     synth_spec, S, P, out_p, out = ALSSMT_Z3(lut_spec, dist, es_timeout).synthesize() if solver == ALSConfig.Solver.Z3 else ALSSMT_Boolector(lut_spec, dist, es_timeout).synthesize()
     gates = len(S[0])
     num_ins = int(math.log2(len(synth_spec))) + 1
