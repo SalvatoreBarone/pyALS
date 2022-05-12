@@ -75,17 +75,16 @@ class MOP(AMOSA.Problem):
         PI = self.graph.get_pi()
         file = open(dataset, "r")
         header = list(filter(None, file.readline().replace("\n", "").split(";")))
-        assert len(header) == len(PI), "Wrong amount of inputs"
+        assert len(header) == len(PI), f"{dataset}: wrong amount of inputs"
         input_dict = {h : [] for h in header}
-
         for row in file:
-            input = list(filter(None, row.replace("\n", "").split(";")))
-            assert len(input) == len(PI), "Wrong amount of inputs"
-            for i, v in zip(input, input_dict.values()):
+            input_values = list(filter(None, row.replace("\n", "").split(";")))
+            assert len(input_values) == len(PI), f"{dataset}: wrong amount of inputs"
+            for i, v in zip(input_values, input_dict.values()):
                 v.append(i)
-        print(input_dict)
-        pi = [ i["name"][1:] for i in PI ]
-        exit()
+        for i in range(len(list(input_dict.values())[0])):
+            inputs = { k["name"] :  True if input_dict[k["name"][1:]][i] == '1' else False for k in PI }
+            self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
     def _generate_samples(self):
         PI = self.graph.get_pi()
