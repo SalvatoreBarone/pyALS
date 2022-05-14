@@ -170,9 +170,9 @@ def expand(catalog):
 				# speculation the synthesized lut is also an exact lut...
 				cache.add_lut(synth_spec, 0, synth_spec, S, P, out_p, out, depth[-1])
 				ax_added += 2
-    print(f"{ax_added} new approximate LUTs inserted in the catalog cache")
-
-
+	print(f"{ax_added} new approximate LUTs inserted in the catalog cache")
+    
+    
 @click.command("plot")
 @click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
 @click.option("-t", "--top",     type=str, required=True, help="specify the top-module name")
