@@ -119,7 +119,7 @@ def clean(catalog):
 		distance = 1
 		while spec := cache.get_lut_at_dist(exact_synth_spec, distance):
 			ax_synth_spec, ax_S, ax_P, ax_out_p, ax_out, ax_depth = spec
-			if hamming(exact_synth_spec, ax_synth_spec) > distance:
+			if hamming(exact_synth_spec, ax_synth_spec) > distance or len(ax_S[0]) > len(exact_S[0]):
 				print(f"{exact_synth_spec} {distance}\n{ax_synth_spec}\n\n")
 				cache.del_lut(exact_synth_spec, distance)
 				count += 1
