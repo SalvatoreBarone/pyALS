@@ -33,7 +33,8 @@ def git_updater():
 	if remote_head != local_head:
 		print("Updating the tool is needed, that will stop the current execution. Please, run it again.")
 		repo.remotes.origin.pull()
-		exit()
+		return True
+	return False
 
 
 def read_source(source_file, top_module, ys_design):
@@ -376,6 +377,9 @@ cli.add_command(rewrite)
 cli.add_command(clean)
 cli.add_command(expand)
 
+
 if __name__ == '__main__':
-	git_updater()
-	cli()
+	if git_updater():
+		os.execv(sys.argv[0], sys.argv)
+	else:
+		cli()
