@@ -19,6 +19,41 @@ Please, cite us!
 pyALS has quite a lot of dependencies. You need to install Yosys (and its dependencies), GHDL (and, again, its dependencies), and so forth.
 Before you get a headache, ***you can use the Docker image I have made available to you [here](https://hub.docker.com/r/salvatorebarone/pyals-docker-image).***  
 
+Please, use the following script to run the container, that allows specifying which catalog and which folder to share with the container.
+```
+#!/bin/bash
+
+usage() {
+  echo "Usage: $0 -c catalog -s path_to_shared_folder";
+  exit 1;
+}
+
+while getopts "c:s:" o; do
+    case "${o}" in
+        c)
+            catalog=${OPTARG}
+            ;;
+        s)
+            shared=${OPTARG}
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ -z "${catalog}" ] || [ -z "${shared}" ] ; then
+    usage
+fi
+
+catalog=`realpath ${catalog}`
+shared=`realpath ${shared}`
+[ ! -d $shared ] && mkdir -p $shared
+xhost local:docker
+docker run --rm -e DISPLAY=unix$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix -v ${catalog}:/root/lut_catalog.db -v ${shared}:/root/shared -w /root --privileged -it salvatorebarone/pyals-docker-image /bin/zsh
+```
+
 If, on the other hand, you really feel the need to install everything by hand, follow this guide step by step. 
 I'm sure it will be very helpful.
 The guide has been tested on Debian 11.
@@ -137,13 +172,14 @@ pyALS als [OPTIONS]
 ```
 Options:
 ```
-  -s, --source TEXT   specify the input HDL source file  [required]
-  -t, --top TEXT      specify the top-module name   [required]
-  -w, --weights TEXT  specify weights for AWCE evaluation
-  -c, --config TEXT   path of the configuration file
-  -o, --output TEXT   Output directory. Everything will be placed there.
-  -i, --improve TEXT  Run again the workflow  using previous Pareto set as initial archive
-  -r, --hdl           Enables rewriting and HDL generation
+  --source TEXT   specify the input HDL source file  [required]
+  --top TEXT      specify the top-module name   [required]
+  --weights TEXT  specify weights for AWCE evaluation
+  --config TEXT   path of the configuration file
+  --catalog TEXT  specify the path for the LUT-catalog cache file
+  --output TEXT   Output directory. Everything will be placed there.
+  --improve TEXT  Run again the workflow  using previous Pareto set as initial archive
+  --hdl           Enables rewriting and HDL generation
 ```
 Example:
 ```
@@ -157,9 +193,10 @@ pyALS es [OPTIONS]
 ```
 Options:
 ```
-  -s, --source TEXT  specify the input HDL source file  [required]
-  -t, --top TEXT     specify the top-module name   [required]
-  -c, --config TEXT  path of the configuration file
+  --source TEXT  specify the input HDL source file  [required]
+  --top TEXT     specify the top-module name   [required]
+  --catalog TEXT  specify the path for the LUT-catalog cache file
+  --config TEXT  path of the configuration file
 ```
 Example:
 ```
@@ -173,11 +210,12 @@ pyALS rewrite [OPTIONS]
 ```
 Options:
 ```
-  -s, --source TEXT   specify the input HDL source file  [required]
-  -t, --top TEXT      specify the top-module name   [required]
-  -r, --results TEXT  Pareto-set resulting from previous als runs  [required]
-  -c, --config TEXT   path of the configuration file
-  -o, --output TEXT   Output directory. Everything will be placed there.
+  --source TEXT   specify the input HDL source file  [required]
+  --top TEXT      specify the top-module name   [required]
+  --results TEXT  Pareto-set resulting from previous als runs  [required]
+  --config TEXT   path of the configuration file
+  --catalog TEXT  specify the path for the LUT-catalog cache file
+  --output TEXT   Output directory. Everything will be placed there.
 ```
 Example:
 ```
@@ -190,10 +228,10 @@ pyALS plot [OPTIONS]
 ```
 Options:
 ```
-  -s, --source TEXT  specify the input HDL source file  [required]
-  -t, --top TEXT     specify the top-module name  [required]
-  -l, --lut TEXT     specify the LUT size  [required]
-  -o, --output TEXT  Output file.  [required]
+  --source TEXT  specify the input HDL source file  [required]
+  --top TEXT     specify the top-module name  [required]
+  --lut TEXT     specify the LUT size  [required]
+  --output TEXT  Output file.  [required]
 ```
 Example:
 ```
@@ -207,7 +245,6 @@ Here, I report the basic structure of a configuration file.
 ```
 [als]
 cut_size = 4              ; specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration
-catalog = lut_catalog.db ; This is the path of the file where synthesized Boolean functions are stored. You can find a ready to use cache at git@github.com:SalvatoreBarone/LUTCatalog.git
 solver = btor            ; SAT-solver to be used. It can be either btor (Boolector) or z3 (Z3-solver)
 timeout = 60000          ; Timeout (in ms) for the Exact synthesis process. You don't need to change its default value.
 

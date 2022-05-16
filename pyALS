@@ -60,7 +60,6 @@ def config_parser(config_file):
 	try:
 		als_conf = ALSConfig(
 			config["als"]["cut_size"] if "cut_size" in config["als"] else "4",
-			config["als"]["catalog"] if "catalog" in config["als"] else "lut_catalog.db",
 			config["als"]["solver"] if "solver" in config["als"] else "boolector",
 			int(config["als"]["timeout"]) if "timeout" in config["als"] else 60000)
 		error_conf = ErrorConfig(
@@ -119,7 +118,7 @@ def cli():
 
 
 @click.command('clean')
-@click.option('-c', '--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
+@click.option('--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
 def clean(catalog):
 	"""Performs a sanity check of the catalog """
 	if not os.path.exists(catalog):
@@ -142,7 +141,7 @@ def clean(catalog):
 
 
 @click.command("expand")
-@click.option('-c', '--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
+@click.option('--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
 def expand(catalog):
 	""" Attempts catalog expansion """
 	if not os.path.exists(catalog):
@@ -188,10 +187,10 @@ def expand(catalog):
 
 
 @click.command("plot")
-@click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
-@click.option("-t", "--top",     type=str, required=True, help="specify the top-module name")
-@click.option("-l", "--lut",     type=str, required=True, help="specify the LUT size")
-@click.option("-o", "--output",  type=str, required=True, help="Output file.")
+@click.option("--source",  type=str, required=True, help="specify the input HDL source file")
+@click.option("--top",     type=str, required=True, help="specify the top-module name")
+@click.option("--lut",     type=str, required=True, help="specify the LUT size")
+@click.option("--output",  type=str, required=True, help="Output file.")
 def plot(source, top, lut, output):
 	"""
 	Draws a k-LUT map of the given circuit
@@ -212,16 +211,20 @@ def plot(source, top, lut, output):
 
 
 @click.command("es")
-@click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
-@click.option("-t", "--top",     type=str, required=True, help="specify the top-module name ")
-@click.option("-c", "--config",  type=str, help="path of the configuration file", default="config.ini")
-def es_synth(source, top, config):
+@click.option("--source",  type=str, required=True, help="specify the input HDL source file")
+@click.option("--top",     type=str, required=True, help="specify the top-module name ")
+@click.option("--catalog", type=str,                help = "specify the path for the LUT-catalog cache file", default="lut_catalog.db")
+@click.option("--config",  type=str,                help="path of the configuration file", default="config.ini")
+def es_synth(source, top, catalog, config):
 	"""
 	Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and
 	exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
 	"""
 	if not os.path.exists(source):
 		print(f"{source}: no such file.")
+		exit()
+	if not os.path.exists(catalog):
+		print(f"{catalog}: no such file.")
 		exit()
 	if not os.path.exists(config):
 		print(f"{config}: no such file.")
@@ -235,20 +238,21 @@ def es_synth(source, top, config):
 	synth_design(design, top, als_conf.cut_size)
 	print(f"{als_conf.cut_size}-LUT synthesis successful")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	ALSCatalog(als_conf.catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
+	ALSCatalog(catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
 	print("Done!")
 
 
 @click.command("als")
-@click.option("-s", "--source",  type=str,     required=True, help="specify the input HDL source file")
-@click.option("-t", "--top",     type=str,     required=True, help="specify the top-module name")
-@click.option("-d", "--dataset", type=str,                    help="specify input vectors for error estimation", default=None)
-@click.option("-w", "--weights", type=str,                    help="specify weights for AWCE evaluation", default=None)
-@click.option("-c", "--config",  type=str,                    help="path of the configuration file", default="config.ini")
-@click.option("-o", "--output",  type=str,                    help="Output directory. Everything will be placed there.", default="output/")
-@click.option("-i", "--improve", type=str,                    help="Run again the workflow  using previous Pareto set as initial archive", default=None)
-@click.option("-r", "--hdl",     is_flag=True,                help="Enables rewriting and HDL generation")
-def als(source, top, dataset, weights, config, output, improve, hdl):
+@click.option("--source",  type=str,     required=True, help="specify the input HDL source file")
+@click.option("--top",     type=str,     required=True, help="specify the top-module name")
+@click.option("--dataset", type=str,                    help="specify input vectors for error estimation", default=None)
+@click.option("--weights", type=str,                    help="specify weights for AWCE evaluation", default=None)
+@click.option("--catalog", type=str,                    help = "specify the path for the LUT-catalog cache file", default="lut_catalog.db")
+@click.option("--config",  type=str,                    help="path of the configuration file", default="config.ini")
+@click.option("--output",  type=str,                    help="Output directory. Everything will be placed there.", default="output/")
+@click.option("--improve", type=str,                    help="Run again the workflow  using previous Pareto set as initial archive", default=None)
+@click.option("--hdl",     is_flag=True,                help="Enables rewriting and HDL generation")
+def als(source, top, dataset, weights, catalog, config, output, improve, hdl):
 	"""
 	Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
 	cuts, design space exploration and rewriting.
@@ -261,6 +265,9 @@ def als(source, top, dataset, weights, config, output, improve, hdl):
 		exit()
 	if dataset is not None and not os.path.exists(dataset):
 		print(f"{dataset}: no such file.")
+		exit()
+	if not os.path.exists(catalog):
+		print(f"{catalog}: no such file.")
 		exit()
 	if not os.path.exists(config):
 		print(f"{config}: no such file.")
@@ -284,9 +291,9 @@ def als(source, top, dataset, weights, config, output, improve, hdl):
 		error_conf.weights = weights_parser(weights, graph)
 		print("Output-weight parsing completed")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	catalog = ALSCatalog(als_conf.catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
+	lut_catalog = ALSCatalog(catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-	problem = MOP(top, graph, catalog, error_conf, hw_conf, dataset)
+	problem = MOP(top, graph, lut_catalog, error_conf, hw_conf, dataset)
 	optimizer = AMOSA(amosa_conf)
 	if improve is None:
 		optimizer.random_archive(problem)
@@ -302,25 +309,29 @@ def als(source, top, dataset, weights, config, output, improve, hdl):
 	if hdl:
 		pareto_set = optimizer.pareto_set()
 		print(f"Performing AIG-rewriting.")
-		rewriter = ALSRewriter(graph, catalog)
+		rewriter = ALSRewriter(graph, lut_catalog)
 		for c, n in zip(pareto_set, range(len(pareto_set))):
 			rewriter.rewrite_and_save("original", c, f"{output}/variant_{n:05d}")
 	print(f"All done! Take a look at {output}!")
 
 
 @click.command("rewrite")
-@click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
-@click.option("-t", "--top",     type=str, required=True, help="specify the top-module name ")
-@click.option("-r", "--results", type=str, required=True, help="Pareto-set resulting from previous als runs")
-@click.option("-c", "--config",  type=str, help="path of the configuration file", default="config.ini")
-@click.option("-o", "--output",  type=str, help="Output directory. Everything will be placed there.", default="output/")
-def rewrite(source, top, results, config, output):
+@click.option("--source",  type=str, required=True, help="specify the input HDL source file")
+@click.option("--top",     type=str, required=True, help="specify the top-module name ")
+@click.option("--results", type=str, required=True, help="Pareto-set resulting from previous als runs")
+@click.option("--catalog", type=str,                help="specify the path for the LUT-catalog cache file", default="lut_catalog.db")
+@click.option("--config",  type=str,                help="path of the configuration file", default="config.ini")
+@click.option("--output",  type=str,                help="Output directory. Everything will be placed there.", default="output/")
+def rewrite(source, top, results, catalog, config, output):
 	"""
 	Given a Pareto-set resulting from previous als runs, this command allows generating HDL implementation of
 	approximate circuits.
 	"""
 	if not os.path.exists(source):
 		print(f"{source}: no such file.")
+		exit()
+	if not os.path.exists(catalog):
+		print(f"{catalog}: no such file.")
 		exit()
 	if not os.path.exists(config):
 		print(f"{config}: no such file.")
@@ -338,9 +349,9 @@ def rewrite(source, top, results, config, output):
 	graph = ALSGraph(design)
 	print(f"Graph generation completed")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	catalog = ALSCatalog(als_conf.catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
+	lut_catalog = ALSCatalog(catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
 	print(f"Performing AIG-rewriting.")
-	rewriter = ALSRewriter(graph, catalog)
+	rewriter = ALSRewriter(graph, lut_catalog)
 	file = open(results, "r")
 	n = 0
 	for row in file:
