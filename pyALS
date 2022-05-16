@@ -31,8 +31,10 @@ def git_updater():
 	local_head = repo.heads[0].commit
 	remote_head = repo.remotes.origin.refs[0].commit
 	if remote_head != local_head:
-		print("Updating the tool is needed, that will stop the current execution. Please, run it again.")
+		print("Updating the tool...")
 		repo.remotes.origin.pull()
+		for submodule in repo.submodules:
+			submodule.update(init = True, recursive = True)
 		return True
 	return False
 
