@@ -125,9 +125,8 @@ def clean(catalog):
 		print(f"{catalog}: no such file.")
 		exit()
 	cache = ALSCatalogCache(catalog)
-	specs = cache.get_all_exact_luts()
 	count = 0
-	for s in specs:
+	for s in cache.get_all_exact_luts():
 		exact_synth_spec, exact_S, exact_P, exact_out_p, exact_out, exact_depth = s
 		distance = 1
 		while spec := cache.get_lut_at_dist(exact_synth_spec, distance):
@@ -137,6 +136,15 @@ def clean(catalog):
 				cache.del_lut(exact_synth_spec, distance)
 				count += 1
 			distance += 1
+	# search for complemented specifications
+	for x in cache.get_all_exact_luts():
+		x_synth_spec, _, _, _, _, _ = x
+		for y in cache.get_all_exact_luts():
+			y_synth_spec, _, _, _, _, _ = y
+			if x_synth_spec == ALSCatalogCache.negate(y_synth_spec):
+				print(f"{x_synth_spec}\n{y_synth_spec}\n\n")
+				cache.del_spec(y_synth_spec)
+				count += 1
 	print(f"Deleted {count} instances")
 
 

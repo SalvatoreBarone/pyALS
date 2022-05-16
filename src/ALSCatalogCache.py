@@ -106,3 +106,18 @@ class ALSCatalogCache:
         except sqlite3.Error as e:
             print(e)
             exit()
+
+    def del_spec(self, spec):
+        try:
+            connection = sqlite3.connect(self.__file_name)
+            cursor = connection.cursor()
+            cursor.execute(f"delete from luts where spec = '{spec}'")
+            connection.commit()
+            connection.close()
+        except sqlite3.Error as e:
+            print(e)
+            exit()
+            
+    @staticmethod
+    def negate(spec):
+        return spec.translate(spec.maketrans({"1": "0", "0": "1"}))
