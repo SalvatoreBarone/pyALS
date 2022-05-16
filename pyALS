@@ -133,7 +133,6 @@ def clean(catalog):
 		while spec := cache.get_lut_at_dist(exact_synth_spec, distance):
 			ax_synth_spec, ax_S, ax_P, ax_out_p, ax_out, ax_depth = spec
 			if hamming(exact_synth_spec, ax_synth_spec) > distance or len(ax_S[0]) > len(exact_S[0]):
-				print(f"{exact_synth_spec} {distance}\n{ax_synth_spec}\n\n")
 				cache.del_lut(exact_synth_spec, distance)
 				count += 1
 			distance += 1
@@ -143,7 +142,6 @@ def clean(catalog):
 		for y in cache.get_all_exact_luts():
 			y_synth_spec, _, _, _, _, _ = y
 			if x_synth_spec == ALSCatalogCache.negate(y_synth_spec):
-				print(f"{x_synth_spec}\n{y_synth_spec}\n\n")
 				cache.del_spec(y_synth_spec)
 				count += 1
 	print(f"Deleted {count} instances")
@@ -370,16 +368,36 @@ def rewrite(source, top, results, catalog, config, output):
 	print(f"All done! Take a look at {output}!")
 
 
+@click.command("query")
+@click.option("--catalog", type=str,  required = True, help="specify the path for the LUT-catalog cache file")
+@click.option("--spec",  type=str,    required = True, help="LUT specification to search")
+@click.option("--dist",  type=str,                     help="distance", default="0")
+@click.option("--neg",  is_flag=True,                help="Search for complemented spec")
+def query(catalog, spec, dist, neg):
+	""" Query the catalog for a specific lut implementation """
+	if not os.path.exists(catalog):
+		print(f"{catalog}: no such file.")
+		exit()
+	cache = ALSCatalogCache(catalog)
+	x = cache.get_lut_at_dist(spec if not neg else ALSCatalogCache.negate(spec), dist)
+	if x is None:
+		print(f"{spec}@{dist} not in the catalog cache")
+	else:
+		print(x)
+
+
 cli.add_command(plot)
 cli.add_command(es_synth)
 cli.add_command(als)
 cli.add_command(rewrite)
 cli.add_command(clean)
 cli.add_command(expand)
+cli.add_command(query)
 
 
 if __name__ == '__main__':
-	if git_updater():
-		os.execv(sys.argv[0], sys.argv)
-	else:
-		cli()
+	#if git_updater():
+	#	os.execv(sys.argv[0], sys.argv)
+	#else:
+	#	cli()
+	cli()
