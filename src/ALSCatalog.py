@@ -22,62 +22,64 @@ from .ALSCatalogCache import *
 from .ALSSMT import *
 
 class ALSCatalog:
-  def __init__(self, file_name, solver):
-    self.__cache_file = file_name
-    self.__solver = solver
-    ALSCatalogCache(self.__cache_file).init()
+	def __init__(self, file_name, solver):
+		self.__cache_file = file_name
+		self.__solver = solver
+		ALSCatalogCache(self.__cache_file).init()
 
-  def generate_catalog(self, design, es_timeout):
-    luts_set = set()
-    for module in design.selected_whole_modules_warn():
-      for cell in module.selected_cells():
-        if ys.IdString("\LUT") in cell.parameters:     
-          luts_set.add(cell.parameters[ys.IdString("\LUT")].as_string()[::-1])
+	def generate_catalog(self, design, es_timeout):
+		luts_set = set()
+		for module in design.selected_whole_modules_warn():
+			for cell in module.selected_cells():
+				if ys.IdString("\LUT") in cell.parameters:
+					spec = cell.parameters[ys.IdString("\LUT")].as_string()[::-1]
+					if ALSCatalogCache.negate(spec) not in luts_set:
+						luts_set.add(spec)
 
-    # return generate_catalog(self.__cache_file, luts_set, es_timeout)
-    luts_set = list(luts_set)
-    random.shuffle(luts_set)
-    luts_to_be_synthesized = list_partitioning(luts_set, cpu_count())
-    args = [ [self.__cache_file, luts, es_timeout, self.__solver] for luts in luts_to_be_synthesized ]
-    with Pool(cpu_count()) as pool:
-      catalog = pool.starmap(generate_catalog, args)
-    catalog = [ item for sublist in catalog for item in sublist ]
-    return catalog
+		# return generate_catalog(self.__cache_file, luts_set, es_timeout)
+		luts_set = list(luts_set)
+		random.shuffle(luts_set)
+		luts_to_be_synthesized = list_partitioning(luts_set, cpu_count())
+		args = [ [self.__cache_file, luts, es_timeout, self.__solver] for luts in luts_to_be_synthesized ]
+		with Pool(cpu_count()) as pool:
+			catalog = pool.starmap(generate_catalog, args)
+		catalog = [ item for sublist in catalog for item in sublist ]
+		return catalog
 
 def generate_catalog(catalog_cache_file, luts_set, smt_timeout, solver):
-    catalog = []
-    for lut in luts_set:
-      lut_specifications = []
-      # Sinthesizing the baseline (non-approximate) LUT
-      hamming_distance = 0
-      synt_spec, S, P, out_p, out, depth = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
-      gates = len(S[0])
-      lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out, "depth": depth})
-      #  and, then, approximate ones
-      while gates > 0:
-        hamming_distance += 1
-        synt_spec, S, P, out_p, out, depth = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
-        gates = len(S[0])
-        lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out, "depth": depth})
-      catalog.append(lut_specifications)
-    return catalog
+	catalog = []
+	for lut in luts_set:
+		lut_specifications = []
+		# Sinthesizing the baseline (non-approximate) LUT
+		hamming_distance = 0
+		synt_spec, S, P, out_p, out, depth = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
+		gates = len(S[0])
+		lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out, "depth": depth})
+		#  and, then, approximate ones
+		while gates > 0:
+			hamming_distance += 1
+			synt_spec, S, P, out_p, out, depth = get_synthesized_lut(catalog_cache_file, lut, hamming_distance, solver, smt_timeout)
+			gates = len(S[0])
+			lut_specifications.append({"spec": synt_spec, "gates": gates, "S": S, "P": P, "out_p": out_p, "out": out, "depth": depth})
+		catalog.append(lut_specifications)
+	return catalog
 
 def get_synthesized_lut(cache_file_name, lut_spec, dist, solver, es_timeout):
-  cache = ALSCatalogCache(cache_file_name)
-  result = cache.get_lut_at_dist(lut_spec, dist)
-  if result is None:
-    print(f"Cache miss for {lut_spec}@{dist}")
-    synth_spec, S, P, out_p, out = ALSSMT_Z3(lut_spec, dist, es_timeout).synthesize() if solver == ALSConfig.Solver.Z3 else ALSSMT_Boolector(lut_spec, dist, es_timeout).synthesize()
-    gates = len(S[0])
-    num_ins = int(math.log2(len(synth_spec))) + 1
-    num_nodes = num_ins + gates
-    depth = [0] * num_nodes
-    for i, gate in zip(range(num_ins, num_nodes), zip(*S)):
-      depth[i] = max(depth[gate[0]], depth[gate[1]]) + 1
-    print(f"{lut_spec}@{dist} synthesized as {synth_spec} using {gates} gates at depth {depth[-1]}.")
-    cache.add_lut(lut_spec, dist, synth_spec, S, P, out_p, out, depth[-1])
-    #speculation the synthesized lut is also an exact lut...
-    cache.add_lut(synth_spec, 0, synth_spec, S, P, out_p, out, depth[-1])
-    return synth_spec, S, P, out_p, out, depth[-1]
-  else:
-    return result[0], result[1], result[2], result[3], result[4], result[5]
+	cache = ALSCatalogCache(cache_file_name)
+	result = cache.get_lut_at_dist(lut_spec, dist)
+	if result is None:
+		print(f"Cache miss for {lut_spec}@{dist}")
+		synth_spec, S, P, out_p, out = ALSSMT_Z3(lut_spec, dist, es_timeout).synthesize() if solver == ALSConfig.Solver.Z3 else ALSSMT_Boolector(lut_spec, dist, es_timeout).synthesize()
+		gates = len(S[0])
+		num_ins = int(math.log2(len(synth_spec))) + 1
+		num_nodes = num_ins + gates
+		depth = [0] * num_nodes
+		for i, gate in zip(range(num_ins, num_nodes), zip(*S)):
+			depth[i] = max(depth[gate[0]], depth[gate[1]]) + 1
+		print(f"{lut_spec}@{dist} synthesized as {synth_spec} using {gates} gates at depth {depth[-1]}.")
+		cache.add_lut(lut_spec, dist, synth_spec, S, P, out_p, out, depth[-1])
+		#speculation the synthesized lut is also an exact lut...
+		cache.add_lut(synth_spec, 0, synth_spec, S, P, out_p, out, depth[-1])
+		return synth_spec, S, P, out_p, out, depth[-1]
+	else:
+		return result[0], result[1], result[2], result[3], result[4], result[5]
