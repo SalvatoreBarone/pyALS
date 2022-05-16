@@ -61,14 +61,21 @@ class ALSCatalogCache:
 
     def get_lut_at_dist(self, spec, dist):
         try:
+            result = None
             connection = sqlite3.connect(self.__file_name)
             cursor = connection.cursor()
+            
             cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{spec}' and distance = {dist};")
-            result = cursor.fetchone()
+            res = cursor.fetchone()
+            if res is not None:
+                result = res[0], string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), res[3], res[4], res[5]
+            else:
+                cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{ALSCatalogCache.negate(spec)}' and distance = {dist};")
+                res = cursor.fetchone()
+                if res is not None:
+                    result = ALSCatalogCache.negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]
             connection.close()
-            if result is not None:
-                return result[0], string_to_nested_list_int(result[1]), string_to_nested_list_int(result[2]), result[3], result[4], result[5]
-            return None
+            return result
         except sqlite3.Error as e:
             print(e)
             exit()
