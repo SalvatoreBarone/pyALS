@@ -99,6 +99,20 @@ def weights_parser(weights_file, graph):
 	return weights
 
 
+def plot_labels(error_conf, hw_conf):
+	error_labels = {
+		ErrorConfig.Metric.EPROB : "Error probability",
+		ErrorConfig.Metric.AWCE : "AWCE",
+		ErrorConfig.Metric.MED : "MED"
+	}
+	hw_labels = {
+		HwConfig.Metric.GATES : "#AIG nodes",
+		HwConfig.Metric.DEPTH : "AIG depth",
+		HwConfig.Metric.SWITCHING : "Switching activity"
+	}
+	return [ error_labels[error_conf.metric] ] + [ hw_labels[m] for m in hw_conf.metrics ]
+
+
 @click.group()
 def cli():
 	pass
@@ -171,8 +185,8 @@ def expand(catalog):
 				cache.add_lut(synth_spec, 0, synth_spec, S, P, out_p, out, depth[-1])
 				ax_added += 2
 	print(f"{ax_added} new approximate LUTs inserted in the catalog cache")
-    
-    
+
+
 @click.command("plot")
 @click.option("-s", "--source",  type=str, required=True, help="specify the input HDL source file")
 @click.option("-t", "--top",     type=str, required=True, help="specify the top-module name")
@@ -284,7 +298,7 @@ def als(source, top, dataset, weights, config, output, improve, hdl):
 	print(f"Took {hours} hours, {minutes} minutes")
 	optimizer.save_results(problem, output + "/report.csv")
 	optimizer.save_pareto_set(problem, output + "/pareto_set.csv")
-	optimizer.plot_pareto(problem, output + "/pareto_front.pdf")
+	optimizer.plot_pareto(problem, output + "/pareto_front.pdf", "", plot_labels(error_conf, hw_conf))
 	if hdl:
 		pareto_set = optimizer.pareto_set()
 		print(f"Performing AIG-rewriting.")
