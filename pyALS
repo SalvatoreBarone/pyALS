@@ -260,7 +260,7 @@ def als(source, top, dataset, weights, catalog, config, output, improve, hdl):
 	if not os.path.exists(source):
 		print(f"{source}: no such file.")
 		exit()
-	if not os.path.exists(weights):
+	if weights is not None and not os.path.exists(weights):
 		print(f"{weights}: no such file.")
 		exit()
 	if dataset is not None and not os.path.exists(dataset):
