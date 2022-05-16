@@ -47,4 +47,4 @@ def get_depth(configuration, graph):
 
 
 def get_switching(configuration):
-    return sum([internal_node_activity(c["axspec"]) for c in configuration.values()])
+    return sum([internal_node_activity(c["axspec"])[0] for c in configuration.values()])
