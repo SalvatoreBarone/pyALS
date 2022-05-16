@@ -396,8 +396,7 @@ cli.add_command(query)
 
 
 if __name__ == '__main__':
-	#if git_updater():
-	#	os.execv(sys.argv[0], sys.argv)
-	#else:
-	#	cli()
-	cli()
+	if git_updater():
+		os.execv(sys.argv[0], sys.argv)
+	else:
+		cli()
