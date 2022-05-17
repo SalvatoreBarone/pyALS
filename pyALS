@@ -131,13 +131,15 @@ def clean(catalog):
 	count = 0
 	for s in cache.get_all_exact_luts():
 		exact_synth_spec, exact_S, exact_P, exact_out_p, exact_out, exact_depth = s
-		distance = 1
-		while spec := cache.get_lut_at_dist(exact_synth_spec, distance):
+		gates = len(exact_S[0])
+		for spec in cache.get_approx_luts(exact_synth_spec):
 			ax_synth_spec, ax_S, ax_P, ax_out_p, ax_out, ax_depth = spec
-			if hamming(exact_synth_spec, ax_synth_spec) > distance or len(ax_S[0]) > len(exact_S[0]):
-				cache.del_lut(exact_synth_spec, distance)
+			dist = hamming(exact_synth_spec, ax_synth_spec)
+			if len(ax_S[0]) >= gates:
+				cache.del_lut(exact_synth_spec, dist)
 				count += 1
-			distance += 1
+			else:
+				gates = len(ax_S[0])
 	# search for complemented specifications
 	for x in cache.get_all_exact_luts():
 		x_synth_spec, _, _, _, _, _ = x
