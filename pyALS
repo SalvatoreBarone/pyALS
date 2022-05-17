@@ -143,7 +143,7 @@ def clean(catalog):
 		x_synth_spec, _, _, _, _, _ = x
 		for y in cache.get_all_exact_luts():
 			y_synth_spec, _, _, _, _, _ = y
-			if x_synth_spec == ALSCatalogCache.negate(y_synth_spec):
+			if x_synth_spec == negate(y_synth_spec):
 				cache.del_spec(y_synth_spec)
 				count += 1
 	print(f"Deleted {count} instances")
@@ -160,37 +160,23 @@ def expand(catalog):
 	# for each lut in the catalog, we add the synthesized approximate lut as exact lut at distance 0, if they do not belong to the catalog
 	# this improves the hit-rate for exact luts
 	exact_added = 0
+	luts_to_be_synthesized = set()
 	for x in cache.get_all_luts():
 		x_spec, x_dist, x_synth_spec, x_S, x_P, x_p, x_out, x_depth = x
 		if cache.get_lut_at_dist(x_synth_spec, 0) is None:
 			cache.add_lut(x_synth_spec, 0, x_synth_spec, x_S, x_P, x_p, x_out, x_depth)
-			#print(f"Inserting {x_synth_spec}")
+			if x_synth_spec not in luts_to_be_synthesized and negate(x_synth_spec) not in luts_to_be_synthesized:
+				luts_to_be_synthesized.add(x_synth_spec)
 			exact_added += 1
 	print(f"{exact_added} new exact LUTs inserted in the catalog cache")
-	ax_added = 0
-	for x in cache.get_all_exact_luts():
-		x_synth_spec, x_S, x_P, x_p, x_out, x_depth = x
-		x_gates = len(x_S[0])
-		distance = 0
-		while x_gates > 0:
-			distance += 1
-			y = cache.get_lut_at_dist(x_synth_spec, distance)
-			if y is not None:
-				y_synth_spec, y_S, y_P, y_out_p, y_out, y_depth = y
-				x_gates = len(y_S[0])
-			else:
-				print(f"Cache miss for {x_synth_spec}@{distance}")
-				synth_spec, S, P, out_p, out = ALSSMT_Boolector(x_synth_spec, distance, 0).synthesize()
-				x_gates = len(S[0])
-				num_ins = int(math.log2(len(synth_spec))) + 1
-				num_nodes = num_ins + x_gates
-				depth = [0] * num_nodes
-				for i, gate in zip(range(num_ins, num_nodes), zip(*S)):
-					depth[i] = max(depth[gate[0]], depth[gate[1]]) + 1
-				print(f"{x_synth_spec}@{distance} synthesized as {synth_spec} using {x_gates} gates at depth {depth[-1]}.\n")
-				cache.add_lut(x_synth_spec, distance, synth_spec, S, P, out_p, out, depth[-1])
-				ax_added += 1
-	print(f"{ax_added} new approximate LUTs inserted in the catalog cache")
+
+	luts_to_be_synthesized = list(luts_to_be_synthesized)
+	random.shuffle(luts_to_be_synthesized)
+	luts_sets = list_partitioning(luts_to_be_synthesized, cpu_count())
+	args = [[catalog, lut_set, 60000, ALSConfig.Solver.Boolector] for lut_set in luts_sets]
+	with Pool(cpu_count()) as pool:
+		ax_added = pool.starmap(synthesize, args)
+	print(f"{sum(ax_added)} new approximate LUTs inserted in the catalog cache")
 
 
 @click.command("plot")
@@ -379,7 +365,7 @@ def query(catalog, spec, dist, neg):
 		print(f"{catalog}: no such file.")
 		exit()
 	cache = ALSCatalogCache(catalog)
-	x = cache.get_lut_at_dist(spec if not neg else ALSCatalogCache.negate(spec), dist)
+	x = cache.get_lut_at_dist(spec if not neg else negate(spec), dist)
 	if x is None:
 		print(f"{spec}@{dist} not in the catalog cache")
 	else:

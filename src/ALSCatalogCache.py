@@ -69,10 +69,10 @@ class ALSCatalogCache:
             if res is not None:
                 result = res[0], string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), res[3], res[4], res[5]
             else:
-                cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{ALSCatalogCache.negate(spec)}' and distance = 0;")
+                cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{negate(spec)}' and distance = 0;")
                 res = cursor.fetchone()
                 if res is not None:
-                    result = ALSCatalogCache.negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]
+                    result = negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]
             connection.close()
             return result
         except sqlite3.Error as e:
@@ -88,9 +88,9 @@ class ALSCatalogCache:
             while res := cursor.fetchone():
                 specs.append((res[0], string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), res[3], res[4], res[5]))
             if len(specs) == 0:
-                cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{ALSCatalogCache.negate(spec)}' and distance > 0 order by distance;")
+                cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{negate(spec)}' and distance > 0 order by distance;")
                 while res := cursor.fetchone():
-                    specs.append((ALSCatalogCache.negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]))
+                    specs.append((negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]))
             connection.close()
             return specs
         except sqlite3.Error as e:
@@ -108,10 +108,10 @@ class ALSCatalogCache:
             if res is not None:
                 result = res[0], string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), res[3], res[4], res[5]
             else:
-                cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{ALSCatalogCache.negate(spec)}' and distance = {dist};")
+                cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{negate(spec)}' and distance = {dist};")
                 res = cursor.fetchone()
                 if res is not None:
-                    result = ALSCatalogCache.negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]
+                    result = negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]
             connection.close()
             return result
         except sqlite3.Error as e:
@@ -162,7 +162,3 @@ class ALSCatalogCache:
         except sqlite3.Error as e:
             print(e)
             exit()
-            
-    @staticmethod
-    def negate(spec):
-        return spec.translate(spec.maketrans({"1": "0", "0": "1"}))

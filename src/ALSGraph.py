@@ -56,7 +56,6 @@ class ALSGraph:
   def get_depth(self, configuration):
     top_ord = self.__graph.topological_sorting()
     depths = [0] * len(top_ord)
-
     for i, v in zip(range(len(top_ord)), [self.__graph.vs[v_i] for v_i in top_ord]):
       if v["type"] in (ALSGraph.VertexType.CELL, ALSGraph.VertexType.PRIMARY_OUTPUT):
         depths[i] = max((configuration[p["name"]]["depth"] if p["type"] == ALSGraph.VertexType.CELL else 0) for p in v.predecessors()) + (configuration[v["name"]]["depth"] if v["type"] == ALSGraph.VertexType.CELL else 0)

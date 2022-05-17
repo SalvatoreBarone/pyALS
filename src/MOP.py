@@ -100,11 +100,17 @@ class MOP(AMOSA.Problem):
                 self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
     def _matter_configuration(self, x):
-        return {l["name"]: {"dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]} for c, l in zip(x, self.graph.get_cells()) for e in self.catalog if e[0]["spec"] == l["spec"]}
+        matter = {}
+        for c, l in zip(x, self.graph.get_cells()):
+            for e in self.catalog:
+                if e[0]["spec"] == l["spec"]:
+                    matter[l["name"]] = {"dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]}
+                if negate(e[0]["spec"]) == l["spec"]:
+                    matter[l["name"]] = {"dist": c, "spec": negate(e[0]["spec"]), "axspec": negate(e[c]["spec"]), "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": 1 - e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]}
+        return matter
 
     def _get_upper_bound(self):
-        cells = [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()]
-        return [len(e) - 1 for c in cells for e in self.catalog if e[0]["spec"] == c["spec"]]
+        return [len(e) - 1 for c in [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()] for e in self.catalog if e[0]["spec"] == c["spec"] or negate(e[0]["spec"]) == c["spec"] ]
 
     def _get_outputs(self, configuration):
         for a in self.__args:
