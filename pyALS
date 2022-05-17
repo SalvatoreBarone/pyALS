@@ -189,9 +189,7 @@ def expand(catalog):
 					depth[i] = max(depth[gate[0]], depth[gate[1]]) + 1
 				print(f"{x_synth_spec}@{distance} synthesized as {synth_spec} using {x_gates} gates at depth {depth[-1]}.\n")
 				cache.add_lut(x_synth_spec, distance, synth_spec, S, P, out_p, out, depth[-1])
-				# speculation the synthesized lut is also an exact lut...
-				cache.add_lut(synth_spec, 0, synth_spec, S, P, out_p, out, depth[-1])
-				ax_added += 2
+				ax_added += 1
 	print(f"{ax_added} new approximate LUTs inserted in the catalog cache")
 
 
@@ -374,7 +372,7 @@ def rewrite(source, top, results, catalog, config, output):
 @click.option("--catalog", type=str,  required = True, help="specify the path for the LUT-catalog cache file")
 @click.option("--spec",  type=str,    required = True, help="LUT specification to search")
 @click.option("--dist",  type=str,                     help="distance", default="0")
-@click.option("--neg",  is_flag=True,                help="Search for complemented spec")
+@click.option("--neg",  is_flag=True,                  help="Search for complemented spec")
 def query(catalog, spec, dist, neg):
 	""" Query the catalog for a specific lut implementation """
 	if not os.path.exists(catalog):

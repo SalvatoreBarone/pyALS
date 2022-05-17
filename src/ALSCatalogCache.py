@@ -59,6 +59,44 @@ class ALSCatalogCache:
             print(e)
             exit()
 
+    def get_exact_lut(self, spec):
+        try:
+            result = None
+            connection = sqlite3.connect(self.__file_name)
+            cursor = connection.cursor()
+            cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{spec}' and distance = 0;")
+            res = cursor.fetchone()
+            if res is not None:
+                result = res[0], string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), res[3], res[4], res[5]
+            else:
+                cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{ALSCatalogCache.negate(spec)}' and distance = 0;")
+                res = cursor.fetchone()
+                if res is not None:
+                    result = ALSCatalogCache.negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]
+            connection.close()
+            return result
+        except sqlite3.Error as e:
+            print(e)
+            exit()
+
+    def get_approx_luts(self, spec):
+        try:
+            specs = []
+            connection = sqlite3.connect(self.__file_name)
+            cursor = connection.cursor()
+            cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{spec}' and distance > 0 order by distance;")
+            while res := cursor.fetchone():
+                specs.append((res[0], string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), res[3], res[4], res[5]))
+            if len(specs) == 0:
+                cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{ALSCatalogCache.negate(spec)}' and distance > 0 order by distance;")
+                while res := cursor.fetchone():
+                    specs.append((ALSCatalogCache.negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]))
+            connection.close()
+            return specs
+        except sqlite3.Error as e:
+            print(e)
+            exit()
+
     def get_lut_at_dist(self, spec, dist):
         try:
             result = None
