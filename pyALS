@@ -161,6 +161,27 @@ def expand(catalog):
 		print(f"{catalog}: no such file.")
 		exit()
 	cache = ALSCatalogCache(catalog)
+
+	# try to complete any incomplete path in the catalog
+	luts_to_be_synthesized = set()
+	for x in cache.get_all_exact_luts():
+		ex_spec, ex_dist, ex_synth_spec, ex_S, ex_P, ex_p, ex_out, ex_depth = x
+		axspect = cache.get_approx_luts(ex_spec)
+		ax_synth_spec, ax_S, ax_P, ax_out_p, ax_out, ax_depth = axspect[-1]
+		gates = len(ax_S[0])
+		distance = hamming(ex_spec, ax_synth_spec)
+		if gates > 0:
+			print(f"Incomplete catalog found for spec {ex_spec}. Synthesis will start from Hamming distance {distance + 1}")
+			luts_to_be_synthesized.add((ex_spec, gates, distance + 1))
+	luts_to_be_synthesized = list(luts_to_be_synthesized)
+	random.shuffle(luts_to_be_synthesized)
+	luts_sets = list_partitioning(luts_to_be_synthesized, cpu_count())
+	args = [[catalog, lut_set, 60000, ALSConfig.Solver.Boolector] for lut_set in luts_sets]
+	with Pool(cpu_count()) as pool:
+		ax_added = pool.starmap(synthesize_at_dist, args)
+	print(f"{sum(ax_added)} new approximate LUTs inserted in the catalog cache while attempting catalog completion")
+
+
 	# for each lut in the catalog, we add the synthesized approximate lut as exact lut at distance 0, if they do not belong to the catalog
 	# this improves the hit-rate for exact luts
 	exact_added = 0

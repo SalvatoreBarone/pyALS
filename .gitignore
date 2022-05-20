@@ -146,3 +146,4 @@ Evaluation/
 run.sh
 
 run_experiments.sh
+*.pdf

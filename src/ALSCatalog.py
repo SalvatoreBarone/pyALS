@@ -88,6 +88,21 @@ def synthesize(catalog_cache_file, luts_set, smt_timeout, solver):
 			hamming_distance += 1
 
 
+def synthesize_at_dist(catalog_cache_file, luts_set, smt_timeout, solver):
+	cache = ALSCatalogCache(catalog_cache_file)
+	for lut_conf, gates, distance in luts_set:
+		hamming_distance = distance
+		current_gates = gates
+		while current_gates > 0:
+			print(f"Synthesizing {lut_conf}@{hamming_distance}.")
+			synt_spec, S, P, out_p, out, depth = do_synthesis(lut_conf, hamming_distance, solver, smt_timeout)
+			print(f"{lut_conf}@{hamming_distance} synthesized as {synt_spec} using {len(S[0])} gates at depth {depth}.")
+			if len(S[0]) < current_gates:
+				cache.add_lut(lut_conf, hamming_distance, synt_spec, S, P, out_p, out, depth)
+			current_gates = len(S[0])
+			hamming_distance += 1
+
+
 def do_synthesis(lut_spec, dist, solver, es_timeout):
 	synth_spec, S, P, out_p, out = ALSSMT_Z3(lut_spec, dist, es_timeout).synthesize() if solver == ALSConfig.Solver.Z3 else ALSSMT_Boolector(lut_spec, dist, es_timeout).synthesize()
 	num_ins = int(math.log2(len(synth_spec))) + 1
