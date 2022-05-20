@@ -295,7 +295,7 @@ def als(source, top, dataset, weights, catalog, config, output, improve, hdl):
 	if improve is None:
 		optimizer.random_archive(problem)
 	else:
-		optimizer.seeded_archive(problem, improve)
+		optimizer.seeded_archive(problem, optimizer.read_seeds_from_csv(problem, improve))
 	optimizer.minimize(problem)
 	hours = int(optimizer.duration / 3600)
 	minutes = int((optimizer.duration - hours * 3600) / 60)
