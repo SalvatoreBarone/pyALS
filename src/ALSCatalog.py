@@ -33,7 +33,7 @@ class ALSCatalog:
 			for cell in module.selected_cells():
 				if ys.IdString("\LUT") in cell.parameters:
 					spec = cell.parameters[ys.IdString("\LUT")].as_string()[::-1]
-					if negate(spec) not in luts_set:
+					if negate(spec) not in luts_set or spec not in luts_set:
 						luts_set.add(spec)
 		luts_set = list(luts_set)
 		random.shuffle(luts_set)
