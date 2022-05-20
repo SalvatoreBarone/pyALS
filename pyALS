@@ -22,7 +22,7 @@ from distutils.dir_util import mkpath
 from src.ALSCatalog import *
 from src.MOP import *
 from src.ALSRewriter import *
-from src.ALSCatalogCache import *
+from src.stats import *
 
 
 def git_updater():
@@ -376,6 +376,27 @@ def query(catalog, spec, dist, neg):
 		print(x)
 
 
+@click.command("stats")
+@click.option("--catalog",       type=str, required = True, help="specify the path for the LUT-catalog cache file")
+@click.option("--gates",                   is_flag = True,  help="histogram of functions w.r.t. the number of AIG nodes")
+@click.option("--power-gates",             is_flag = True,  help="box-and-whiskers plot of switching activity w.r.t. the number of AIG nodes")
+@click.option("--power-truth",             is_flag = True,  help="box-and-whiskers plot of switching activity w.r.t. the truth-density")
+@click.option("--power-truth-k", type=int,                  help="box-and-whiskers plot of switching activity w.r.t. the truth-density for k-luts", default = None)
+def stats(catalog, gates, power_gates, power_truth, power_truth_k):
+	""" Compute statistics on a given catalog """
+	if not os.path.exists(catalog):
+		print(f"{catalog}: no such file.")
+		exit()
+	if gates:
+		gates_histogram(catalog)
+	if power_gates:
+		power_gates_boxplot(catalog)
+	if power_truth:
+		power_truth_boxplot(catalog)
+	if power_truth_k is not None:
+		power_truth_k_boxplot(power_truth_k)
+
+
 cli.add_command(plot)
 cli.add_command(es_synth)
 cli.add_command(als)
@@ -383,7 +404,7 @@ cli.add_command(rewrite)
 cli.add_command(clean)
 cli.add_command(expand)
 cli.add_command(query)
-
+cli.add_command(stats)
 
 if __name__ == '__main__':
 	if git_updater():
