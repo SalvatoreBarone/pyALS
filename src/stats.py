@@ -29,7 +29,7 @@ def gates_histogram(catalog):
 			gates_per_luts[ngates] = 1
 		else:
 			gates_per_luts[ngates] += 1
-	plt.figure()
+	plt.figure(figsize=[8,4])
 	gates_range = list(gates_per_luts.keys())
 	gates_range.sort()
 	plt.bar(gates_range, [gates_per_luts[i] for i in gates_range], width=0.5)
@@ -72,7 +72,7 @@ def power_gates_boxplot(catalog):
 		power_per_gates[exact_gates].append(exact_power)
 	gates_range = list(power_per_gates.keys())
 	gates_range.sort()
-	plt.figure()
+	plt.figure(figsize=[8,4])
 	data = [power_per_gates[i] for i in reversed(gates_range)]
 	plt.boxplot(data, labels=list(reversed(gates_range)))
 	plt.ylabel("Switching activity")
@@ -92,7 +92,7 @@ def power_truth_boxplot(catalog):
 		power_per_ones[ones].append(exact_power)
 	ones_range = list(power_per_ones.keys())
 	ones_range.sort()
-	plt.figure()
+	plt.figure(figsize=[8,4])
 	data = [power_per_ones[i] for i in ones_range]
 	plt.boxplot(data, labels=ones_range)
 	plt.ylabel("Switching activity")
@@ -109,6 +109,7 @@ def power_truth_k_boxplot(k):
 		spec = spec.format(bool_f=bool_f)
 		ones = spec.count('1')
 		powers[ones].append(internal_node_activity(spec)[0])
+	fig = plt.figure(figsize=[8,4])
 	plt.boxplot([powers[i] for i in relevant_truth], labels=relevant_truth)
 	plt.ylabel("Switching activity")
 	plt.xlabel("Truth density")
