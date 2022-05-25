@@ -254,7 +254,7 @@ class ALSSMT_Boolector:
 
 def hamming(s1, s2):
     assert len(s1) == len(s2), "specs must be equal in lenght"
-    return sum([1 for x, y in zip(s1, s2) if x == y])
+    return sum([1 for x, y in zip(s1, s2) if x != y])
 
 
 def truth_table_value(i, t):
