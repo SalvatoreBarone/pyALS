@@ -268,9 +268,10 @@ def es_synth(source, top, catalog, config):
 @click.option("--catalog", type=str,                    help = "specify the path for the LUT-catalog cache file", default="lut_catalog.db")
 @click.option("--config",  type=str,                    help="path of the configuration file", default="config.ini")
 @click.option("--output",  type=str,                    help="Output directory. Everything will be placed there.", default="output/")
-@click.option("--improve", type=str,                    help="Run again the workflow  using previous Pareto set as initial archive", default=None)
+@click.option("--improve", type=str,                    help="Path of the file containing results from previous runs to be improved", default=None)
+@click.option("--resume",  is_flag=True,                help="Resume the execution")
 @click.option("--hdl",     is_flag=True,                help="Enables rewriting and HDL generation")
-def als(source, top, dataset, weights, catalog, config, output, improve, hdl):
+def als(source, top, dataset, weights, catalog, config, output, improve, resume, hdl):
 	"""
 	Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
 	cuts, design space exploration and rewriting.
@@ -313,11 +314,14 @@ def als(source, top, dataset, weights, catalog, config, output, improve, hdl):
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
 	problem = MOP(top, graph, lut_catalog, error_conf, hw_conf, dataset)
 	optimizer = AMOSA(amosa_conf)
-	if improve is None:
-		optimizer.random_archive(problem)
+	if not resume:
+		if improve is None:
+			optimizer.random_archive(problem)
+		else:
+			optimizer.archive_from_json(problem, improve)
+		optimizer.minimize(problem, output + "/checkpoint.json")
 	else:
-		optimizer.seeded_archive(problem, optimizer.read_seeds_from_csv(problem, improve))
-	optimizer.minimize(problem)
+		optimizer.minimize_from_checkpoint(problem, output + "/checkpoint.json")
 	hours = int(optimizer.duration / 3600)
 	minutes = int((optimizer.duration - hours * 3600) / 60)
 	print(f"Took {hours} hours, {minutes} minutes")
