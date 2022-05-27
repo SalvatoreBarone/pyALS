@@ -327,6 +327,7 @@ def als(source, top, dataset, weights, catalog, config, output, improve, resume,
 	print(f"Took {hours} hours, {minutes} minutes")
 	optimizer.save_results(problem, output + "/report.csv")
 	optimizer.save_pareto_set(problem, output + "/pareto_set.csv")
+	optimizer.archive_to_json(output + "/final_archive.json")
 	optimizer.plot_pareto(problem, output + "/pareto_front.pdf", "", plot_labels(error_conf, hw_conf))
 	if hdl:
 		pareto_set = optimizer.pareto_set()
