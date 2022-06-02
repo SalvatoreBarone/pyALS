@@ -334,7 +334,7 @@ def als(source, top, dataset, weights, catalog, config, output, improve, resume)
 	rewriter = ALSRewriter(graph, lut_catalog)
 	for c, n in zip(pareto_set, range(len(pareto_set))):
 		hdl_file_name = f"{output}/variant_{n:05d}"
-		rewriter.rewrite_and_save("original", c, )
+		rewriter.rewrite_and_save("original", c, hdl_file_name)
 		print(f"{hdl_file_name} written successfully")
 	print(f"All done! Take a look at {output}!")
 
