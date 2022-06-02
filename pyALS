@@ -269,10 +269,9 @@ def es_synth(source, top, catalog, config):
 @click.option("--catalog", type=str,                    help = "specify the path for the LUT-catalog cache file", default="lut_catalog.db")
 @click.option("--config",  type=str,                    help="path of the configuration file", default="config.ini")
 @click.option("--output",  type=str,                    help="Output directory. Everything will be placed there.", default="output/")
-@click.option("--improve", type=str,                    help="Path of the file containing results from previous runs to be improved", default=None)
+@click.option("--improve", type=str,                    help="Path of the file containing results from previous runs to be improved (JSON file)", default=None)
 @click.option("--resume",  is_flag=True,                help="Resume the execution")
-@click.option("--hdl",     is_flag=True,                help="Enables rewriting and HDL generation")
-def als(source, top, dataset, weights, catalog, config, output, improve, resume, hdl):
+def als(source, top, dataset, weights, catalog, config, output, improve, resume):
 	"""
 	Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
 	cuts, design space exploration and rewriting.
@@ -330,58 +329,13 @@ def als(source, top, dataset, weights, catalog, config, output, improve, resume,
 	optimizer.save_pareto_set(problem, output + "/pareto_set.csv")
 	optimizer.archive_to_json(output + "/final_archive.json")
 	optimizer.plot_pareto(problem, output + "/pareto_front.pdf", "", plot_labels(error_conf, hw_conf))
-	if hdl:
-		pareto_set = optimizer.pareto_set()
-		print(f"Performing AIG-rewriting.")
-		rewriter = ALSRewriter(graph, lut_catalog)
-		for c, n in zip(pareto_set, range(len(pareto_set))):
-			rewriter.rewrite_and_save("original", c, f"{output}/variant_{n:05d}")
-	print(f"All done! Take a look at {output}!")
-
-
-@click.command("rewrite")
-@click.option("--source",  type=str, required=True, help="specify the input HDL source file")
-@click.option("--top",     type=str, required=True, help="specify the top-module name ")
-@click.option("--results", type=str, required=True, help="Pareto-set resulting from previous als runs")
-@click.option("--catalog", type=str,                help="specify the path for the LUT-catalog cache file", default="lut_catalog.db")
-@click.option("--config",  type=str,                help="path of the configuration file", default="config.ini")
-@click.option("--output",  type=str,                help="Output directory. Everything will be placed there.", default="output/")
-def rewrite(source, top, results, catalog, config, output):
-	"""
-	Given a Pareto-set resulting from previous als runs, this command allows generating HDL implementation of
-	approximate circuits.
-	"""
-	if not os.path.exists(source):
-		print(f"{source}: no such file.")
-		exit()
-	if not os.path.exists(catalog):
-		print(f"{catalog}: no such file.")
-		exit()
-	if not os.path.exists(config):
-		print(f"{config}: no such file.")
-		exit()
-	if output != ".":
-		mkpath(output)
-	als_conf, error_conf, hw_conf, amosa_conf = config_parser(config)
-	design = ys.Design()
-	ys.run_pass("plugin -i ghdl", design)
-	print("GHDL plugin loaded successfully")
-	read_source(source, top, design)
-	print(f"{source} read successfully")
-	synth_design(design, top, als_conf.cut_size)
-	print(f"{als_conf.cut_size}-LUT synthesis successful")
-	graph = ALSGraph(design)
-	print(f"Graph generation completed")
-	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	lut_catalog = ALSCatalog(catalog, als_conf.solver).generate_catalog(design, als_conf.timeout)
+	pareto_set = optimizer.pareto_set()
 	print(f"Performing AIG-rewriting.")
 	rewriter = ALSRewriter(graph, lut_catalog)
-	file = open(results, "r")
-	n = 0
-	for row in file:
-		c = [int(r) for r in list(filter(None, row.replace("\n", "").split(";")))]
-		rewriter.rewrite_and_save("original", c, f"{output}/variant_{n:05d}")
-		n += 1
+	for c, n in zip(pareto_set, range(len(pareto_set))):
+		hdl_file_name = f"{output}/variant_{n:05d}"
+		rewriter.rewrite_and_save("original", c, )
+		print(f"{hdl_file_name} written successfully")
 	print(f"All done! Take a look at {output}!")
 
 
@@ -427,7 +381,6 @@ def stats(catalog, gates, power_gates, power_truth, power_truth_k):
 cli.add_command(plot)
 cli.add_command(es_synth)
 cli.add_command(als)
-cli.add_command(rewrite)
 cli.add_command(clean)
 cli.add_command(expand)
 cli.add_command(query)
