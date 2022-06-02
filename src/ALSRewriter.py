@@ -16,6 +16,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import gc
 from pyosys import libyosys as ys
+from .Utility import *
 
 class ALSRewriter:
     def __init__(self, graph, catalog):
@@ -61,12 +62,17 @@ class ALSRewriter:
         gc.collect()
 
     def __configuration(self, x):
-        return [{"name": l["name"], "dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"],
-                 "S": e[c]["S"], "P": e[c]["P"], "out_p": e[c]["out_p"], "out": e[c]["out"]} for c, l in
-                zip(x, self.graph.get_cells()) for e in self.catalog if e[0]["spec"] == l["spec"]]
+        matter = {}
+        for c, l in zip(x, self.graph.get_cells()):
+            for e in self.catalog:
+                if e[0]["spec"] == l["spec"]:
+                    matter[l["name"]] = {"dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]}
+                if negate(e[0]["spec"]) == l["spec"]:
+                    matter[l["name"]] = {"dist": c, "spec": negate(e[0]["spec"]), "axspec": negate(e[c]["spec"]), "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": 1 - e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]}
+        return matter
 
     def __cell_to_aig(self, configuration, module, cell):
-        ax_cell_conf = [c for c in configuration if c["name"] == cell.name.str()][0]
+        ax_cell_conf = configuration[cell.name.str()]
         sigmap = ys.SigMap(module)
         S = ax_cell_conf["S"]
         P = ax_cell_conf["P"]
