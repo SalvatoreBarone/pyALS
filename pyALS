@@ -26,7 +26,8 @@ from src.stats import *
 
 
 def git_updater():
-	repo = git.Repo('.')
+	dir_path = os.path.dirname(os.path.realpath(__file__))
+	repo = git.Repo(dir_path)
 	repo.remotes.origin.fetch()
 	local_head = repo.heads[0].commit
 	remote_head = repo.remotes.origin.refs[0].commit
