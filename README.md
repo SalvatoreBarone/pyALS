@@ -15,7 +15,7 @@ Please, cite us!
 }
 ```
 
-## Installation
+## Using the ready-to-use docker container
 pyALS has quite a lot of dependencies. You need to install Yosys (and its dependencies), GHDL (and, again, its dependencies), and so forth.
 Before you get a headache, ***you can use the Docker image I have made available to you [here](https://hub.docker.com/r/salvatorebarone/pyals-docker-image).***  
 
@@ -54,21 +54,126 @@ xhost local:docker
 docker run --rm -e DISPLAY=unix$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix -v ${catalog}:/root/lut_catalog.db -v ${shared}:/root/shared -w /root --privileged -it salvatorebarone/pyals-docker-image /bin/zsh
 ```
 
-If, on the other hand, you really feel the need to install everything by hand, follow this guide step by step. 
+If, on the other hand, you really feel the need to install everything by hand, follow the guide below step by step. 
 I'm sure it will be very helpful.
-The guide has been tested on Debian 11.
 
-### Cloning the repo
-pyALS uses git submodules, so you have to clone this repository as follows
+## Running pyALS
+pyALS supports the following main commands, each with its own set of options:
+  - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
+  - ```es```: performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting;
+  - ```plot```: only draws the k-LUT map of the given circuit;
+
+Please kindly note you will need the file where synthesized Boolean functions are stored, i.e., the catalog-cache file. 
+You can mine, which is ready-to-use, frequently updated and freely available at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
+If you do not want to use the one I mentioned, pyALS will perform exact synthesis when needed.
+
+Furthermore, the ```als``` and ```es``` commands requires a lot of configuration parameters, which are provided through a JSON configuration file. Therefore,
+we will first discuss the generic structure of the latter, before going into command-specific information.
+
+### The configuration file
+The configuration file defines parameters governing the behavior of pyALS. Is is a JSON file which generic structure is reported below.
+Please note that, depending on the specific command you selected, some parameters are not required, hence they can be omitted.
+Furthermore, an example configuration file is provided in the ```example``` directory.
+
+In the following, each field of the JSON file is described using C-Style comments. Note JSON does not provide any support for comments, hence you must remove them in case you copy-and-paste from the following box.
+
 ```
-git clone git@github.com:SalvatoreBarone/pyALS.git
-git submodule init
-git submodule update
+{
+    "hdl" : {                                           // the "hdl" section defines HDL source files, the name of the top-level entity, and the output directory
+        "source" : "example/mult_2_bit.sv",             // specify the input HDL source file, always required  
+        "top"    : "mult_2_bit",                        // specify the top-module name, always required
+        "output" : "output_directory"                   // specify the top-module name, ignored by the es command
+    },
+    "als" : {
+        "cache"    : "path_to_the_catalog_cache/catalog_cache.db",
+        "cut_size" : 4,                                 // specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration, always required
+        "solver"   : "btor",                            // SAT-solver to be used. It can be either btor (Boolector) or z3 (Z3-solver), always required
+        "timeout"  : 60000                              // Timeout (in ms) for the exact synthesis process, always required. It is better you don't change its default value.              
+    },
+    "error" : {                                         // This section defines error-related stuff
+        "metric"       : "med",                         // Error metric to be used during Design-Space exploration. It can be "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively; The "ia-ep" and "ia-ed" stand for "input-aware" error-probability and error-distance, which require the user to provide the probability-distribution for input vectors  
+        "threshold"    : 16,                            // The error threshold
+        "vectors"      : 5,                             // The number of test vectors for error assessment. Using the value "0" will unlock exhaustive evaluation, i.e., it will cause the tool to evaluate the error for every possible input assignment.
+        "distribution" : [                              // Input distribution, required for both the "ia-ep" and "ia-ed" metrics.
+            {"lb": 127, "ub": 129, "p": 0.2},
+            {"lb": 1,   "ub": 19,  "p": 0.3}
+        ],
+        "weigths" : {                                   // specify weights for outputs, as needed by the AWCE, MED and IA-MED metrics
+            "\\o[0]" : 1,
+            "\\o[1]" : 2,
+            "\\o[2]" : 4,
+            "\\o[3]" : 8
+        }
+
+    },
+    "hardware]" : {                                     // Hardware related stuff
+        "metric" : ["gates", "depth", "switching"]      // hardware metric(s) to be optimized (AIG-gates, AIG-depth, or LUT switching activity). Please note you can specify more than one metric.
+    },
+    "amosa" : {                                         // Parameters governing the Archived Multi-Objective Simulated-Annealing optimization heuristic 
+        "archive_hard_limit"       : 100,               // Archive hard limit for the AMOSA optimization heuristic, see [1]
+        "archive_soft_limit"       : 200,               // Archive soft limit for the AMOSA optimization heuristic, see [1]
+        "archive_gamma"            : 2,                 // Gamma parameter for the AMOSA optimization heuristic, see [1]
+        "hill_climbing_iterations" : 500,               // the number of iterations performed during the initial hill-climbing refinement, see [1];
+        "initial_temperature"      : 500,               // Initial temperature of the matter for the AMOSA optimization heuristic, see [1]
+        "final_temperature"        : 0.0000001,         // Final temperature of the matter for the AMOSA optimization heuristic, see [1]
+        "cooling_factor"           : 0.95,              // It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
+        "annealing_iterations"     : 750,               // The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
+        "annealing_strength"       : 1,                 // Governs the strength of random perturbations during the annealing phase; specifically, the number of variables whose value is affected by perturbation.
+        "early_termination"        : 20                 // Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
+    }
+}
 ```
-or
+
+### The ```als``` command
+Usage: 
 ```
-git clone --recursive git@github.com:SalvatoreBarone/pyALS.git
+pyALS als [OPTIONS]
 ```
+Options:
+```
+  --config TEXT   path of the configuration file
+  --improve TEXT  Run again the workflow using previous Pareto set as initial archive
+  --resume        Resume the execution
+```
+Example:
+```
+./pyALS als --config example/config.json --improve output_dir/final_archive.json --resume 
+```
+
+### The ```es``` command
+Usage: 
+```
+pyALS es [OPTIONS]
+```
+Options:
+```
+  --config TEXT  path of the configuration file
+```
+Example:
+```
+./pyALS es --config example/config.json 
+```
+
+### The ```plot``` command
+Usage: 
+```
+pyALS plot [OPTIONS]
+```
+Options:
+```
+  --source TEXT  specify the input HDL source file  [required]
+  --top TEXT     specify the top-module name  [required]
+  --lut TEXT     specify the LUT size  [required]
+  --output TEXT  Output file.  [required]
+```
+Example:
+```
+./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit -lut 4 -output mult_2_bit.pdf 
+```
+
+## Manual installation
+
+The guide has been tested on Debian 11.
 
 ### Preliminaries
 You need to install some basic dependencies. So, run
@@ -84,6 +189,17 @@ You also need to create some symbolic links.
 ```
 Please, kindly note you are required to amend any differences concerning the python version. I'm using python 3.9 here.
 
+### Cloning the repo
+pyALS uses git submodules, so you have to clone this repository as follows
+```
+git clone git@github.com:SalvatoreBarone/pyALS.git
+git submodule init
+git submodule update
+```
+or
+```
+git clone --recursive git@github.com:SalvatoreBarone/pyALS.git
+```
 
 ### Installing Yosys
 First, you need to clone Yosys from its public repository
@@ -155,120 +271,6 @@ You're almost done, the last step is to install python dependencies. It's quite 
 pip3 install -r requirements.txt 
 ```
 
-## Running pyALS
-pyALS supports the following main commands, each with its own set of options:
-  - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
-  - ```es```: performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting;
-  - ```plot```: only draws the k-LUT map of the given circuit;
-  - ```rewrite```: given a Pareto-set resulting from previous als runs, this command allows generating HDL implementation of approximate circuits.
-
-Please kindly note you have to specify the path of the file where synthesized Boolean functions are stored. You can find a ready to use cache at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
-If you do not want to use the one I mentioned, pyALS will perform exact synthesis as needed.
-
-### The ```als``` command
-Usage: 
-```
-pyALS als [OPTIONS]
-```
-Options:
-```
-  --source TEXT   specify the input HDL source file  [required]
-  --top TEXT      specify the top-module name   [required]
-  --weights TEXT  specify weights for AWCE evaluation
-  --config TEXT   path of the configuration file
-  --catalog TEXT  specify the path for the LUT-catalog cache file
-  --output TEXT   Output directory. Everything will be placed there.
-  --improve TEXT  Run again the workflow  using previous Pareto set as initial archive
-  --hdl           Enables rewriting and HDL generation
-```
-Example:
-```
-./pyALS als --source example/mult_2_bit.sv --top mult_2_bit --weights example/output_weights.txt --config example/config.ini --output prova --hdl 
-```
-
-### The ```es``` command
-Usage: 
-```
-pyALS es [OPTIONS]
-```
-Options:
-```
-  --source TEXT  specify the input HDL source file  [required]
-  --top TEXT     specify the top-module name   [required]
-  --catalog TEXT  specify the path for the LUT-catalog cache file
-  --config TEXT  path of the configuration file
-```
-Example:
-```
-./pyALS es --source example/mult_2_bit.sv --top mult_2_bit --config example/config.ini 
-```
-
-### The ```rewrite``` command
-Usage: 
-```
-pyALS rewrite [OPTIONS]
-```
-Options:
-```
-  --source TEXT   specify the input HDL source file  [required]
-  --top TEXT      specify the top-module name   [required]
-  --results TEXT  Pareto-set resulting from previous als runs  [required]
-  --config TEXT   path of the configuration file
-  --catalog TEXT  specify the path for the LUT-catalog cache file
-  --output TEXT   Output directory. Everything will be placed there.
-```
-Example:
-```
-./pyALS rewrite --source example/mult_2_bit.sv --top mult_2_bit --config example/config.ini --output prova --results results/pareto_set.csv
-```
-### The ```plot``` command
-Usage: 
-```
-pyALS plot [OPTIONS]
-```
-Options:
-```
-  --source TEXT  specify the input HDL source file  [required]
-  --top TEXT     specify the top-module name  [required]
-  --lut TEXT     specify the LUT size  [required]
-  --output TEXT  Output file.  [required]
-```
-Example:
-```
-./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit -lut 4 -output mult_2_bit.pdf 
-```
-
-
-### The configuration file
-Several of the mentioned commands require a configuration file that defines parameters governing the behavior of pyALS.
-Here, I report the basic structure of a configuration file.
-```
-[als]
-cut_size = 4              ; specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration
-solver = btor            ; SAT-solver to be used. It can be either btor (Boolector) or z3 (Z3-solver)
-timeout = 60000          ; Timeout (in ms) for the Exact synthesis process. You don't need to change its default value.
-
-[error]
-metric = med             ; Error metric to be used during Design-Space exploration. It can be "eprob", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively
-threshold = 1            ; The error threshold
-vectors = 0              ; The number of test vectors for error assessment. "0" will unlock exhaustive evaluation.
-
-[hardware]
-metric = gates, depth    ; hardware metric(s) to be optimized (gates, depth, switching).
-
-[amosa]
-archive_hard_limit = 30         ; Archive hard limit for the AMOSA optimization heuristic, see [1]
-archive_soft_limit = 50         ; Archive soft limit for the AMOSA optimization heuristic, see [1]
-archive_gamma = 2               ; Gamma parameter for the AMOSA optimization heuristic, see [1]
-hill_climbing_iterations = 250  ; the number of iterations performed during the initial hill-climbing refinement, see [1];
-initial_temperature = 500       ; Initial temperature of the matter for the AMOSA optimization heuristic, see [1]
-final_temperature = 0.000001    ; Final temperature of the matter for the AMOSA optimization heuristic, see [1]
-cooling_factor =  0.9           ; It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
-annealing_iterations = 600      ; The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
-annealing_strength = 1          ; Governs the strength of random perturbations during the annealing phase; specifically, the number of variables whose value is affected by perturbation.
-early_termination = 20          ; Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
-
-```
 
 
 

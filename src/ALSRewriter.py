@@ -29,7 +29,7 @@ class ALSRewriter:
         for module in design.selected_whole_modules_warn():
             for cell in module.selected_cells():
                 if ys.IdString("\LUT") in cell.parameters:
-                    self.__cell_to_aig(configuration, module, cell)
+                    ALSRewriter.cell_to_aig(configuration, module, cell)
         ys.run_pass("tee -q clean -purge", design)
         ys.run_pass("tee -q opt", design)
 
@@ -40,7 +40,7 @@ class ALSRewriter:
         for module in design.selected_whole_modules_warn():
             for cell in module.selected_cells():
                 if ys.IdString("\LUT") in cell.parameters:
-                    self.__cell_to_aig(configuration, module, cell)
+                    ALSRewriter.cell_to_aig(configuration, module, cell)
         ys.run_pass("tee -q clean -purge", design)
         ys.run_pass("tee -q opt", design)
         return design
@@ -52,7 +52,7 @@ class ALSRewriter:
         for module in design.selected_whole_modules_warn():
             for cell in module.selected_cells():
                 if ys.IdString("\LUT") in cell.parameters:
-                    self.__cell_to_aig(configuration, module, cell)
+                    ALSRewriter.cell_to_aig(configuration, module, cell)
         ys.run_pass("tee -q clean -purge", design)
         ys.run_pass("tee -q opt", design)
         ys.run_pass(f"tee -q write_verilog -noattr {destination}.v", design)
@@ -71,7 +71,8 @@ class ALSRewriter:
                     matter[l["name"]] = {"dist": c, "spec": negate(e[0]["spec"]), "axspec": negate(e[c]["spec"]), "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": 1 - e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]}
         return matter
 
-    def __cell_to_aig(self, configuration, module, cell):
+    @staticmethod
+    def cell_to_aig(configuration, module, cell):
         ax_cell_conf = configuration[cell.name.str()]
         sigmap = ys.SigMap(module)
         S = ax_cell_conf["S"]
