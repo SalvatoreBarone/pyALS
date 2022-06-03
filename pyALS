@@ -167,12 +167,12 @@ def als(config, improve, resume):
 	print(f"{configuration.als_conf.cut_size}-LUT synthesis successful")
 	graph = ALSGraph(design)
 	print(f"Graph generation completed")
+	if configuration.error_conf.metric in [ErrorConfig.Metric.IA_EPROB, ErrorConfig.Metric.IA_MED]:
+		configuration.error_conf.weights = configuration.error_conf.validate_input_distribution(graph)
+		print("Input-distribution parsing completed")
 	if configuration.error_conf.metric in [ErrorConfig.Metric.AWCE, ErrorConfig.Metric.MED, ErrorConfig.Metric.IA_MED]:
 		configuration.error_conf.validate_weights(graph)
 		print("Output-weight parsing completed successfully")
-	if configuration.error_conf.metric in [ErrorConfig.Metric.IA_EPROB, ErrorConfig.Metric.IA_MED]:
-		configuration.error_conf.weights = configuration.error_conf.validate_input_distribution(graph)
-		print("Output-weight parsing completed")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
@@ -324,6 +324,7 @@ cli.add_command(clean)
 cli.add_command(expand)
 cli.add_command(query)
 cli.add_command(stats)
+
 
 if __name__ == '__main__':
 	if git_updater():

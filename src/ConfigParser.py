@@ -27,12 +27,12 @@ class ConfigParser:
 		configuration = json.load(open(config_file))
 		self.source_hdl = ConfigParser.search_field_in_config(configuration, "hdl", "source", True)
 		self.top_module = ConfigParser.search_field_in_config(configuration, "hdl", "top", True)
-		self.output_dir = ConfigParser.search_field_in_config(configuration, "hdl", "output", True if command == "als" else False)
-		self.lut_cache = ConfigParser.search_field_in_config(configuration, "als", "cache", True)
+		self.output_dir = ConfigParser.search_field_in_config(configuration, "hdl", "output", True if command in ["als"] else False)
+		self.lut_cache = ConfigParser.search_field_in_config(configuration, "als", "cache", True if command in ["als", "es"] else False)
 		self.als_conf = ALSConfig(
-			str(ConfigParser.search_field_in_config(configuration, "als", "cut_size", True)),
-			ConfigParser.search_field_in_config(configuration, "als", "solver", True),
-			int(ConfigParser.search_field_in_config(configuration, "als", "timeout")))
+			str(ConfigParser.search_field_in_config(configuration, "als", "cut_size", True if command in ["als", "es"] else False)),
+			ConfigParser.search_field_in_config(configuration, "als", "solver", True if command in ["als", "es"] else False),
+			int(ConfigParser.search_field_in_config(configuration, "als", "timeout", True if command in ["als", "es"] else False)))
 		self.error_conf = None
 		self.hw_conf = None
 		self.amosa_conf = None

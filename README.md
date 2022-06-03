@@ -79,13 +79,13 @@ In the following, each field of the JSON file is described using C-Style comment
 
 ```
 {
-    "hdl" : {                                           // the "hdl" section defines HDL source files, the name of the top-level entity, and the output directory
-        "source" : "example/mult_2_bit.sv",             // specify the input HDL source file, always required  
-        "top"    : "mult_2_bit",                        // specify the top-module name, always required
-        "output" : "output_directory"                   // specify the top-module name, ignored by the es command
+    "hdl" : {
+        "source" : "example/mult_2_bit.sv",             // the HDL source file
+        "top"    : "mult_2_bit",                        // the top-level entity name
+        "output" : "results"                            // path to the output directory
     },
     "als" : {
-        "cache"    : "path_to_the_catalog_cache/catalog_cache.db",
+        "cache"    : "lut_catalog.db",                  // path to the catalog-cache
         "cut_size" : 4,                                 // specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration, always required
         "solver"   : "btor",                            // SAT-solver to be used. It can be either btor (Boolector) or z3 (Z3-solver), always required
         "timeout"  : 60000                              // Timeout (in ms) for the exact synthesis process, always required. It is better you don't change its default value.              
@@ -94,17 +94,13 @@ In the following, each field of the JSON file is described using C-Style comment
         "metric"       : "med",                         // Error metric to be used during Design-Space exploration. It can be "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively; The "ia-ep" and "ia-ed" stand for "input-aware" error-probability and error-distance, which require the user to provide the probability-distribution for input vectors  
         "threshold"    : 16,                            // The error threshold
         "vectors"      : 5,                             // The number of test vectors for error assessment. Using the value "0" will unlock exhaustive evaluation, i.e., it will cause the tool to evaluate the error for every possible input assignment.
-        "distribution" : [                              // Input distribution, required for both the "ia-ep" and "ia-ed" metrics.
-            {"lb": 127, "ub": 129, "p": 0.2},
-            {"lb": 1,   "ub": 19,  "p": 0.3}
-        ],
+        "distribution" : "input_distribution.csv",      // Input distribution file required for both the "ia-ep" and "ia-ed" metrics, in csv or json
         "weigths" : {                                   // specify weights for outputs, as needed by the AWCE, MED and IA-MED metrics
             "\\o[0]" : 1,
             "\\o[1]" : 2,
             "\\o[2]" : 4,
             "\\o[3]" : 8
         }
-
     },
     "hardware]" : {                                     // Hardware related stuff
         "metric" : ["gates", "depth", "switching"]      // hardware metric(s) to be optimized (AIG-gates, AIG-depth, or LUT switching activity). Please note you can specify more than one metric.
@@ -133,11 +129,11 @@ Options:
 ```
   --config TEXT   path of the configuration file
   --improve TEXT  Run again the workflow using previous Pareto set as initial archive
-  --resume        Resume the execution
+  --resume        Resume the execution. It searches for available checkpoints in the output directory.
 ```
 Example:
 ```
-./pyALS als --config example/config.json --improve output_dir/final_archive.json --resume 
+./pyALS als --source /path_to_source --top top_level_entity --catalog /path_to_catalog_cache --output /path_to_output_directory --config /path_to_config.json --improve /path_to_final_archive.json --resume 
 ```
 
 ### The ```es``` command
@@ -151,7 +147,7 @@ Options:
 ```
 Example:
 ```
-./pyALS es --config example/config.json 
+./pyALS es --config /path_to_config.json 
 ```
 
 ### The ```plot``` command

@@ -14,10 +14,7 @@
         "metric"       : "ep",
         "threshold"    : 16,
         "vectors"      : 10,
-        "distribution" : [
-            {"lb": 127, "ub": 129, "p": 0.2},
-            {"lb": 1,   "ub": 19,  "p": 0.3}
-        ],
+        "distribution" : "input_distribution.csv",
         "weights" : {
             "\\o[0]" : 1,
             "\\o[1]" : 2,
