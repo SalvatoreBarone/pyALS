@@ -74,14 +74,14 @@ def evaluate_eprob(graph, samples, configuration):
 
 def evaluate_awce(graph, samples, configuration, weights):
     current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return float(np.max([ sum([weights[o] if sample["output"][o] != current[o] else 0 for o in weights.keys() ]) for sample, current in zip(samples, current_outputs) ]))
+    return float(np.max([ sum([float(weights[o]) if sample["output"][o] != current[o] else 0 for o in weights.keys() ]) for sample, current in zip(samples, current_outputs) ]))
 
 
 def evaluate_med(graph, samples, configuration, weights):
     error_hystogram = { i: 0 for i in range(2**len(weights)) }
     for sample in samples:
         current_output = graph.evaluate(sample["input"], configuration)
-        error = sum([weights[o] if sample["output"][o] != current_output[o] else 0 for o in weights.keys()])
+        error = sum([float(weights[o]) if sample["output"][o] != current_output[o] else 0 for o in weights.keys()])
         error_hystogram[error] += 1
     return error_hystogram
 
@@ -94,6 +94,6 @@ def evaluate_ia_med(graph, i_distribution, samples, configuration, weights):
     error_hystogram = {i: 0 for i in range(2 ** len(weights))}
     for sample in samples:
         current_output = graph.evaluate(sample["input"], configuration)
-        error = sum([weights[o] if sample["output"][o] != current_output[o] else 0 for o in weights.keys()])
+        error = sum([float(weights[o]) if sample["output"][o] != current_output[o] else 0 for o in weights.keys()])
         error_hystogram[error] += 1
     return error_hystogram

@@ -33,6 +33,7 @@ def git_updater():
 		repo.remotes.origin.fetch()
 		local_head = repo.heads[0].commit
 		remote_head = repo.remotes.origin.refs[0].commit
+		print(f"Remote HEAD: {remote_head}, local HEAD: {local_head}")
 		if remote_head != local_head:
 			print("Updating the tool...")
 			repo.remotes.origin.pull()
