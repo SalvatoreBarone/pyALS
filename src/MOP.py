@@ -21,22 +21,10 @@ from .ErrorMetrics import *
 from .ALSGraph import *
 from .Utility import *
 from .ALSRewriter import *
-
 from pyAMOSA.AMOSA import *
 
 
-def get_mop_instance(top_module, graph, catalog, error_config, hw_config):
-    if error_config.metric == ErrorConfig.Metric.EPROB:
-        return MopUnweightedUniform(top_module, graph, catalog, error_config, hw_config)
-    elif error_config.metric in [ErrorConfig.Metric.MED, ErrorConfig.Metric.AWCE]:
-        return MopWeightedUniform(top_module, graph, catalog, error_config, hw_config)
-    elif error_config.metric == ErrorConfig.Metric.IA_EPROB:
-        return MopUnweightedNonuniform(top_module, graph, catalog, error_config, hw_config)
-    elif error_config.metric == ErrorConfig.Metric.IA_MED:
-        return MopWeightedNonuniform(top_module, graph, catalog, error_config, hw_config)
-
-
-class MopBaseClass(AMOSA.Problem):
+class MOP(AMOSA.Problem):
     def __init__(self, top_module, graph, catalog, error_config, hw_config):
         self.top_module = top_module
         self.graph = graph
@@ -48,11 +36,7 @@ class MopBaseClass(AMOSA.Problem):
         self.hw_config = hw_config
         self.samples = []
         self._generate_samples()
-        self._args = []
-        #if self.error_config.metric == ErrorConfig.Metric.EPROB:
-        #    self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
-        #else:
-        #    self._args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
+        self._args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
         self.upper_bound = self._get_upper_bound()
         self.baseline_and_gates = self._get_baseline_gates()
         self.baseline_depth = self._get_baseline_depth()
@@ -64,15 +48,24 @@ class MopBaseClass(AMOSA.Problem):
     def evaluate(self, x, out):
         out["f"] = []
         out["g"] = []
-
-    def _hw_objectives(self, matter_configuration, out):
+        configuration = self._matter_configuration(x)
+        if self.error_config.builtin_metric:
+            if self.error_config.metric == ErrorConfig.Metric.EPROB:
+                out["f"].append(self._get_eprob(configuration))
+            elif self.error_config.metric == ErrorConfig.Metric.AWCE:
+                out["f"].append(self._get_awce(configuration))
+            elif self.error_config.metric == ErrorConfig.Metric.MED:
+                out["f"].append(self._get_med(configuration))
+        else:
+            out["f"].append(self._get_custom(configuration))
+        out["g"].append(out["f"][-1] - self.error_config.threshold)
         for metric in self.hw_config.metrics:
             if metric == HwConfig.Metric.GATES:
-                out["f"].append(get_gates(matter_configuration))
+                out["f"].append(get_gates(configuration))
             elif metric == HwConfig.Metric.DEPTH:
-                out["f"].append(get_depth(matter_configuration, self.graph))
+                out["f"].append(get_depth(configuration, self.graph))
             elif metric == HwConfig.Metric.SWITCHING:
-                out["f"].append(get_switching(matter_configuration))
+                out["f"].append(get_switching(configuration))
 
     def _read_samples(self, dataset):
         PI = self.graph.get_pi()
@@ -131,20 +124,6 @@ class MopBaseClass(AMOSA.Problem):
     def _get_baseline_switching(self):
         return get_switching(self._matter_configuration([0] * self.n_vars))
 
-
-class MopUnweightedUniform(MopBaseClass):
-    def __init__(self, top_module, graph, catalog, error_config, hw_config):
-        MopBaseClass.__init__(self, top_module, graph, catalog, error_config, hw_config)
-        self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
-
-    def evaluate(self, x, out):
-        MopBaseClass.evaluate(self, x, out)
-        configuration = self._matter_configuration(x)
-        if self.error_config.metric == ErrorConfig.Metric.EPROB:
-            out["f"].append(self._get_eprob(configuration))
-        out["g"].append(out["f"][-1] - self.error_config.threshold)
-        self._hw_objectives(configuration, out)
-
     def _get_eprob(self, configuration):
         for a in self._args:
             a[2] = configuration
@@ -155,22 +134,6 @@ class MopUnweightedUniform(MopBaseClass):
             return rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))
         else:
             return rs
-
-
-class MopWeightedUniform(MopBaseClass):
-    def __init__(self, top_module, graph, catalog, error_config, hw_config):
-        MopBaseClass.__init__(self, top_module, graph, catalog, error_config, hw_config)
-        self._args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
-
-    def evaluate(self, x, out):
-        MopBaseClass.evaluate(self, x, out)
-        configuration = self._matter_configuration(x)
-        if self.error_config.metric == ErrorConfig.Metric.AWCE:
-            out["f"].append(self._get_awce(configuration))
-        elif self.error_config.metric == ErrorConfig.Metric.MED:
-            out["f"].append(self._get_med(configuration))
-        out["g"].append(out["f"][-1] - self.error_config.threshold)
-        self._hw_objectives(configuration, out)
 
     def _get_awce(self, configuration):
         for a in self._args:
@@ -187,49 +150,11 @@ class MopWeightedUniform(MopBaseClass):
         den = 2 ** len(self.error_config.weights)
         return sum([ i[0] * i[1] / den for i in dict(functools.reduce(operator.add, map(collections.Counter, hystogram))).items() ])
 
-
-class MopUnweightedNonuniform(MopBaseClass):
-    def __init__(self, top_module, graph, catalog, error_config, hw_config):
-        MopBaseClass.__init__(self, top_module, graph, catalog, error_config, hw_config)
-        self._args = [[g, s, [0] * self.n_vars, self.error_config.distribution] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
-
-    def evaluate(self, x, out):
-        MopBaseClass.evaluate(self, x, out)
-        configuration = self._matter_configuration(x)
-        if self.error_config.metric == ErrorConfig.Metric.IA_EPROB:
-            out["f"].append(self._get_ia_eprob(configuration))
-        out["g"].append(out["f"][-1] - self.error_config.threshold)
-        self._hw_objectives(configuration, out)
-
-    def _get_ia_eprob(self, configuration):
+    def _get_custom(self, configuration):
         for a in self._args:
             a[2] = configuration
+        ec_function = self.error_config.function
         with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_ia_eprob, self._args)
-        rs = sum(error) / self.error_config.n_vectors
-        if self.error_config.n_vectors != 0:
-            return rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))
-        else:
-            return rs
+            error = pool.starmap(ec_function, self._args)
+        return self.error_config.reduce(error)
 
-
-class MopWeightedNonuniform(MopBaseClass):
-    def __init__(self, top_module, graph, catalog, error_config, hw_config):
-        MopBaseClass.__init__(self, top_module, graph, catalog, error_config, hw_config)
-        self._args = [[g, s, [0] * self.n_vars, self.error_config.weights, self.error_config.distribution] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
-
-    def evaluate(self, x, out):
-        MopBaseClass.evaluate(self, x, out)
-        configuration = self._matter_configuration(x)
-        if self.error_config.metric == ErrorConfig.Metric.IA_MED:
-            out["f"].append(self._get_ia_med(configuration))
-        out["g"].append(out["f"][-1] - self.error_config.threshold)
-        self._hw_objectives(configuration, out)
-
-    def _get_ia_med(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            hystogram = pool.starmap(evaluate_ia_med, self._args)
-        den = 2 ** len(self.error_config.weights)
-        return sum([ i[0] * i[1] / den for i in dict(functools.reduce(operator.add, map(collections.Counter, hystogram))).items() ])

@@ -15,12 +15,7 @@
         "threshold"    : 16,
         "vectors"      : 10,
         "distribution" : "input_distribution.csv",
-        "weights" : {
-            "\\o[0]" : 1,
-            "\\o[1]" : 2,
-            "\\o[2]" : 4,
-            "\\o[3]" : 8
-        }
+        "weights" : {}
 
     },
     "hardware" : {

@@ -41,10 +41,8 @@ class ConfigParser:
 				ConfigParser.search_field_in_config(configuration, "error", "metric", True),
 				float(ConfigParser.search_field_in_config(configuration, "error", "threshold", True)),
 				int(ConfigParser.search_field_in_config(configuration, "error", "vectors", True)))
-			if self.error_conf.metric in [ErrorConfig.Metric.AWCE, ErrorConfig.Metric.MED, ErrorConfig.Metric.IA_MED]:
-				self.error_conf.weights = ConfigParser.search_field_in_config(configuration, "error", "weights", True)
-			if self.error_conf.metric in [ErrorConfig.Metric.IA_EPROB, ErrorConfig.Metric.IA_MED]:
-				self.error_conf.distribution = ConfigParser.search_field_in_config(configuration, "error", "distribution", True)
+			self.error_conf.weights = ConfigParser.search_field_in_config(configuration, "error", "weights",  self.error_conf.builtin_metric and  self.error_conf.metric in [ErrorConfig.Metric.AWCE, ErrorConfig.Metric.MED])
+
 			self.hw_conf = HwConfig(ConfigParser.search_field_in_config(configuration, "hardware", "metrics", True))
 			self.amosa_conf = AMOSAConfig(
 				int(ConfigParser.search_field_in_config(configuration, "amosa", "archive_hard_limit", True)),

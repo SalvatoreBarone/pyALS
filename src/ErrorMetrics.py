@@ -14,18 +14,33 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
+import numpy as np
 from .ALSGraph import *
 from .Utility import *
+from .DynLoader import *
 
 class ErrorConfig:
     class Metric(Enum):
         EPROB = 1           # Classic error probability
         AWCE = 2            # Absolute worst-case error
         MED = 3             # Mean error distance
-        IA_EPROB = 4,       # Input (distribution)-aware error-probability
-        IA_MED = 5          # Input (distribution)-aware error.distance
 
     def __init__(self, metric, threshold, vectors, distribution = None, weights = None):
+        self.metric = None
+        self.function = None
+        self.reduce = None
+        self.builtin_metric = None
+
+        if type(metric) == str:
+            self.get_builin_metric(metric)
+        elif type(metric) == dict:
+           self.get_custom_metric(metric)
+        self.threshold = threshold
+        self.n_vectors = vectors
+        self.distribution = distribution
+        self.weights = weights
+
+    def get_builin_metric(self, metric):
         error_metrics = {
             "ep": ErrorConfig.Metric.EPROB,
             "eprob": ErrorConfig.Metric.EPROB,
@@ -33,25 +48,29 @@ class ErrorConfig:
             "EPROB": ErrorConfig.Metric.EPROB,
             "awce": ErrorConfig.Metric.AWCE,
             "AWCE": ErrorConfig.Metric.AWCE,
-            "med" : ErrorConfig.Metric.MED,
-            "MED" : ErrorConfig.Metric.MED,
-            "ia-ep" : ErrorConfig.Metric.IA_EPROB,
-            "ia_ep": ErrorConfig.Metric.IA_EPROB,
-            "IA-EP": ErrorConfig.Metric.IA_EPROB,
-            "IA_EP": ErrorConfig.Metric.IA_EPROB,
-            "ia-ed" : ErrorConfig.Metric.IA_MED,
-            "ia_ed": ErrorConfig.Metric.IA_MED,
-            "IA-ED": ErrorConfig.Metric.IA_MED,
-            "IA_ED": ErrorConfig.Metric.IA_MED,
+            "med": ErrorConfig.Metric.MED,
+            "MED": ErrorConfig.Metric.MED,
         }
         if metric not in error_metrics.keys():
             raise ValueError(f"{metric}: error-metric not recognized")
         else:
+            self.builtin_metric = True
             self.metric = error_metrics[metric]
-        self.threshold = threshold
-        self.n_vectors = vectors
-        self.distribution = distribution
-        self.weights = weights
+
+    def get_custom_metric(self, metric):
+        reduce_operators = {
+            "max" : np.max,
+            "sum" : np.sum
+        }
+        if "module" not in metric.keys():
+            raise ValueError(f"'module' field not specified")
+        if "function" not in metric.keys():
+            raise ValueError(f"'function' field not specified")
+        if "reduce" not in metric.keys():
+            raise ValueError(f"'reduce' field not specified")
+        self.function = dynamic_import(metric["module"], metric["function"])
+        self.reduce = reduce_operators[metric["reduce"]]
+        self.builtin_metric = False
 
     def validate_weights(self, graph):
         po_names = [o["name"] for o in graph.get_po()]
@@ -68,7 +87,7 @@ def evaluate_output(graph, samples, configuration):
     return [{"e" : s["output"], "a" : graph.evaluate(s["input"], configuration)} for s in samples]
 
 
-def evaluate_eprob(graph, samples, configuration):
+def evaluate_eprob(graph, samples, configuration, weights):
     return sum([0 if sample["output"] == graph.evaluate(sample["input"], configuration) else 1 for sample in samples])
 
 
@@ -79,19 +98,6 @@ def evaluate_awce(graph, samples, configuration, weights):
 
 def evaluate_med(graph, samples, configuration, weights):
     error_hystogram = { i: 0 for i in range(2**len(weights)) }
-    for sample in samples:
-        current_output = graph.evaluate(sample["input"], configuration)
-        error = sum([float(weights[o]) if sample["output"][o] != current_output[o] else 0 for o in weights.keys()])
-        error_hystogram[error] += 1
-    return error_hystogram
-
-
-def evaluate_ia_eprob(graph, i_distribution, samples, configuration):
-    return sum([0 if sample["output"] == graph.evaluate(sample["input"], configuration) else 1 for sample in samples])
-
-
-def evaluate_ia_med(graph, i_distribution, samples, configuration, weights):
-    error_hystogram = {i: 0 for i in range(2 ** len(weights))}
     for sample in samples:
         current_output = graph.evaluate(sample["input"], configuration)
         error = sum([float(weights[o]) if sample["output"][o] != current_output[o] else 0 for o in weights.keys()])

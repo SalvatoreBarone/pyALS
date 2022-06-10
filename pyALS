@@ -20,7 +20,7 @@ import sys, os, click, git
 from pyosys import libyosys as ys
 from distutils.dir_util import mkpath
 from src.ALSCatalog import *
-from src.MopBaseClass import *
+from src.MOP import *
 from src.ALSRewriter import *
 from src.stats import *
 from src.ConfigParser import *
@@ -70,15 +70,13 @@ def plot_labels(error_conf, hw_conf):
 		ErrorConfig.Metric.EPROB : "Error probability",
 		ErrorConfig.Metric.AWCE : "AWCE",
 		ErrorConfig.Metric.MED : "MED",
-		ErrorConfig.Metric.IA_EPROB : "IA-EP",
-		ErrorConfig.Metric.IA_MED : "IA-MED"
 	}
 	hw_labels = {
 		HwConfig.Metric.GATES : "#AIG nodes",
 		HwConfig.Metric.DEPTH : "AIG depth",
 		HwConfig.Metric.SWITCHING : "Switching activity"
 	}
-	return [ error_labels[error_conf.metric] ] + [ hw_labels[m] for m in hw_conf.metrics ]
+	return [ error_labels[error_conf.metric] ] + [ hw_labels[m] for m in hw_conf.metrics ] if error_conf.builtin_metric else ["Error"] + [ hw_labels[m] for m in hw_conf.metrics ]
 
 
 def check_for_optional_file(file_name):
@@ -168,16 +166,13 @@ def als(config, improve, resume):
 	print(f"{configuration.als_conf.cut_size}-LUT synthesis successful")
 	graph = ALSGraph(design)
 	print(f"Graph generation completed")
-	if configuration.error_conf.metric in [ErrorConfig.Metric.IA_EPROB, ErrorConfig.Metric.IA_MED]:
-		configuration.error_conf.weights = configuration.error_conf.validate_input_distribution(graph)
-		print("Input-distribution parsing completed")
-	if configuration.error_conf.metric in [ErrorConfig.Metric.AWCE, ErrorConfig.Metric.MED, ErrorConfig.Metric.IA_MED]:
+	if configuration.error_conf.weights is not None and len(configuration.error_conf.weights) != 0:
 		configuration.error_conf.validate_weights(graph)
 		print("Output-weight parsing completed successfully")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-	problem = get_mop_instance(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf)
+	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf)
 	optimizer = AMOSA(configuration.amosa_conf)
 	if not resume:
 		if improve is None:
