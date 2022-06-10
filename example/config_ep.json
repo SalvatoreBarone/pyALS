@@ -11,11 +11,11 @@
         "timeout"  : 60000
     },
     "error" : {
-        "metric"       : "ep",
-        "threshold"    : 16,
-        "vectors"      : 10,
-        "distribution" : "input_distribution.csv",
-        "weights" : {}
+        "metric"    : "ep",
+        "threshold" : 16,
+        "vectors"   : 10,
+        "dataset"   : "example/dataset.csv",
+        "weights"   : {}
 
     },
     "hardware" : {

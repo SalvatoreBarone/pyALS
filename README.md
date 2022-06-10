@@ -15,7 +15,7 @@ Please, cite us!
 }
 ```
 
-## Using the ready-to-use docker container
+# Using the ready-to-use docker container
 pyALS has quite a lot of dependencies. You need to install Yosys (and its dependencies), GHDL (and, again, its dependencies), and so forth.
 Before you get a headache, ***you can use the Docker image I have made available to you [here](https://hub.docker.com/r/salvatorebarone/pyals-docker-image).***  
 
@@ -57,7 +57,7 @@ docker run --rm -e DISPLAY=unix$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix -v ${c
 If, on the other hand, you really feel the need to install everything by hand, follow the guide below step by step. 
 I'm sure it will be very helpful.
 
-## Running pyALS
+# Running pyALS
 pyALS supports the following main commands, each with its own set of options:
   - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
   - ```es```: performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting;
@@ -120,7 +120,7 @@ In the following, each field of the JSON file is described using C-Style comment
 }
 ```
 
-#### Error metrics
+## Error metrics
 
 pyALS actually provides the user to define the error metric to be used during optimization. It can be selected through the ```metric``` field of the ```error``` section of the configuration file.
 The latter can be set to "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively, which are defined below.
@@ -130,6 +130,8 @@ The latter can be set to "ep", "awce" or "med", for error-probability, absolute 
 <img src="https://render.githubusercontent.com/render/math?math=e_{awce}(f,\hat{f})=\max_{\forall x \in \mathbb{B}^n} |int(f(x)) - int(\hat{f}(x))|">
 <br>
 <img src="https://render.githubusercontent.com/render/math?math=e_{med}(f,\hat{f})=\sum_{\forall x \in \mathbb{B}^n} |int(f(x)) - int(\hat{f}(x))| \cdot P(|int(f(x)) - int(\hat{f}(x))|)">
+
+### Defining your own error metric
 
 In case the metric you want to use isn't available, you can define it on your own and make it available to ```pyALS``` through its dynamic module loader.
 Suppose you want to define the relative error magniture (REM) metric  for error assessment, as defined below.
@@ -168,37 +170,13 @@ The procedure follows:
    ```
    note that the ```module``` field gives the path where the module is stored, but it does not have any "py" extension; furthermore, once again, please note that the error assessment is performed using python multiprocessing, in parallel, using all the available cores provided by the machine.
 
-### The ```als``` command
-Usage: 
-```
-pyALS als [OPTIONS]
-```
-Options:
-```
-  --config TEXT   path of the configuration file
-  --improve TEXT  Run again the workflow using previous Pareto set as initial archive
-  --resume        Resume the execution. It searches for available checkpoints in the output directory.
-```
-Example:
-```
-./pyALS als --source /path_to_source --top top_level_entity --catalog /path_to_catalog_cache --output /path_to_output_directory --config /path_to_config.json --improve /path_to_final_archive.json --resume 
-```
+## Command line interface
 
-### The ```es``` command
-Usage: 
-```
-pyALS es [OPTIONS]
-```
-Options:
-```
-  --config TEXT  path of the configuration file
-```
-Example:
-```
-./pyALS es --config /path_to_config.json 
-```
+You can use the following commands
 
 ### The ```plot``` command
+Draws a k-LUT map of the given circuit
+
 Usage: 
 ```
 pyALS plot [OPTIONS]
@@ -214,6 +192,64 @@ Example:
 ```
 ./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit -lut 4 -output mult_2_bit.pdf 
 ```
+
+### The ```dataset``` command
+Creates a CSV template file to be used to define a  
+
+Usage: 
+```
+pyALS dataset [OPTIONS]
+```
+Options:
+```
+  --source TEXT  specify the input HDL source file  [required]
+  --top TEXT     specify the top-module name  [required]
+  --output TEXT  Output file.  [required]
+  --separator    specify the column separator
+```
+Example:
+```
+./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit --output dataset.csv 
+```
+
+
+
+### The ```es``` command
+Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
+
+Usage: 
+```
+pyALS es [OPTIONS]
+```
+Options:
+```
+  --config TEXT  path of the configuration file
+```
+Example:
+```
+./pyALS es --config /path_to_config.json 
+```
+
+
+### The ```als``` command
+Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting.
+
+Usage: 
+```
+pyALS als [OPTIONS]
+```
+Options:
+```
+  --config TEXT   path of the configuration file
+  --improve TEXT  Run again the workflow using previous Pareto set as initial archive
+  --resume        Resume the execution. It searches for available checkpoints in the output directory.
+```
+Example:
+```
+./pyALS als --source /path_to_source --top top_level_entity --catalog /path_to_catalog_cache --output /path_to_output_directory --config /path_to_config.json --improve /path_to_final_archive.json --resume 
+```
+
+
 
 ## Manual installation
 

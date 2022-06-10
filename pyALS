@@ -141,6 +141,33 @@ def es_synth(config):
 	print("Done!")
 
 
+@click.command("dataset")
+@click.option("--source",  type=str, required=True, help="specify the input HDL source file")
+@click.option("--top",     type=str, required=True, help="specify the top-module name")
+@click.option("--output",  type=str, required=True, help="Output file.")
+def dataset(source, top, output):
+	"""
+	Draws a k-LUT map of the given circuit
+	"""
+	check_for_file(source)
+	design = ys.Design()
+	ys.run_pass("plugin -i ghdl", design)
+	print("GHDL plugin loaded successfully")
+	read_source(source, top, design)
+	print(f"{source} read successfully")
+	synth_design(design, top, "4")
+	print(f"Synthesis successful")
+	graph = ALSGraph(design)
+	print(f"Graph generation completed")
+	PI = graph.get_pi()
+	original_stdout = sys.stdout
+	row_format = ",".join([i["name"] for i in PI])
+	with open(output, "w") as file:
+		sys.stdout = file
+		print(row_format)
+	sys.stdout = original_stdout
+
+
 @click.command("als")
 @click.option("--config",       type=str,                    help="path of the configuration file")
 @click.option("--improve",      type=str,                    help="Path of the file containing results from previous runs to be improved (JSON file)", default=None)
@@ -155,6 +182,8 @@ def als(config, improve, resume):
 	check_for_file(configuration.source_hdl)
 	check_for_file(configuration.lut_cache)
 	check_for_optional_file(improve)
+	if configuration.error_conf.dataset is not None:
+		check_for_file(configuration.error_conf.dataset)
 	if configuration.output_dir != ".":
 		mkpath(configuration.output_dir)
 	design = ys.Design()
@@ -172,6 +201,7 @@ def als(config, improve, resume):
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
+
 	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf)
 	optimizer = AMOSA(configuration.amosa_conf)
 	if not resume:
@@ -313,6 +343,7 @@ def stats(catalog, gates, power_gates, power_truth, power_truth_k):
 		power_truth_k_boxplot(power_truth_k)
 
 
+cli.add_command(dataset)
 cli.add_command(plot)
 cli.add_command(es_synth)
 cli.add_command(als)

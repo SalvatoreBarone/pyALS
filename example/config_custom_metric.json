@@ -14,8 +14,8 @@
         "metric"       : {"module" : "metrics/relative_error_magnitude", "function" : "compute_rem", "reduce": "max"},
         "threshold"    : 16,
         "vectors"      : 10,
-        "distribution" : "input_distribution.csv",
-        "weights" : {
+        "dataset"      : "example/dataset.csv",
+        "weights"      : {
             "\\o[0]" : 1,
             "\\o[1]" : 2,
             "\\o[2]" : 4,

@@ -35,7 +35,11 @@ class MOP(AMOSA.Problem):
         self.error_config = error_config
         self.hw_config = hw_config
         self.samples = []
-        self._generate_samples()
+        if error_config.dataset is None:
+            self._generate_samples()
+        else:
+            print("Reading samples...")
+            self._read_samples(error_config.dataset)
         self._args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
         self.upper_bound = self._get_upper_bound()
         self.baseline_and_gates = self._get_baseline_gates()
@@ -70,16 +74,16 @@ class MOP(AMOSA.Problem):
     def _read_samples(self, dataset):
         PI = self.graph.get_pi()
         file = open(dataset, "r")
-        header = list(filter(None, file.readline().replace("\n", "").split(";")))
-        assert len(header) == len(PI), f"{dataset}: wrong amount of inputs"
+        header = list(filter(None, file.readline().replace("\n", "").split(",")))
+        assert len(header) == len(PI), f"{dataset}: wrong amount of inputs (header: {len(header)} PI: {len(PI)})"
         input_dict = {h : [] for h in header}
         for row in file:
-            input_values = list(filter(None, row.replace("\n", "").split(";")))
+            input_values = list(filter(None, row.replace("\n", "").split(",")))
             assert len(input_values) == len(PI), f"{dataset}: wrong amount of inputs"
             for i, v in zip(input_values, input_dict.values()):
                 v.append(i)
         for i in range(len(list(input_dict.values())[0])):
-            inputs = { k["name"] :  True if input_dict[k["name"][1:]][i] == '1' else False for k in PI }
+            inputs = { k["name"] :  True if input_dict[k["name"]][i] == '1' else False for k in PI }
             self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
     def _generate_samples(self):

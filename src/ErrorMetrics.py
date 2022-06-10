@@ -25,11 +25,12 @@ class ErrorConfig:
         AWCE = 2            # Absolute worst-case error
         MED = 3             # Mean error distance
 
-    def __init__(self, metric, threshold, vectors, distribution = None, weights = None):
+    def __init__(self, metric, threshold, vectors, dataset = None, weights = None):
         self.metric = None
         self.function = None
         self.reduce = None
         self.builtin_metric = None
+        self.dataset = None
 
         if type(metric) == str:
             self.get_builin_metric(metric)
@@ -37,7 +38,7 @@ class ErrorConfig:
            self.get_custom_metric(metric)
         self.threshold = threshold
         self.n_vectors = vectors
-        self.distribution = distribution
+        self.dataset = dataset
         self.weights = weights
 
     def get_builin_metric(self, metric):
