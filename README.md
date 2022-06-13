@@ -123,20 +123,21 @@ In the following, each field of the JSON file is described using C-Style comment
 ## Error metrics
 
 pyALS actually provides the user to define the error metric to be used during optimization. It can be selected through the ```metric``` field of the ```error``` section of the configuration file.
-The latter can be set to "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively, which are defined below.
-
-<img src="https://render.githubusercontent.com/render/math?math=e_{prob}(f,\hat{f})=\frac{1}{2^n} \sum_{\forall x \in \mathbb{B}^n} \llbracket f(x) \ne \hat{f}(x) \rrbracket">
-<br>
-<img src="https://render.githubusercontent.com/render/math?math=e_{awce}(f,\hat{f})=\max_{\forall x \in \mathbb{B}^n} |int(f(x)) - int(\hat{f}(x))|">
-<br>
-<img src="https://render.githubusercontent.com/render/math?math=e_{med}(f,\hat{f})=\sum_{\forall x \in \mathbb{B}^n} |int(f(x)) - int(\hat{f}(x))| \cdot P(|int(f(x)) - int(\hat{f}(x))|)">
+The latter can be set to 
+   - "ep" for error-probability, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/ep.png);
+   - "awce" for absolute worst-case error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/awce.png);
+   - "med" for mean error distance, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/med.png);
+   - "mae" for mean absolute error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mae.png);
+   - "wre" for worst-case relative error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/wre.png);
+   - "mre" for mean relative error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mre.png);
+   - "mse" for mean squared error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mse.png);
+   - "med" for mean error distance, that, given the error distance ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/ed.png) and the probability the latter happens ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/p_ed.png), is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/med.png);
+   - "mred" for mean relative error distance, that, given the error distance ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/red.png) and the probability the latter happens ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/p_red.png), is defined as  ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mred.png)
 
 ### Defining your own error metric
 
 In case the metric you want to use isn't available, you can define it on your own and make it available to ```pyALS``` through its dynamic module loader.
-Suppose you want to define the relative error magniture (REM) metric  for error assessment, as defined below.
-<br>
-<img src="https://render.githubusercontent.com/render/math?math=e_{rem}(f,\hat{f}) = max_{\forall x \in \mathbb{B}^n} \left| 1 - \frac{\hat{f}(x)}{f(x)} \right|">
+Suppose you want to define the worst-case relative error magniture metric  for error assessment, as defined above.
 
 The procedure follows: 
 1. create a source file, namely ```relative_error_magnitude.py``` in the root directory of ```pyALS```; I suggest using a directory in which to place user-defined metrics, so, in the following, I suppose you have the ```custom_error_metrics``` directory in the root directory of ```pyALS```;

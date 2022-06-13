@@ -78,9 +78,14 @@ def synth_design(ys_design, top_module, cut_size, design_name_save="original"):
 
 def plot_labels(error_conf, hw_conf):
 	error_labels = {
-		ErrorConfig.Metric.EPROB : "Error probability",
-		ErrorConfig.Metric.AWCE : "AWCE",
-		ErrorConfig.Metric.MED : "MED",
+		ErrorConfig.Metric.EPROB: "Error probability",
+		ErrorConfig.Metric.AWCE: "AWCE",
+		ErrorConfig.Metric.MAE: "MAE",
+		ErrorConfig.Metric.WRE: "WRE",
+		ErrorConfig.Metric.MRE: "MRE",
+		ErrorConfig.Metric.MSE: "MSE",
+		ErrorConfig.Metric.MED: "MED",
+		ErrorConfig.Metric.MRED: "MRED"
 	}
 	hw_labels = {
 		HwConfig.Metric.GATES : "#AIG nodes",
