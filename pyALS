@@ -57,6 +57,7 @@ def read_source(source_file, top_module, ys_design):
 
 
 def read_single_source(source_file, ys_design):
+	check_for_file(source_file)
 	name, extension = os.path.splitext(source_file)
 	if extension == ".vhd":
 		#ys.run_pass(f"ghdl {source_file} -e {top_module}", ys_design)
@@ -113,7 +114,7 @@ def cli():
 
 
 @click.command("plot")
-@click.option("--source",  type=str, required=True, help="specify the input HDL source file")
+@click.option("--source",  type=str, required=True, help="specify the input HDL source file", multiple=True)
 @click.option("--top",     type=str, required=True, help="specify the top-module name")
 @click.option("--lut",     type=str, required=True, help="specify the LUT size")
 @click.option("--output",  type=str, required=True, help="Output file.")
@@ -121,7 +122,6 @@ def plot(source, top, lut, output):
 	"""
 	Draws a k-LUT map of the given circuit
 	"""
-	check_for_file(source)
 	design = ys.Design()
 	ys.run_pass("plugin -i ghdl", design)
 	print("GHDL plugin loaded successfully")
@@ -135,7 +135,7 @@ def plot(source, top, lut, output):
 
 
 @click.command("es")
-@click.option("--config",  type=str, help="path of the configuration file", default="config.json")
+@click.option("--config",  required = True, type=str, help="path of the configuration file")
 def es_synth(config):
 	"""
 	Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and
@@ -143,7 +143,6 @@ def es_synth(config):
 	"""
 	check_for_file(config)
 	configuration = ConfigParser(config, "es")
-	check_for_file(configuration.source_hdl)
 	check_for_file(configuration.lut_cache)
 	design = ys.Design()
 	ys.run_pass("plugin -i ghdl", design)
@@ -158,14 +157,13 @@ def es_synth(config):
 
 
 @click.command("dataset")
-@click.option("--source",  type=str, required=True, help="specify the input HDL source file")
+@click.option("--source",  type=str, multiple=True, help="specify the input HDL source file")
 @click.option("--top",     type=str, required=True, help="specify the top-module name")
 @click.option("--output",  type=str, required=True, help="Output file.")
 def dataset(source, top, output):
 	"""
 	Draws a k-LUT map of the given circuit
 	"""
-	check_for_file(source)
 	design = ys.Design()
 	ys.run_pass("plugin -i ghdl", design)
 	print("GHDL plugin loaded successfully")
@@ -194,7 +192,6 @@ def als(config, improve):
 	"""
 	check_for_file(config)
 	configuration = ConfigParser(config, "als")
-	check_for_file(configuration.source_hdl)
 	check_for_file(configuration.lut_cache)
 	check_for_optional_file(improve)
 	if configuration.error_conf.dataset is not None:
