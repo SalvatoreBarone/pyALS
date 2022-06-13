@@ -126,7 +126,6 @@ pyALS actually provides the user to define the error metric to be used during op
 The latter can be set to 
    - "ep" for error-probability, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/ep.png);
    - "awce" for absolute worst-case error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/awce.png);
-   - "med" for mean error distance, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/med.png);
    - "mae" for mean absolute error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mae.png);
    - "wre" for worst-case relative error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/wre.png);
    - "mre" for mean relative error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mre.png);
