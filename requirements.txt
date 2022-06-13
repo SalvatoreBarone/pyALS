@@ -4,5 +4,4 @@ z3-solver
 pyboolector
 python-igraph
 numpy
-configparser
 GitPython

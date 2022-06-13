@@ -169,10 +169,9 @@ def dataset(source, top, output):
 
 
 @click.command("als")
-@click.option("--config",       type=str,                    help="path of the configuration file")
-@click.option("--improve",      type=str,                    help="Path of the file containing results from previous runs to be improved (JSON file)", default=None)
-@click.option("--resume",       is_flag=True,                help="Resume the execution")
-def als(config, improve, resume):
+@click.option("--config",  type=str, help="path of the configuration file")
+@click.option("--improve", type=str, help="Path of the file containing results from previous runs to be improved (JSON file)", default=None)
+def als(config, improve):
 	"""
 	Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
 	cuts, design space exploration and rewriting.
@@ -201,17 +200,9 @@ def als(config, improve, resume):
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-
 	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf)
 	optimizer = AMOSA(configuration.amosa_conf)
-	if not resume:
-		if improve is None:
-			optimizer.random_archive(problem)
-		else:
-			optimizer.archive_from_json(problem, improve)
-		optimizer.minimize(problem, f"{configuration.output_dir}/checkpoint.json")
-	else:
-		optimizer.minimize_from_checkpoint(problem, f"{configuration.output_dir}/checkpoint.json")
+	optimizer.run(problem, improve)
 	hours = int(optimizer.duration / 3600)
 	minutes = int((optimizer.duration - hours * 3600) / 60)
 	print(f"Took {hours} hours, {minutes} minutes")
