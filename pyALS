@@ -215,6 +215,8 @@ def als(config, improve):
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
 	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf)
 	optimizer = AMOSA(configuration.amosa_conf)
+	optimizer.hill_climb_checkpoint_file = f"{configuration.output_dir}/{optimizer.hill_climb_checkpoint_file}"
+	optimizer.minimize_checkpoint_file = f"{configuration.output_dir}/{optimizer.minimize_checkpoint_file}"
 	optimizer.run(problem, improve)
 	hours = int(optimizer.duration / 3600)
 	minutes = int((optimizer.duration - hours * 3600) / 60)
