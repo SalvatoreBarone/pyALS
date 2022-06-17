@@ -67,108 +67,9 @@ Please kindly note you will need the file where synthesized Boolean functions ar
 You can mine, which is ready-to-use, frequently updated and freely available at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
 If you do not want to use the one I mentioned, pyALS will perform exact synthesis when needed.
 
-Furthermore, the ```als``` and ```es``` commands requires a lot of configuration parameters, which are provided through a JSON configuration file. Therefore,
-we will first discuss the generic structure of the latter, before going into command-specific information.
+Furthermore, the ```als``` and ```es``` commands requires a lot of configuration parameters, which are provided through a JSON configuration file. 
+I will its generic structure later. Now, focus on the command-line interface.
 
-### The configuration file
-The configuration file defines parameters governing the behavior of pyALS. Is is a JSON file which generic structure is reported below.
-Please note that, depending on the specific command you selected, some parameters are not required, hence they can be omitted.
-Furthermore, an example configuration file is provided in the ```example``` directory.
-
-In the following, each field of the JSON file is described using C-Style comments. Note JSON does not provide any support for comments, hence you must remove them in case you copy-and-paste from the following box.
-
-```json
-{
-    "hdl" : {
-        "source" : "example/mult_2_bit.sv",             // the HDL source file
-        "top"    : "mult_2_bit",                        // the top-level entity name
-        "output" : "results"                            // path to the output directory
-    },
-    "als" : {
-        "cache"    : "lut_catalog.db",                  // path to the catalog-cache
-        "cut_size" : 4,                                 // specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration, always required
-        "solver"   : "btor",                            // SAT-solver to be used. It can be either btor (Boolector) or z3 (Z3-solver), always required
-        "timeout"  : 60000                              // Timeout (in ms) for the exact synthesis process, always required. It is better you don't change its default value.              
-    },
-    "error" : {                                         // This section defines error-related stuff
-        "metric"       : "med",                         // Error metric to be used during Design-Space exploration. It can be "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively; The "ia-ep" and "ia-ed" stand for "input-aware" error-probability and error-distance, which require the user to provide the probability-distribution for input vectors  
-        "threshold"    : 16,                            // The error threshold
-        "vectors"      : 5,                             // The number of test vectors for error assessment. Using the value "0" will unlock exhaustive evaluation, i.e., it will cause the tool to evaluate the error for every possible input assignment.
-        "distribution" : "input_distribution.csv",      // Input distribution file required for both the "ia-ep" and "ia-ed" metrics, in csv or json
-        "weigths" : {                                   // specify weights for outputs, as needed by the AWCE, MED and IA-MED metrics
-            "\\o[0]" : 1,
-            "\\o[1]" : 2,
-            "\\o[2]" : 4,
-            "\\o[3]" : 8
-        }
-    },
-    "hardware]" : {                                     // Hardware related stuff
-        "metric" : ["gates", "depth", "switching"]      // hardware metric(s) to be optimized (AIG-gates, AIG-depth, or LUT switching activity). Please note you can specify more than one metric.
-    },
-    "amosa" : {                                         // Parameters governing the Archived Multi-Objective Simulated-Annealing optimization heuristic 
-        "archive_hard_limit"       : 100,               // Archive hard limit for the AMOSA optimization heuristic, see [1]
-        "archive_soft_limit"       : 200,               // Archive soft limit for the AMOSA optimization heuristic, see [1]
-        "archive_gamma"            : 2,                 // Gamma parameter for the AMOSA optimization heuristic, see [1]
-        "hill_climbing_iterations" : 500,               // the number of iterations performed during the initial hill-climbing refinement, see [1];
-        "initial_temperature"      : 500,               // Initial temperature of the matter for the AMOSA optimization heuristic, see [1]
-        "final_temperature"        : 0.0000001,         // Final temperature of the matter for the AMOSA optimization heuristic, see [1]
-        "cooling_factor"           : 0.95,              // It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
-        "annealing_iterations"     : 750,               // The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
-        "annealing_strength"       : 1,                 // Governs the strength of random perturbations during the annealing phase; specifically, the number of variables whose value is affected by perturbation.
-        "early_termination"        : 20                 // Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
-    }
-}
-```
-
-## Error metrics
-
-pyALS actually provides the user to define the error metric to be used during optimization. It can be selected through the ```metric``` field of the ```error``` section of the configuration file.
-The latter can be set to 
-   - "ep" for error-probability, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/ep.png);
-   - "awce" for absolute worst-case error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/awce.png);
-   - "mae" for mean absolute error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mae.png);
-   - "wre" for worst-case relative error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/wre.png);
-   - "mre" for mean relative error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mre.png);
-   - "mse" for mean squared error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mse.png);
-   - "med" for mean error distance, that, given the error distance ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/ed.png) and the probability the latter happens ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/p_ed.png), is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/med.png);
-   - "mred" for mean relative error distance, that, given the error distance ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/red.png) and the probability the latter happens ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/p_red.png), is defined as  ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mred.png)
-
-### Defining your own error metric
-
-In case the metric you want to use isn't available, you can define it on your own and make it available to ```pyALS``` through its dynamic module loader.
-Suppose you want to define the worst-case relative error magniture metric  for error assessment, as defined above.
-
-The procedure follows: 
-1. create a source file, namely ```relative_error_magnitude.py``` in the root directory of ```pyALS```; I suggest using a directory in which to place user-defined metrics, so, in the following, I suppose you have the ```custom_error_metrics``` directory in the root directory of ```pyALS```;
-2. in the mentioned source file, implement the function computing the error metric; for instance, in the ```relative_error_magnitude.py``` you can put the following 
-    ```python
-    import numpy as np
-    
-    def compute_rem(graph, samples, configuration, weights):
-        current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]  #compute the output of the circuit for each of the samples
-        rem = 0
-        for sample, current in zip(samples, current_outputs):
-            f_exact = np.sum([float(weights[o]) * sample["output"][o] for o in weights.keys() ]) # compute f(x), from the circuit output
-            f_apprx = np.sum([float(weights[o]) * current[o] for o in weights.keys() ])          # compute the same, but for the approximate circuit
-            err = np.abs(1- f_apprx / f_exact)                                                   # computing the relative error 
-            if rem < err:                                                                        # keeping track of the maximum 
-                rem = err                                                                        
-            return rem
-    ```
-   please note that, whatever metric you're going to compute, the function computing it ***MUST*** have the following parameters, in the specified order:
-   1. ```graph```: graph-based representation of the circuit suitable for simulation; for you it is a black box, and you're only using it to obtain the circuit output for each input vector, using ```graph.evaluate(sample["input"], configuration) for sample in samples```;
-   2. ```samples```: the input vectors to be used for error assessment (actually, a fraction of them); these are generated by ```pyALS```; It is an array-like of dictionaries with two entries, i.e., ```input``` and ```output```; the latter are dictionaries indexed using the name of primary inputs and primary output signals;
-   3. ```configuration```: the approximate configuration to be evaluated; the only thing you have to know is you have to pass it to the ```evaluate``` method of the ```graph``` object;
-   4. ```weights```: python dictionary containing weights for output signals, as specified in the JSON configuration file; with these, you can compute the final error, if it has arithmetic meaning;
-
-    please, note that the ```samples``` parameter is only a fraction of the set of input vectors used for error assessment. This is because the error assessment is performed using python multiprocessing.function you define will be performed. This is why you have to specify the **reduction operator** to be used; it can be either ```sum``` or ```max```; in this case, the latter is appropriate. 
-3. now, you have to tell to the ```pyALS``` tool to use the function you defined; you can do it in the JSON configuration file, specifically using the ```metric``` field of the ```error``` section; basically, you have to specify the module name, the function name and the reduce operation to be performed; these information have to be placed in the JSON file as a python dictionary, as follows
-   ```json
-       "error" : {
-           "metric" : {"module" : "applications/relative_error_magnitude", "function" : "compute_rem", "reduce": "max"}  
-       }
-   ```
-   note that the ```module``` field gives the path where the module is stored, but it does not have any "py" extension; furthermore, once again, please note that the error assessment is performed using python multiprocessing, in parallel, using all the available cores provided by the machine.
 
 ## Command line interface
 
@@ -194,7 +95,7 @@ Example:
 ```
 
 ### The ```dataset``` command
-Creates a CSV template file to be used to define a  
+Creates a CSV template file to be used to define a dataset while optimizing a given error metric
 
 Usage: 
 ```
@@ -211,7 +112,6 @@ Example:
 ```
 ./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit --output dataset.csv 
 ```
-
 
 
 ### The ```es``` command
@@ -248,6 +148,166 @@ Example:
 ```
 ./pyALS als --source /path_to_source --top top_level_entity --catalog /path_to_catalog_cache --output /path_to_output_directory --config /path_to_config.json --improve /path_to_final_archive.json --resume 
 ```
+
+## The configuration file
+The configuration file defines parameters governing the behavior of pyALS. Is is a JSON file which generic structure is reported below.
+Please note that, depending on the specific command you selected, some parameters are not required, hence they can be omitted.
+Furthermore, an example configuration file is provided in the ```example``` directory.
+
+In the following, each field of the JSON file is described using C-Style comments. Note JSON does not provide any support for comments, hence you must remove them in case you copy-and-paste from the following box.
+
+```json
+{
+    "hdl" : {
+        "source" : "path_to_hdl_source",                // the HDL source file; VHDL, Verilog and System Verilog are supported. You can also pass more than one source file, using a list, i.e., ["source1", "source2"];
+        "top"    : "mult_2_bit",                        // the top-level entity name
+        "output" : "results"                            // path to the output directory
+    },
+    "als" : {
+        "cache"    : "lut_catalog.db",                  // path to the catalog-cache
+        "cut_size" : 4,                                 // specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration, always required
+        "solver"   : "btor",                            // SAT-solver to be used. It can be either btor (Boolector) or z3 (Z3-solver), always required
+        "timeout"  : 60000                              // Timeout (in ms) for the exact synthesis process, always required. It is better you don't change its default value.              
+    },
+    "error" : {                                         // This section defines error-related stuff
+        "metric"       : "med",                         // Error metric to be used during Design-Space exploration. It can be "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively; The "ia-ep" and "ia-ed" stand for "input-aware" error-probability and error-distance, which require the user to provide the probability-distribution for input vectors  
+        "threshold"    : 16,                            // The error threshold
+        "vectors"      : 5,                             // The number of test vectors for error assessment. Using the value "0" will unlock exhaustive evaluation, i.e., it will cause the tool to evaluate the error for every possible input assignment.
+        "distribution" : "input_distribution.csv",      // Input dataset to be used for error assessment. Its format depend on the specific error metric being adopted (simple csv for builin, json for custom assessment).
+        "weigths" : {                                   // specify weights for outputs; you can also define weights as floating point, or even negative numbers;
+            "signal_name" : weight,
+            // for instance:
+            "\\o[0]" : 1,
+            "\\o[1]" : 2,
+            "\\o[2]" : 4,
+            "\\o[3]" : 8
+        }
+    },
+    "hardware]" : {                                     // Hardware related stuff
+        "metric" : ["gates", "depth", "switching"]      // hardware metric(s) to be optimized (AIG-gates, AIG-depth, or LUT switching activity). Please note you can specify more than one metric.
+    },
+    "amosa" : {                                         // Parameters governing the Archived Multi-Objective Simulated-Annealing optimization heuristic 
+        "archive_hard_limit"       : 100,               // Archive hard limit for the AMOSA optimization heuristic, see [1]
+        "archive_soft_limit"       : 200,               // Archive soft limit for the AMOSA optimization heuristic, see [1]
+        "archive_gamma"            : 2,                 // Gamma parameter for the AMOSA optimization heuristic, see [1]
+        "hill_climbing_iterations" : 500,               // the number of iterations performed during the initial hill-climbing refinement, see [1];
+        "initial_temperature"      : 500,               // Initial temperature of the matter for the AMOSA optimization heuristic, see [1]
+        "final_temperature"        : 0.0000001,         // Final temperature of the matter for the AMOSA optimization heuristic, see [1]
+        "cooling_factor"           : 0.95,              // It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
+        "annealing_iterations"     : 750,               // The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
+        "annealing_strength"       : 1,                 // Governs the strength of random perturbations during the annealing phase; specifically, the number of variables whose value is affected by perturbation.
+        "early_termination"        : 20                 // Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
+    }
+}
+```
+
+## Error metrics
+
+pyALS actually provides the user to define the error metric to be used during optimization. It can be selected through the ```metric``` field of the ```error``` section of the configuration file.
+The latter can be set to
+- "ep" for error-probability, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/ep.png);
+- "awce" for absolute worst-case error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/awce.png);
+- "mae" for mean absolute error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mae.png);
+- "wre" for worst-case relative error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/wre.png);
+- "mre" for mean relative error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mre.png);
+- "mse" for mean squared error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mse.png);
+- "med" for mean error distance, that, given the error distance ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/ed.png) and the probability the latter happens ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/p_ed.png), is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/med.png);
+- "mred" for mean relative error distance, that, given the error distance ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/red.png) and the probability the latter happens ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/p_red.png), is defined as  ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mred.png)
+
+### Defining your own error metric
+
+In case the metric you want to use isn't available, you can define it on your own and make it available to ```pyALS``` through its dynamic module loader. This mechanism also allows you to simulate the behavior of the approximate component you want to design when deployed in a given target application.
+
+#### Simple, generic metric
+
+Suppose you want to define the worst-case relative error magniture metric  for error assessment, as defined above.
+
+The procedure follows:
+1. create a source file, namely ```relative_error_magnitude.py``` in the root directory of ```pyALS```; I suggest using a directory in which to place user-defined metrics, so, in the following, I suppose you have the ```custom_error_metrics``` directory in the root directory of ```pyALS```;
+2. in the mentioned source file, implement the function computing the error metric; for instance, in the ```relative_error_magnitude.py``` you can put the following
+    ```python
+    import numpy as np
+    
+    def compute_rem(graph, input_data, configuration, weights):
+        current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in input_data ]  #compute the output of the circuit for each of the samples
+        rem = 0
+        for sample, current in zip(input_data, current_outputs):
+            f_exact = np.sum([float(weights[o]) * sample["output"][o] for o in weights.keys() ]) # compute f(x), from the circuit output
+            f_apprx = np.sum([float(weights[o]) * current[o] for o in weights.keys() ])          # compute the same, but for the approximate circuit
+            err = np.abs(1- f_apprx / f_exact)                                                   # computing the relative error 
+            if rem < err:                                                                        # keeping track of the maximum 
+                rem = err                                                                        
+            return rem
+    ```
+   please note that, whatever metric you're going to compute, the function computing it ***MUST*** have the following parameters, in the specified order:
+   1. ```graph```: graph-based representation of the circuit suitable for simulation; for now, consider it as a black box: you're only using it to obtain the circuit output for each input vector, using ```graph.evaluate(sample["input"], configuration) for sample in input_data```;
+      1. ```input_data```: the input data to be used for error assessment; in this particular case it is a list of input vectors automatically generated by the tool; each entry of the list is a dictionary with two entries:
+         - ```input```: a dictionary containing the truth value of each primary input signal; the value field for this key is a dictionary itself that can be indexed using PIs' name in order to get the corresponding truth value;
+         - ```output```: a dictionary containing the truth value of each primary outsingal signal; the value field for this key is a dictionary itself that can be indexed using POs' name in order to get the corresponding truth value;
+
+         for instance, consider a 4-input-4-output circuit with the following interface, coded in Verilog HDL
+         ```
+         module mult_2_bit (
+            input  logic [1:0]  a,
+            output logic [3:0]  o,
+            input  logic [1:0]  b
+         );
+         ```
+         the mentioned list of dictionary will be, depending on the number of input vectors to be generated, the set of PIs and POs, something like
+         ```
+         [
+           {'input': {'\\a[0]': False, '\\a[1]': False, '\\b[0]': False, '\\b[1]': False}, 'output': {'\\o[0]': False, '\\o[1]': False, '\\o[2]': False, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': False, '\\a[1]': False, '\\b[0]': False, '\\b[1]': True}, 'output': {'\\o[0]': False, '\\o[1]': False, '\\o[2]': False, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': False, '\\a[1]': False, '\\b[0]': True, '\\b[1]': False}, 'output': {'\\o[0]': False, '\\o[1]': False, '\\o[2]': False, '\\o[3]': False}},
+           {'input': {'\\a[0]': False, '\\a[1]': False, '\\b[0]': True, '\\b[1]': True}, 'output': {'\\o[0]': False, '\\o[1]': False, '\\o[2]': False, '\\o[3]': False}},
+           {'input': {'\\a[0]': False, '\\a[1]': True, '\\b[0]': False, '\\b[1]': False}, 'output': {'\\o[0]': False, '\\o[1]': False, '\\o[2]': False, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': False, '\\a[1]': True, '\\b[0]': False, '\\b[1]': True}, 'output': {'\\o[0]': False, '\\o[1]': False, '\\o[2]': True, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': False, '\\a[1]': True, '\\b[0]': True, '\\b[1]': False}, 'output': {'\\o[0]': False, '\\o[1]': True, '\\o[2]': False, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': False, '\\a[1]': True, '\\b[0]': True, '\\b[1]': True}, 'output': {'\\o[0]': False, '\\o[1]': True, '\\o[2]': True, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': True, '\\a[1]': False, '\\b[0]': False, '\\b[1]': False}, 'output': {'\\o[0]': False, '\\o[1]': False, '\\o[2]': False, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': True, '\\a[1]': False, '\\b[0]': False, '\\b[1]': True}, 'output': {'\\o[0]': False, '\\o[1]': True, '\\o[2]': False, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': True, '\\a[1]': False, '\\b[0]': True, '\\b[1]': False}, 'output': {'\\o[0]': True, '\\o[1]': False, '\\o[2]': False, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': True, '\\a[1]': False, '\\b[0]': True, '\\b[1]': True}, 'output': {'\\o[0]': True, '\\o[1]': True, '\\o[2]': False, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': True, '\\a[1]': True, '\\b[0]': False, '\\b[1]': False}, 'output': {'\\o[0]': False, '\\o[1]': False, '\\o[2]': False, '\\o[3]': False}}, 
+           {'input': {'\\a[0]': True, '\\a[1]': True, '\\b[0]': False, '\\b[1]': True}, 'output': {'\\o[0]': False, '\\o[1]': True, '\\o[2]': True, '\\o[3]': False}},
+           {'input': {'\\a[0]': True, '\\a[1]': True, '\\b[0]': True, '\\b[1]': False}, 'output': {'\\o[0]': True, '\\o[1]': True, '\\o[2]': False, '\\o[3]': False}},
+           {'input': {'\\a[0]': True, '\\a[1]': True, '\\b[0]': True, '\\b[1]': True}, 'output': {'\\o[0]': True, '\\o[1]': False, '\\o[2]': False, '\\o[3]': True}}
+         ]
+
+         ```
+         you can obtain the circuit output for each input vector using ```graph.evaluate(sample["input"], configuration) for sample in input_data```; feel free to spawn processes, if you need them, to speed-up the computation; Furthermore,  ```pyALS``` is thought to be as flexible as possible, so you can pass the error-assessment function anything you want; for further details se the "Simulating a whole application" section below.
+
+   2. ```configuration```: the approximate configuration to be evaluated; the only thing you have to know is you have to pass it to the ```evaluate``` method of the ```graph``` object;
+   3. ```weights```: python dictionary containing weights for output signals, as specified in the JSON configuration file; with these, you can compute the numeric value of the output from using ```np.sum([float(weights[o]) * sample["output"][o] for o in weights.keys() ])```, for instance
+
+3. now, you have to tell to the ```pyALS``` tool to use the function you defined; you can do it in the JSON configuration file, specifically using the ```metric``` field of the ```error``` section; basically, you have to specify the module name, the function name and the reduce operation to be performed; these information have to be placed in the JSON file as a python dictionary, as follows
+   ```json
+       "error" : {
+           "metric" : {
+              "module" : "applications/relative_error_magnitude", # the path to the module source file; note that the ```module``` field gives the path where the module is stored, but it does not have any "py" extension;
+              "function" : "compute_rem"}                         # the actual name of the function to be called
+       }
+   ```
+
+
+#### Simulating a whole application
+
+```pyALS``` also allows you to approximate a component while considering its final application into account, using the same mechanism we exploited before to extend the set of error metrics.
+To illustrate how it works, I'll consider a simple demo application, i.e., the approximation of a 16-bits signed fixed-point multiplier intended to be used in a FIR filter, using the PSNR as error metric to be minimized.
+This example is also available in the ```example/fir``` directory of ```pyALS```.
+
+
+
+
+```json
+       "error" : {
+           "metric" : {
+              "module" : "applications/relative_error_magnitude", # the path to the module source file; note that the ```module``` field gives the path where the module is stored, but it does not have any "py" extension;
+              "function" : "compute_rem"},                        # the actual name of the function to be called
+           "dataset"      : "path_to_json_encoded_data.json",     # the path to the JSON file containing the data for the mentioned function
+       }
+   ```
+
 
 
 

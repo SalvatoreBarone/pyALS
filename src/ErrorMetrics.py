@@ -14,6 +14,8 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
+import json
+
 import numpy as np
 from .ALSGraph import *
 from .Utility import *
@@ -32,19 +34,16 @@ class ErrorConfig:
 
     def __init__(self, metric, threshold, vectors, dataset = None, weights = None):
         self.metric = None
-        self.function = None
-        self.reduce = None
-        self.builtin_metric = None
-        self.dataset = None
-
-        if type(metric) == str:
-            self.get_builin_metric(metric)
-        elif type(metric) == dict:
-           self.get_custom_metric(metric)
         self.threshold = threshold
         self.n_vectors = vectors
         self.dataset = dataset
         self.weights = weights
+        self.function = None
+        self.builtin_metric = None
+        if type(metric) == str:
+            self.get_builin_metric(metric)
+        elif type(metric) == dict:
+           self.get_custom_metric(metric)
 
     def get_builin_metric(self, metric):
         error_metrics = {
@@ -64,18 +63,11 @@ class ErrorConfig:
             self.metric = error_metrics[metric]
 
     def get_custom_metric(self, metric):
-        reduce_operators = {
-            "max" : np.max,
-            "sum" : np.sum
-        }
         if "module" not in metric.keys():
             raise ValueError(f"'module' field not specified")
         if "function" not in metric.keys():
             raise ValueError(f"'function' field not specified")
-        if "reduce" not in metric.keys():
-            raise ValueError(f"'reduce' field not specified")
         self.function = dynamic_import(metric["module"], metric["function"])
-        self.reduce = reduce_operators[metric["reduce"]]
         self.builtin_metric = False
 
     def validate_weights(self, graph):

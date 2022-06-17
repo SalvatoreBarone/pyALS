@@ -1,6 +1,6 @@
 {
     "hdl" : {
-        "source" : "example/mult_2_bit.sv",
+        "source" : "example/mult_2_bit/mult_2_bit.sv",
         "top"    : "mult_2_bit",
         "output" : "prova"
     },
@@ -11,10 +11,10 @@
         "timeout"  : 60000
     },
     "error" : {
-        "metric"       : "wre",
+        "metric"       : "mse",
         "threshold"    : 16,
         "vectors"      : 10,
-        "dataset"      : "example/dataset.csv",
+        "dataset"      : "example/mult_2_bit/dataset.csv",
         "weights"      : {
             "\\o[0]" : 1,
             "\\o[1]" : 2,

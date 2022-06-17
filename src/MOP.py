@@ -14,7 +14,7 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import sys, os, itertools, collections, functools, operator
+import sys, os, itertools, collections, functools, operator, json
 from multiprocessing import cpu_count, Pool
 from .HwMetrics import *
 from .ErrorMetrics import *
@@ -50,13 +50,18 @@ class MOP(AMOSA.Problem):
         self.catalog = catalog
         self.error_config = error_config
         self.hw_config = hw_config
-        self.samples = []
-        if error_config.dataset is None:
+        self.samples = None
+        if self.error_config.dataset is None:
+            print(f"Generating {self.error_config.n_vectors} input-vectors for error assessment...")
             self._generate_samples()
         else:
-            print("Reading samples...")
-            self._read_samples(error_config.dataset)
-        self._args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))]
+            print(f"Reading input data from {self.error_config.dataset} ...")
+            if self.error_config.dataset.endswith(".json"):
+                self.samples = json.load(open(self.error_config.dataset))
+            else:
+                self._read_samples(self.error_config.dataset)
+        print("Done!")
+        self._args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self._get_upper_bound()
         self.baseline_and_gates = self._get_baseline_gates()
         self.baseline_depth = self._get_baseline_depth()
@@ -72,12 +77,13 @@ class MOP(AMOSA.Problem):
         if self.error_config.builtin_metric:
             out["f"].append(getattr(self, self.error_ffs[self.error_config.metric])(configuration))
         else:
-            out["f"].append(self.get_custom(configuration))
+            out["f"].append(self.error_config.function(self.graph, self.samples, configuration, self.error_config.weights))
         out["g"].append(out["f"][-1] - self.error_config.threshold)
         for metric in self.hw_config.metrics:
             out["f"].append(self.hw_ffs[metric](configuration))
 
     def _read_samples(self, dataset):
+        self.samples = []
         PI = self.graph.get_pi()
         file = open(dataset, "r")
         header = list(filter(None, file.readline().replace("\n", "").split(",")))
@@ -93,6 +99,7 @@ class MOP(AMOSA.Problem):
             self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
     def _generate_samples(self):
+        self.samples = []
         PI = self.graph.get_pi()
         if self.error_config.n_vectors != 0:
             for _ in range(self.error_config.n_vectors):
@@ -213,12 +220,3 @@ class MOP(AMOSA.Problem):
                 else:
                     final_fistogram[k] = v
         return float(np.sum([k * v / total for k, v in final_fistogram.items()]))
-
-    def get_custom(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        ec_function = self.error_config.function
-        with Pool(cpu_count()) as pool:
-            error = pool.starmap(ec_function, self._args)
-        return self.error_config.reduce(error)
-
