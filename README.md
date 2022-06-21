@@ -190,13 +190,15 @@ In the following, each field of the JSON file is described using C-Style comment
         "archive_hard_limit"       : 100,               // Archive hard limit for the AMOSA optimization heuristic, see [1]
         "archive_soft_limit"       : 200,               // Archive soft limit for the AMOSA optimization heuristic, see [1]
         "archive_gamma"            : 2,                 // Gamma parameter for the AMOSA optimization heuristic, see [1]
+        "clustering_iterations"    : 300,               // maximum iterations performed by the clustering algorithm
         "hill_climbing_iterations" : 500,               // the number of iterations performed during the initial hill-climbing refinement, see [1];
         "initial_temperature"      : 500,               // Initial temperature of the matter for the AMOSA optimization heuristic, see [1]
         "final_temperature"        : 0.0000001,         // Final temperature of the matter for the AMOSA optimization heuristic, see [1]
         "cooling_factor"           : 0.95,              // It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
         "annealing_iterations"     : 750,               // The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
         "annealing_strength"       : 1,                 // Governs the strength of random perturbations during the annealing phase; specifically, the number of variables whose value is affected by perturbation.
-        "early_termination"        : 20                 // Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
+        "early_termination"        : 20,                // Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
+        "multiprocess_enabled"     : true               // Enables/disables synchronous multiprocessing with intensive solution exchanges in AMOSA. While using built-in metrics, it should be disabled.
     }
 }
 ```

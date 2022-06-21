@@ -221,7 +221,6 @@ def als(config, improve):
 	hours = int(optimizer.duration / 3600)
 	minutes = int((optimizer.duration - hours * 3600) / 60)
 	print(f"Took {hours} hours, {minutes} minutes")
-	optimizer.save_results(problem, f"{configuration.output_dir}/report.csv")
 	optimizer.archive_to_json(f"{configuration.output_dir}/final_archive.json")
 	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", plot_labels(configuration.error_conf, configuration.hw_conf))
 	pareto_set = optimizer.pareto_set()

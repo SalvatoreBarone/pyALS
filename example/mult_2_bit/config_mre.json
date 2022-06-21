@@ -30,12 +30,14 @@
         "archive_hard_limit"       : 3,
         "archive_soft_limit"       : 5,
         "archive_gamma"            : 2,
+        "clustering_iterations"    : 300,
         "hill_climbing_iterations" : 5,
         "initial_temperature"      : 5,
         "final_temperature"        : 0.01,
         "cooling_factor"           : 0.9,
         "annealing_iterations"     : 5,
         "annealing_strength"       : 1,
-        "early_termination"        : 20
+        "early_termination"        : 20,
+        "multiprocess_enabled"     : false
     }
 }
