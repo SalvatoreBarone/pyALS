@@ -1,0 +1,186 @@
+#!/usr/bin/python3
+"""
+Copyright 2022 Salvatore Barone <salvatore.barone@unina.it>
+
+This is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation; either version 3 of the License, or any later version.
+
+This is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+
+You should have received a copy of the GNU General Public License along with
+RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
+Street, Fifth Floor, Boston, MA 02110-1301, USA.
+"""
+import pickle, click
+import random
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.signal import kaiserord, firwin, lfilter
+
+from Waves import *
+from FirFilter import *
+
+
+def plot_signals(signals, labels, freq, alpha = 10, outfile = None):
+	sample_f = freq * 100  # sampling frequency (Hz)
+	sample_period = 1 / sample_f  # sampling period
+	num_of_sample = int(alpha * sample_f / freq)  # number of samples
+	step_f = sample_f / num_of_sample
+	t = np.linspace(0, (num_of_sample - 1) * sample_period, num_of_sample)  # sampling time-instants
+	f = np.linspace(0, (num_of_sample - 1) * step_f, num_of_sample)  		# sampling frequencies
+	f_plot = f[0:int(num_of_sample / 2 + 1)]
+	assert len(signals) == len(labels), "Signals and labels must have the same amount of elements"
+	cols = len(signals)
+	fig, ax = plt.subplots(figsize = [6*cols, 6], nrows = 2, ncols = cols)
+	for i, s, l in zip(range(cols), signals, labels):
+		ax[0][i].set_title(l)
+		ax[0][i].set_xlabel("Time (s)")
+		ax[0][i].set_ylabel("Amplitude")
+		ax[1][i].set_title("Spectrum")
+		ax[1][i].set_xlabel("Frequency (Hz)")
+		ax[1][i].set_ylabel("Magnitude")
+		ax[1][i].set_xscale("symlog")
+		X = np.fft.fft(s)
+		mag_X = np.abs(X) / num_of_sample
+		mag_X_plot = 2 * mag_X[0:int(num_of_sample / 2 + 1)]
+		mag_X_plot[0] /= 2
+		ax[0][i].plot(t, s, 'b-')
+		ax[1][i].plot(f_plot, mag_X_plot, 'b-')
+	fig.tight_layout()
+	if outfile is not None:
+		fig.savefig(outfile, pad_inches = 0)
+
+
+def plot_bode(filters, labels, sample_rate, outfile = None):
+	assert len(filters) == len(labels), "Signals and labels must have the same amount of elements"
+	cols = len(filters)
+	fig, ax = plt.subplots(figsize = [6 * cols, 6], nrows = 1, ncols = cols)
+	for a, f, l in zip(ax, filters, labels):
+		w, h = freqz(f)
+		a.plot((w / np.pi) * sample_rate, 20 * np.log10(np.abs(h)), 'b-')
+		a.set_xlabel('Frequency (Hz)')
+		a.set_ylabel('Gain (dB)')
+		a.set_title(l)
+		a.set_xscale("symlog")
+		a.grid(True)
+	fig.tight_layout()
+	if outfile is not None:
+		fig.savefig(outfile, pad_inches = 0)
+
+
+@click.group()
+def cli():
+	pass
+
+
+@click.command("design")
+@click.option("--freq", type=float, required=True, help="Frequency of the signal to be sampled")
+@click.option("--signal", type=str, required=True, help="Signal to be sampled")
+@click.option("--armonics", type=int, help="Number of armonics", default = 250)
+@click.option("--amplitude", type=float, help="Amplitude of the signal", default = .5)
+@click.option("--rep", type=(int, int), required=True, help="Qm.n representation", nargs=2)
+@click.option("--cutoff", type=float, required=True, help="Cut-off frequency of the filter")
+@click.option("--ripple", type=float, help="Ripple of the filter (db)", default = 60.0)
+@click.option("--width", type=float, help="Width of the filter", default = 25.0)
+@click.option("--lowpass", is_flag=True, help="High/Low pass")
+def design(freq, signal, armonics, amplitude, rep, cutoff, ripple, width, lowpass):
+	signal_selector = {
+		"square": Wave.square,
+		"saw": Wave.saw,
+		"triangle": Wave.triangle
+	}
+	x, t, sample_rate = signal_selector[signal](freq, armonics = armonics, amplitude = amplitude)
+	sample_rate = cutoff * 5
+	window_width = cutoff * width / sample_rate
+	num_of_taps, beta = kaiserord(ripple, window_width)
+	if num_of_taps % 2 == 0:
+		num_of_taps = num_of_taps + 1
+	taps = firwin(num_of_taps, cutoff / sample_rate, window = ('kaiser', beta), pass_zero = lowpass)  # Estimate the filter coefficients.
+	filtered_x = lfilter(taps, 1.0, x)
+	my_filter = FIRFilter(taps, rep[0], rep[1], True)
+	ax_filtered_x = my_filter.apply(x, True)
+	print(sample_rate)
+	for t, i in zip(taps, my_filter.coefficients):
+		print(t, i, f"{i:0{sum(rep)}b}", sep = "\t")
+	plot_signals((x, filtered_x, ax_filtered_x), ("Original signal", "Reference filter", "My filter"), freq, outfile = "signals.pdf")
+	plot_bode((taps, my_filter.coefficients), ("Reference filter", "My filter"), sample_rate, outfile = "bodes.pdf")
+
+
+@click.command("profile")
+@click.option("--freq", type=float, required=True, help="Frequency of the signal to be sampled")
+@click.option("--signal", type=str, required=True, help="Signal to be sampled")
+@click.option("--armonics", type=int, help="Number of armonics", default = 250)
+@click.option("--amplitude", type=float, help="Amplitude of the signal", default = .5)
+@click.option("--rep", type=(int, int), required=True, help="Qm.n representation", nargs=2)
+@click.option("--cutoff", type=float, required=True, help="Cut-off frequency of the filter")
+@click.option("--ripple", type=float, help="Ripple of the filter (db)", default = 60.0)
+@click.option("--width", type=float, help="Width of the filter", default = 25.0)
+@click.option("--highpass", is_flag=True, help="High/Low pass")
+@click.option("--outformat", help="Printing format", default = "json")
+def profile(freq, signal, armonics, amplitude, rep, cutoff, ripple, width, highpass, outformat):
+	signal_selector = {
+		"square": Wave.square,
+		"saw": Wave.saw,
+		"triangle": Wave.triangle
+	}
+	x, t, sample_rate = signal_selector[signal](freq, armonics = armonics, amplitude = amplitude)
+	window_width = cutoff * width / sample_rate
+	num_of_taps, beta = kaiserord(ripple, window_width)
+	if num_of_taps % 2 == 0:
+		num_of_taps = num_of_taps + 1
+	taps = firwin(num_of_taps, cutoff / sample_rate, window = ('kaiser', beta), pass_zero = highpass)
+	my_filter = FIRFilter(taps, rep[0], rep[1], True)
+	q_x = [ FixedPoint(i, signed = True, m = rep[0], n = rep[1]) for i in x ]
+	reference_output = my_filter.apply(x, True)
+	print("{")
+	print(f"\"m\": {rep[0]}, ")
+	print(f"\"n\": {rep[1]}, ")
+	input_signal_as_str = ", ".join(f'{float(c)}' for c in q_x)
+	print(f"\"input_signal\": [ {input_signal_as_str} ],")
+	filter_coefficients_as_str = ", ".join(f'{float(c)}' for c in my_filter.coefficients)
+	print(f"\"filter_coefficients\": [ {filter_coefficients_as_str} ],")
+	reference_output_as_str = ", ".join(f"{float(c)}" for c in reference_output)
+	print(f"\"reference_output\": [ {reference_output_as_str} ]")
+	print("}")
+
+
+@click.command("randomize")
+@click.option("--nvett", type=int, required=True, help="Number of random samples")
+@click.option("--amplitude", type=float, help="Amplitude", default = .5)
+@click.option("--rate", type=float, required=True, help="Sampling rate")
+@click.option("--rep", type=(int, int), required=True, help="Qm.n representation", nargs=2)
+@click.option("--cutoff", type=float, required=True, help="Cut-off frequency of the filter")
+@click.option("--ripple", type=float, help="Ripple (db)", default = 60.0)
+@click.option("--width", type=float, help="Width of the filter", default = 25)
+@click.option("--highpass", is_flag=True, help="High/low pass")
+def randomize(nvett, amplitude, rate, rep, cutoff, ripple, width, highpass):
+	window_width = cutoff * width / rate
+	num_of_taps, beta = kaiserord(ripple, window_width)
+	if num_of_taps % 2 == 0:
+		num_of_taps = num_of_taps + 1
+	taps = firwin(num_of_taps, cutoff / rate, window = ('kaiser', beta), pass_zero = highpass)
+	my_filter = FIRFilter(taps, rep[0], rep[1], True)
+	q_x = [FixedPoint(random.uniform(-amplitude, +amplitude), signed = True, m = rep[0], n = rep[1]) for _ in range(nvett)]
+	half = len(my_filter.coefficients)//2 if len(my_filter.coefficients) % 2 == 0 else len(my_filter.coefficients)//2 + 1
+	for c in my_filter.coefficients[:half]:
+		for q in q_x:
+			print(','.join(f"{c:0{sum(rep)}b}"), ',', ','.join(f"{q:0{sum(rep)}b}"), sep = "")
+
+
+cli.add_command(design)
+cli.add_command(profile)
+cli.add_command(randomize)
+
+if __name__ == '__main__':
+	cli()
+
+
+
+
+
+
