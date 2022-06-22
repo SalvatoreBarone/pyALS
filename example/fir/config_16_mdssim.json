@@ -2,7 +2,7 @@
     "hdl": {
         "source": ["example/fir/s_wallace_rca16.v"],
         "top": "s_wallace_rca16",
-        "output": "example/fir/result"
+        "output": "example/fir/result16"
     },
     "als": {
         "cache": "lut_catalog.db",
@@ -14,7 +14,7 @@
         "metric": {"module" : "example/fir/fir", "function" : "compute_mdssim"},
         "threshold": 1.0,
         "vectors": 1,
-        "dataset": "example/fir/dataset.json",
+        "dataset": "example/fir/dataset_16.json",
         "weights": {
             "\\s_wallace_rca16_out[0]"  : 9.3132257461547852e-10,
             "\\s_wallace_rca16_out[1]"  : 1.862645149230957e-09,

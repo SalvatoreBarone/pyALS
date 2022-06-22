@@ -17,23 +17,25 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 import numpy as np
 from fixedpoint import FixedPoint
 
-m = 1
-n = 15
 
-
-def multiply(graph, configuration, weights, a, b):
-    bin_a, bin_b = f"{a:016b}"[::-1], f"{b:016b}"[::-1]
-    input_assignment = { **{ f"\\a[{i}]": bin_a[i] == "1" for i in range(16) }, **{ f"\\b[{i}]": bin_b[i] == "1" for i in range(16) }}
-    output_assignment = graph.evaluate(input_assignment, configuration)
-    return np.sum([float(weights[o]) * output_assignment[o] for o in weights.keys()])
+def multiply(graph, configuration, weights, a, b, m, n):
+    if a != 0 and b != 0:
+        bin_a, bin_b = f"{a:0{m+n}b}"[::-1], f"{b:0{m+n}b}"[::-1]
+        input_assignment = { **{ f"\\a[{i}]": bin_a[i] == "1" for i in range(16) }, **{ f"\\b[{i}]": bin_b[i] == "1" for i in range(16) }}
+        output_assignment = graph.evaluate(input_assignment, configuration)
+        return np.sum([float(weights[o]) * output_assignment[o] for o in weights.keys()])
+    else:
+        return 0
 
 
 def compute_fir(graph, input_data, configuration, weights):
+    m = int(input_data["m"])
+    n = int(input_data["n"])
     input_signal = [FixedPoint(c, signed = True, m = m, n = n) for c in input_data["input_signal"]]
     filter_coefficients = [FixedPoint(c, signed = True, m = m, n = n) for c in input_data["filter_coefficients"]]
     len_i, len_c = len(input_signal), len(filter_coefficients)
     len_r = len_i + len_c - 1
-    return [sum([multiply(graph, configuration, weights, input_signal[j - i - len_c], filter_coefficients[i]) for i in range(len_c)]) for j in range(len_c, len_r + 1)]
+    return [sum([multiply(graph, configuration, weights, input_signal[j - i - len_c], filter_coefficients[i], m, n) for i in range(len_c)]) for j in range(len_c, len_r + 1)]
 
 
 def get_ssim(x, y, k1 = 0.01, k2 = 0.003):
@@ -69,7 +71,7 @@ def compute_psnr(graph, input_data, configuration, weights):
     output_signal = compute_fir(graph, input_data, configuration, weights)
     assert len(reference_signal) == len(output_signal), "Reference and output signals must be equal in size"
     output_signal = [float(x) for x in output_signal]
-    _, psnr = get_mse_psnr(output_signal, reference_signal)
+    mse, psnr = get_mse_psnr(output_signal, reference_signal)
     return -psnr # the PSNR has to be MAXIMIZED to minimize the error
 
 
