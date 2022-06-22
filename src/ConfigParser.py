@@ -65,7 +65,7 @@ class ConfigParser:
 			return configuration[section][field]
 		except KeyError as e:
 			if mandatory:
-				print(e)
+				print("{e} not found in the configuration")
 				exit()
 			else:
 				return None
