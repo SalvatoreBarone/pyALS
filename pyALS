@@ -156,11 +156,11 @@ def es_synth(config):
 	print("Done!")
 
 
-@click.command("dataset")
+@click.command("template")
 @click.option("--source",  type=str, multiple=True, help="specify the input HDL source file")
 @click.option("--top",     type=str, required=True, help="specify the top-module name")
 @click.option("--output",  type=str, required=True, help="Output file.")
-def dataset(source, top, output):
+def template(source, top, output):
 	"""
 	Draws a k-LUT map of the given circuit
 	"""
@@ -180,6 +180,42 @@ def dataset(source, top, output):
 		sys.stdout = file
 		print(row_format)
 	sys.stdout = original_stdout
+
+
+@click.command("randomsplit")
+@click.option("--source",  type=str, multiple=True, help="specify the input HDL source file")
+@click.option("--top",     type=str, required=True, help="specify the top-module name")
+@click.option("--splits",  type=int, required=True, help="amount of dataset partitions")
+@click.option("--outputdir",  type=str, required=True, help="output directory")
+def randomsplit(source, top, splits, outputdir):
+	"""
+	Split the input-set in N partitions, using random sampling without repetitions.
+	"""
+	mkpath(outputdir)
+	design = ys.Design()
+	ys.run_pass("plugin -i ghdl", design)
+	print("GHDL plugin loaded successfully")
+	read_source(source, top, design)
+	print(f"{source} read successfully")
+	synth_design(design, top, "4")
+	print(f"Synthesis successful")
+	graph = ALSGraph(design)
+	print(f"Graph generation completed")
+	PI = graph.get_pi()
+	PI = [i["name"] for i in PI]
+	permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
+	assignments = [{i: p for i, p in zip(PI, perm)} for perm in permutations]
+	random.shuffle(assignments)
+	splitsize = len(assignments) // splits
+	for i in range(splits):
+		original_stdout = sys.stdout
+		with open(f"{outputdir}/split_{i}.csv", "w") as file:
+			sys.stdout = file
+			print(",".join(PI))
+			for r in range(i*splitsize, (i+1)*splitsize):
+				print(",".join(["1" if assignments[r][p] else "0" for p in PI]))
+		sys.stdout = original_stdout
+	print("Dataset generation completed")
 
 
 @click.command("als")
@@ -348,7 +384,8 @@ def stats(catalog, gates, power_gates, power_truth, power_truth_k):
 		power_truth_k_boxplot(power_truth_k)
 
 
-cli.add_command(dataset)
+cli.add_command(randomsplit)
+cli.add_command(template)
 cli.add_command(plot)
 cli.add_command(es_synth)
 cli.add_command(als)
