@@ -16,7 +16,7 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 
-import sys, os, click, git
+import sys, os, click, git, shutil
 from pyosys import libyosys as ys
 from distutils.dir_util import mkpath
 from src.ALSCatalog import *
@@ -233,7 +233,7 @@ def als(config, improve):
 	if configuration.error_conf.dataset is not None:
 		check_for_file(configuration.error_conf.dataset)
 	if configuration.output_dir != ".":
-		os.rmdir(configuration.output_dir)
+		shutil.rmtree(configuration.output_dir)
 		mkpath(configuration.output_dir)
 	design = ys.Design()
 	ys.run_pass("plugin -i ghdl", design)
