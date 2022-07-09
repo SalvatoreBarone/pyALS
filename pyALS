@@ -233,7 +233,6 @@ def als(config, improve):
 	if configuration.error_conf.dataset is not None:
 		check_for_file(configuration.error_conf.dataset)
 	if configuration.output_dir != ".":
-		shutil.rmtree(configuration.output_dir)
 		mkpath(configuration.output_dir)
 	design = ys.Design()
 	ys.run_pass("plugin -i ghdl", design)
@@ -263,10 +262,10 @@ def als(config, improve):
 	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", plot_labels(configuration.error_conf, configuration.hw_conf))
 	pareto_set = optimizer.pareto_set()
 	print(f"Performing AIG-rewriting.")
+	shutil.rmtree(f"{configuration.output_dir}/*.v")
 	rewriter = ALSRewriter(graph, lut_catalog)
 	for c, n in zip(pareto_set, range(len(pareto_set))):
-		hdl_file_name = f"{configuration.output_dir}/variant_{n:05d}"
-		rewriter.rewrite_and_save("original", c, hdl_file_name)
+		rewriter.rewrite_and_save("original", c, f"{configuration.output_dir}/variant_{n:05d}")
 		print(f"{hdl_file_name} written successfully")
 	print(f"All done! Take a look at {configuration.output_dir}!")
 
