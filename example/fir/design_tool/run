@@ -104,7 +104,6 @@ def design(freq, signal, armonics, amplitude, rep, cutoff, ripple, width, lowpas
 	filtered_x = lfilter(taps, 1.0, x)
 	my_filter = FIRFilter(taps, rep[0], rep[1], True)
 	ax_filtered_x = my_filter.apply(x, True)
-	print(sample_rate)
 	for t, i in zip(taps, my_filter.coefficients):
 		print(t, i, f"{i:0{sum(rep)}b}", sep = "\t")
 	plot_signals((x, filtered_x, ax_filtered_x), ("Original signal", "Reference filter", "My filter"), freq, outfile = "signals.pdf")

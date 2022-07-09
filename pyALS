@@ -233,6 +233,7 @@ def als(config, improve):
 	if configuration.error_conf.dataset is not None:
 		check_for_file(configuration.error_conf.dataset)
 	if configuration.output_dir != ".":
+		os.rmdir(configuration.output_dir)
 		mkpath(configuration.output_dir)
 	design = ys.Design()
 	ys.run_pass("plugin -i ghdl", design)
@@ -258,6 +259,7 @@ def als(config, improve):
 	minutes = int((optimizer.duration - hours * 3600) / 60)
 	print(f"Took {hours} hours, {minutes} minutes")
 	optimizer.archive_to_json(f"{configuration.output_dir}/final_archive.json")
+	optimizer.archive_to_csv(problem, f"{configuration.output_dir}/final_archive.csv")
 	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", plot_labels(configuration.error_conf, configuration.hw_conf))
 	pareto_set = optimizer.pareto_set()
 	print(f"Performing AIG-rewriting.")
