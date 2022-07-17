@@ -14,14 +14,14 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import numpy as np
+import numpy as np, sys
 from fixedpoint import FixedPoint
 
 
 def multiply(graph, configuration, weights, a, b, m, n):
     if a != 0 and b != 0:
         bin_a, bin_b = f"{a:0{m+n}b}"[::-1], f"{b:0{m+n}b}"[::-1]
-        input_assignment = { **{ f"\\a[{i}]": bin_a[i] == "1" for i in range(16) }, **{ f"\\b[{i}]": bin_b[i] == "1" for i in range(16) }}
+        input_assignment = { **{ f"\\a[{i}]": bin_a[i] == "1" for i in range(n+m) }, **{ f"\\b[{i}]": bin_b[i] == "1" for i in range(n+m) }}
         output_assignment = graph.evaluate(input_assignment, configuration)
         return np.sum([float(weights[o]) * output_assignment[o] for o in weights.keys()])
     else:
@@ -60,7 +60,8 @@ def get_mse_psnr(a, b):
     assert len(a) == len(b), "Arrays must be equal in size"
     mse = np.mean([(x - y) ** 2 for x, y in zip(a, b)])
     if mse == 0:
-        return mse, np.inf
+        #return mse, np.inf # np.inf makes computation cumbersome (because of nan), so select an high-enough value!
+        return mse, 100
     max_ab = np.max(np.concatenate((a, b)))
     psnr = 20 * np.log10(max_ab / np.sqrt(mse))
     return mse, psnr
