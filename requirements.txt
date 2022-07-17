@@ -5,3 +5,4 @@ pyboolector
 python-igraph
 numpy
 GitPython
+fixedpoint
