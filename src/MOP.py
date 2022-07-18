@@ -52,7 +52,6 @@ class MOP(AMOSA.Problem):
         self.hw_config = hw_config
         self.samples = None
         if self.error_config.dataset is None:
-            print(f"Generating {self.error_config.n_vectors} input-vectors for error assessment...")
             self._generate_samples()
         else:
             print(f"Reading input data from {self.error_config.dataset} ...")
@@ -102,11 +101,13 @@ class MOP(AMOSA.Problem):
         self.samples = []
         PI = self.graph.get_pi()
         if self.error_config.n_vectors != 0:
+            print(f"Generating {self.error_config.n_vectors} input-vectors for error assessment...")
             for _ in range(self.error_config.n_vectors):
                 inputs = {i["name"]: bool(random.getrandbits(1)) for i in PI}
                 self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
         else:
             self.error_config.n_vectors = 2 ** len(PI)
+            print(f"Generating {self.error_config.n_vectors} input-vectors for error assessment...")
             permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
             for perm in permutations:
                 inputs = {i["name"]: p for i, p in zip(PI, perm)}
