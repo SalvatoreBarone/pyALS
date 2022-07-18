@@ -108,6 +108,13 @@ def check_for_file(file_name):
 		exit()
 
 
+def rm_old_implementation(output_directory):
+	for file in os.listdir(output_directory):
+		if file.endswith('.v'):
+			print(f"Removing old source-file {output_directory}/{file}")
+			os.remove(f"{output_directory}/{file}")
+
+
 @click.group()
 def cli():
 	pass
@@ -262,11 +269,53 @@ def als(config, improve):
 	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", plot_labels(configuration.error_conf, configuration.hw_conf))
 	pareto_set = optimizer.pareto_set()
 	print(f"Performing AIG-rewriting.")
-	shutil.rmtree(f"{configuration.output_dir}/*.v")
+	rm_old_implementation(configuration.output_dir)
 	rewriter = ALSRewriter(graph, lut_catalog)
 	for c, n in zip(pareto_set, range(len(pareto_set))):
 		rewriter.rewrite_and_save("original", c, f"{configuration.output_dir}/variant_{n:05d}")
-		print(f"{hdl_file_name} written successfully")
+		print(f"{configuration.output_dir}/variant_{n:05d} written successfully")
+	print(f"All done! Take a look at {configuration.output_dir}!")
+
+
+@click.command('generate')
+@click.option("--config",  type=str, help="path of the configuration file")
+def generate(config):
+	"""
+	Performs the rewriting step of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command
+	"""
+	check_for_file(config)
+	configuration = ConfigParser(config, "als")
+	check_for_file(configuration.lut_cache)
+	if configuration.error_conf.dataset is not None:
+		check_for_file(configuration.error_conf.dataset)
+	if configuration.output_dir != ".":
+		mkpath(configuration.output_dir)
+	check_for_file(f"{configuration.output_dir}/final_archive.json")
+	design = ys.Design()
+	ys.run_pass("plugin -i ghdl", design)
+	print("GHDL plugin loaded successfully")
+	read_source(configuration.source_hdl, configuration.top_module, design)
+	print(f"{configuration.source_hdl} read successfully")
+	synth_design(design, configuration.top_module, configuration.als_conf.cut_size)
+	print(f"{configuration.als_conf.cut_size}-LUT synthesis successful")
+	graph = ALSGraph(design)
+	print(f"Graph generation completed")
+	if configuration.error_conf.weights is not None and len(configuration.error_conf.weights) != 0:
+		configuration.error_conf.validate_weights(graph)
+		print("Output-weight parsing completed successfully")
+	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
+	print(f"Reading the Pareto front.")
+	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf)
+	optimizer = AMOSA(configuration.amosa_conf)
+	optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
+	pareto_set = optimizer.pareto_set()
+	print(f"Performing AIG-rewriting.")
+	rm_old_implementation(configuration.output_dir)
+	rewriter = ALSRewriter(graph, lut_catalog)
+	for c, n in zip(pareto_set, range(len(pareto_set))):
+		rewriter.rewrite_and_save("original", c, f"{configuration.output_dir}/variant_{n:05d}")
+		print(f"{configuration.output_dir}/variant_{n:05d} written successfully")
 	print(f"All done! Take a look at {configuration.output_dir}!")
 
 
@@ -390,6 +439,7 @@ cli.add_command(template)
 cli.add_command(plot)
 cli.add_command(es_synth)
 cli.add_command(als)
+cli.add_command(generate)
 cli.add_command(clean)
 cli.add_command(expand)
 cli.add_command(query)
