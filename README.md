@@ -214,8 +214,10 @@ The latter can be set to
 - "mre" for mean relative error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mre.png);
 - "mse" for mean squared error, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mse.png);
 - "med" for mean error distance, that, given the error distance ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/ed.png) and the probability the latter happens ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/p_ed.png), is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/med.png);
-- "mred" for mean relative error distance, that, given the error distance ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/red.png) and the probability the latter happens ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/p_red.png), is defined as  ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mred.png)
-
+- "mred" for mean relative error distance, that, given the error distance ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/red.png) and the probability the latter happens ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/p_red.png), is defined as  ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/mred.png);
+- "rmsed" for the root mean squared error distance, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/rmsed.gif);
+- "vared" for the variance of the error distance, that is defined as ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/vared.gif), where ![](https://github.com/SalvatoreBarone/pyALS/raw/main/imgs/signed_ed.gif).
+ 
 ### Defining your own error metric
 
 In case the metric you want to use isn't available, you can define it on your own and make it available to ```pyALS``` through its dynamic module loader. This mechanism also allows you to simulate the behavior of the approximate component you want to design when deployed in a given target application.

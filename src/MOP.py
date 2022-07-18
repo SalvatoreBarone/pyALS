@@ -16,6 +16,9 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import sys, os, itertools, collections, functools, operator, json
 from multiprocessing import cpu_count, Pool
+
+import numpy as np
+
 from .HwMetrics import *
 from .ErrorMetrics import *
 from .ALSGraph import *
@@ -33,7 +36,9 @@ class MOP(AMOSA.Problem):
         ErrorConfig.Metric.MRE   : "get_mre",
         ErrorConfig.Metric.MSE   : "get_mse",
         ErrorConfig.Metric.MED   : "get_med",
-        ErrorConfig.Metric.MRED  : "get_mred"
+        ErrorConfig.Metric.MRED  : "get_mred",
+        ErrorConfig.Metric.RMSED : "get_rmsed",
+        ErrorConfig.Metric.VARED : "get_vared"
     }
     hw_ffs = {
         HwConfig.Metric.GATES:      get_gates,
@@ -157,37 +162,35 @@ class MOP(AMOSA.Problem):
         for a in self._args:
             a[2] = configuration
         with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_ed, self._args)
+            error = pool.starmap(evaluate_absolute_ed, self._args)
         return float(np.max(np.concatenate(error).flat))
 
     def get_mae(self, configuration):
         for a in self._args:
             a[2] = configuration
         with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_ed, self._args)
+            error = pool.starmap(evaluate_absolute_ed, self._args)
         return float(np.average(np.concatenate(error).flat))
 
     def get_mre(self, configuration):
         for a in self._args:
             a[2] = configuration
         with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_re, self._args)
+            error = pool.starmap(evaluate_relative_ed, self._args)
         return float(np.average(np.concatenate(error).flat))
 
     def get_wre(self, configuration):
         for a in self._args:
             a[2] = configuration
         with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_re, self._args)
+            error = pool.starmap(evaluate_relative_ed, self._args)
         return float(np.max(np.concatenate(error).flat))
 
     def get_mse(self, configuration):
         for a in self._args:
             a[2] = configuration
         with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_sed, self._args)
-        print(f"MSE: {error}")
-        exit()
+            error = pool.starmap(evaluate_squared_ed, self._args)
         return float(np.average(np.concatenate(error).flat))
 
     def get_med(self, configuration):
@@ -221,3 +224,17 @@ class MOP(AMOSA.Problem):
                 else:
                     final_fistogram[k] = v
         return float(np.sum([k * v / total for k, v in final_fistogram.items()]))
+
+    def get_rmsed(self, configuration):
+        for a in self._args:
+            a[2] = configuration
+        with Pool(cpu_count()) as pool:
+            error = pool.starmap(evaluate_squared_ed, self._args)
+        return float(np.sqrt(np.average(np.concatenate(error).flat)))
+
+    def get_vared(self, configuration):
+        for a in self._args:
+            a[2] = configuration
+        with Pool(cpu_count()) as pool:
+            error = pool.starmap(evaluate_squared_ed, self._args)
+        return float(np.var(np.concatenate(error).flat))

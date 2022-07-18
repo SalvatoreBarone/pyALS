@@ -31,6 +31,8 @@ class ErrorConfig:
         MSE = 6             # Mean squared error
         MED = 7             # Mean error distance
         MRED = 8            # Relative mean error distance
+        RMSED = 9           # Root Mean Squared Error Distance
+        VARED = 10          # Variance of the Error Distance
 
     def __init__(self, metric, threshold, vectors, dataset = None, weights = None):
         self.metric = None
@@ -55,6 +57,8 @@ class ErrorConfig:
             "mse": ErrorConfig.Metric.MSE,
             "med": ErrorConfig.Metric.MED,
             "mred": ErrorConfig.Metric.MRED,
+            "rmsed" : ErrorConfig.Metric.RMSED,
+            "vared" : ErrorConfig.Metric.VARED
         }
         if metric not in error_metrics.keys():
             raise ValueError(f"{metric}: error-metric not recognized")
@@ -86,21 +90,24 @@ def evaluate_ep(graph, samples, configuration, weights):
     return sum([0 if sample["output"] == graph.evaluate(sample["input"], configuration) else 1 for sample in samples])
 
 
-def evaluate_ed(graph, samples, configuration, weights):
+def evaluate_absolute_ed(graph, samples, configuration, weights):
     current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
     return [ np.sum([float(weights[o]) if sample["output"][o] != current[o] else 0 for o in weights.keys() ]) for sample, current in zip(samples, current_outputs) ]
 
 
-def evaluate_sed(graph, samples, configuration, weights):
+def evaluate_signed_ed(graph, samples, configuration, weights):
+    current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
+    return [ np.sum([float(weights[o]) * current[o] for o in weights.keys()]) - np.sum([float(weights[o]) * sample["output"][o] for o in weights.keys()]) for current, sample in zip(current_outputs, samples) ]
+
+
+def evaluate_squared_ed(graph, samples, configuration, weights):
     current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
     return [ np.sum([float(weights[o]) if sample["output"][o] != current[o] else 0 for o in weights.keys() ])**2 for sample, current in zip(samples, current_outputs) ]
 
 
-def evaluate_re(graph, samples, configuration, weights):
+def evaluate_relative_ed(graph, samples, configuration, weights):
     current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return [ np.abs(1 - (1 + np.sum([float(weights[o]) * sample["output"][o] for o in weights.keys()])) /
-                        (1 + np.sum([float(weights[o]) * current[o] for o in weights.keys()])) )
-             for sample, current in zip(samples, current_outputs) ]
+    return [ np.abs(1 - (1 + np.sum([float(weights[o]) * sample["output"][o] for o in weights.keys()])) / (1 + np.sum([float(weights[o]) * current[o] for o in weights.keys()])) ) for sample, current in zip(samples, current_outputs) ]
 
 
 def evaluate_med(graph, samples, configuration, weights):
@@ -128,3 +135,5 @@ def evaluate_mred(graph, samples, configuration, weights):
         else:
             error_hystogram[index] = 1
     return error_hystogram
+
+

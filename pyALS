@@ -86,7 +86,9 @@ def plot_labels(error_conf, hw_conf):
 		ErrorConfig.Metric.MRE: "MRE",
 		ErrorConfig.Metric.MSE: "MSE",
 		ErrorConfig.Metric.MED: "MED",
-		ErrorConfig.Metric.MRED: "MRED"
+		ErrorConfig.Metric.MRED: "MRED",
+		ErrorConfig.Metric.RMSED: "RMSED",
+		ErrorConfig.Metric.VARED: "VarED"
 	}
 	hw_labels = {
 		HwConfig.Metric.GATES : "#AIG nodes",
