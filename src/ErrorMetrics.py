@@ -86,35 +86,39 @@ def evaluate_output(graph, samples, configuration):
     return [{"e" : s["output"], "a" : graph.evaluate(s["input"], configuration)} for s in samples]
 
 
+def bool_to_value(output, weights):
+    return np.sum([float(weights[o]) * output[o] for o in weights.keys()])
+
+
 def evaluate_ep(graph, samples, configuration, weights):
     return sum([0 if sample["output"] == graph.evaluate(sample["input"], configuration) else 1 for sample in samples])
 
 
 def evaluate_absolute_ed(graph, samples, configuration, weights):
     current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return [ np.sum([float(weights[o]) if sample["output"][o] != current[o] else 0 for o in weights.keys() ]) for sample, current in zip(samples, current_outputs) ]
+    return [ np.abs( bool_to_value(current, weights) - bool_to_value(sample["output"], weights) ) for sample, current in zip(samples, current_outputs) ]
 
 
 def evaluate_signed_ed(graph, samples, configuration, weights):
     current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return [ np.sum([float(weights[o]) * current[o] for o in weights.keys()]) - np.sum([float(weights[o]) * sample["output"][o] for o in weights.keys()]) for current, sample in zip(current_outputs, samples) ]
+    return [ bool_to_value(current, weights) - bool_to_value(sample["output"], weights) for sample, current in zip(samples, current_outputs) ]
 
 
 def evaluate_squared_ed(graph, samples, configuration, weights):
     current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return [ np.sum([float(weights[o]) if sample["output"][o] != current[o] else 0 for o in weights.keys() ])**2 for sample, current in zip(samples, current_outputs) ]
+    return [ ( bool_to_value(current, weights) - bool_to_value(sample["output"], weights) )**2 for sample, current in zip(samples, current_outputs) ]
 
 
 def evaluate_relative_ed(graph, samples, configuration, weights):
     current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return [ np.abs(1 - (1 + np.sum([float(weights[o]) * sample["output"][o] for o in weights.keys()])) / (1 + np.sum([float(weights[o]) * current[o] for o in weights.keys()])) ) for sample, current in zip(samples, current_outputs) ]
+    return [ np.abs ( (1 + bool_to_value(sample["output"], weights)) / (1 + bool_to_value(current, weights)) ) for sample, current in zip(samples, current_outputs) ]
 
 
 def evaluate_med(graph, samples, configuration, weights):
     error_hystogram = {}
     for sample in samples:
-        current_output = graph.evaluate(sample["input"], configuration)
-        error = sum([float(weights[o]) if sample["output"][o] != current_output[o] else 0 for o in weights.keys()])
+        current = graph.evaluate(sample["input"], configuration)
+        error = np.abs( bool_to_value(current, weights) - bool_to_value(sample["output"], weights) )
         index = round(error, 2)
         if index in error_hystogram.keys():
             error_hystogram[index] += 1
@@ -126,9 +130,8 @@ def evaluate_med(graph, samples, configuration, weights):
 def evaluate_mred(graph, samples, configuration, weights):
     error_hystogram = {}
     for sample in samples:
-        current_output = graph.evaluate(sample["input"], configuration)
-        error = np.abs(1 - (1 + np.sum([float(weights[o]) * sample["output"][o] for o in weights.keys()])) /
-                            (1 + np.sum([float(weights[o]) * current_output[o] for o in weights.keys()])) )
+        current = graph.evaluate(sample["input"], configuration)
+        error = np.abs ( (1 + bool_to_value(sample["output"], weights)) / (1 + bool_to_value(current, weights)) )
         index = round(error, 2)
         if index in error_hystogram.keys():
             error_hystogram[index] += 1
