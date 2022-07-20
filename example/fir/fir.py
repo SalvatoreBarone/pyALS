@@ -21,7 +21,7 @@ from fixedpoint import FixedPoint
 def multiply(graph, configuration, weights, a, b, m, n):
     if a != 0 and b != 0:
         bin_a, bin_b = f"{a:0{m+n}b}"[::-1], f"{b:0{m+n}b}"[::-1]
-        input_assignment = { **{ f"\\a[{i}]": bin_a[i] == "1" for i in range(n+m) }, **{ f"\\b[{i}]": bin_b[i] == "1" for i in range(n+m) }}
+        input_assignment = { **{ f"\\a[{i}]": bin_a[i] == "1" for i in range(m+n) }, **{ f"\\b[{i}]": bin_b[i] == "1" for i in range(m+n) }}
         output_assignment = graph.evaluate(input_assignment, configuration)
         return np.sum([float(weights[o]) * output_assignment[o] for o in weights.keys()])
     else:
@@ -58,11 +58,11 @@ def compute_mdssim(graph, input_data, configuration, weights):
 
 def get_mse_psnr(a, b):
     assert len(a) == len(b), "Arrays must be equal in size"
-    mse = np.mean([(x - y) ** 2 for x, y in zip(a, b)])
+    mse = np.nanmean([(x - y) ** 2 for x, y in zip(a, b)])
     if mse == 0:
         #return mse, np.inf # np.inf makes computation cumbersome (because of nan), so select an high-enough value!
         return mse, 100
-    max_ab = np.max(np.concatenate((a, b)))
+    max_ab = np.nanmax(np.concatenate((a, b)))
     psnr = 20 * np.log10(max_ab / np.sqrt(mse))
     return mse, psnr
 
