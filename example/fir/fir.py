@@ -57,13 +57,14 @@ def compute_mdssim(graph, input_data, configuration, weights):
 
 
 def get_mse_psnr(a, b):
+    psnr_max = 100 # for stability reason, the PSNR is ceiled at 100
     assert len(a) == len(b), "Arrays must be equal in size"
     mse = np.nanmean([(x - y) ** 2 for x, y in zip(a, b)])
     if mse == 0:
         #return mse, np.inf # np.inf makes computation cumbersome (because of nan), so select an high-enough value!
-        return mse, 100
+        return mse, psnr_max
     max_ab = np.nanmax(np.concatenate((a, b)))
-    psnr = 20 * np.log10(max_ab / np.sqrt(mse))
+    psnr = np.min([psnr_max, 20 * np.log10(max_ab / np.sqrt(mse))])
     return mse, psnr
 
 
