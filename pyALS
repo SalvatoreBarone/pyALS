@@ -228,9 +228,10 @@ def randomsplit(source, top, splits, outputdir):
 
 
 @click.command("als")
-@click.option("--config",  type=str, help="path of the configuration file")
+@click.option("--config",  type=str, required = True, help="path of the configuration file")
+@click.option("--store", type=str, help = "Store the random vectors adopted for error estimation on file, for further use.", default = None)
 @click.option("--improve", type=str, help="Path of the file containing results from previous runs to be improved (JSON file)", default=None)
-def als(config, improve):
+def als(config, store, improve):
 	"""
 	Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
 	cuts, design space exploration and rewriting.
@@ -258,7 +259,7 @@ def als(config, improve):
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf)
+	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
 	optimizer = AMOSA(configuration.amosa_conf)
 	optimizer.hill_climb_checkpoint_file = f"{configuration.output_dir}/{optimizer.hill_climb_checkpoint_file}"
 	optimizer.minimize_checkpoint_file = f"{configuration.output_dir}/{optimizer.minimize_checkpoint_file}"
@@ -308,7 +309,7 @@ def generate(config):
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
 	print(f"Reading the Pareto front.")
-	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf)
+	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
 	optimizer = AMOSA(configuration.amosa_conf)
 	optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
 	pareto_set = optimizer.pareto_set()

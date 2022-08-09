@@ -46,7 +46,7 @@ class MOP(AMOSA.Problem):
         HwConfig.Metric.SWITCHING:  get_switching
     }
 
-    def __init__(self, top_module, graph, catalog, error_config, hw_config):
+    def __init__(self, top_module, graph, catalog, error_config, hw_config, dataset_outfile):
         self.top_module = top_module
         self.graph = graph
         self.graphs = [copy.deepcopy(graph)] * cpu_count()
@@ -58,12 +58,9 @@ class MOP(AMOSA.Problem):
         self.samples = None
         if self.error_config.dataset is None:
             self._generate_samples()
+            self._store_dataset(dataset_outfile)
         else:
-            print(f"Reading input data from {self.error_config.dataset} ...")
-            if self.error_config.dataset.endswith(".json"):
-                self.samples = json.load(open(self.error_config.dataset))
-            else:
-                self._read_samples(self.error_config.dataset)
+            self._load_dataset()
         print("Done!")
         self._args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self._get_upper_bound()
@@ -73,6 +70,21 @@ class MOP(AMOSA.Problem):
         print(f"#vars: {self.n_vars}, ub:{self.upper_bound}, #conf.s {np.prod([ float(x + 1) for x in self.upper_bound ])}.")
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
         AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.hw_config.metrics) + 1, 1)
+
+    def _load_dataset(self):
+        print(f"Reading input data from {self.error_config.dataset} ...")
+        if self.error_config.dataset.endswith(".json"):
+            self.samples = json.load(open(self.error_config.dataset))
+        else:
+            self._read_samples(self.error_config.dataset)
+
+    def _store_dataset(self, dataset_outfile):
+        if dataset_outfile is not None:
+            if not dataset_outfile.endswith(".json"):
+                dataset_outfile += ".json"
+            print(f"Storing generated random vectors on {dataset_outfile} further use...")
+            with open(dataset_outfile, 'w') as outfile:
+                outfile.write(json.dumps(self.samples))
 
     def evaluate(self, x, out):
         out["f"] = []
