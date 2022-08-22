@@ -59,9 +59,10 @@ I'm sure it will be very helpful.
 
 # Running pyALS
 pyALS supports the following main commands, each with its own set of options:
-  - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
   - ```es```: performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting;
-  - ```plot```: only draws the k-LUT map of the given circuit;
+  - ```generate```: performs only the rewriting step, of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command;
+  - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
+  - ```elaborate```: only draws the k-LUT map of the given circuit;
 
 Please kindly note you will need the file where synthesized Boolean functions are stored, i.e., the catalog-cache file. 
 You can mine, which is ready-to-use, frequently updated and freely available at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
@@ -70,17 +71,29 @@ If you do not want to use the one I mentioned, pyALS will perform exact synthesi
 Furthermore, the ```als``` and ```es``` commands requires a lot of configuration parameters, which are provided through a JSON configuration file. 
 I will its generic structure later. Now, focus on the command-line interface.
 
+## Other commands
 
+The pyALS tool also provide the following commands for input-aware approximation:
+  
+  - ```template```: generates a CSV file for specifying the input dataset to be used for error assessment;
+  - ```randomsplit```: splits the complete input-set in N partitions, using random sampling without repetitions.
+
+Furthermore, the tool also provides the following sanity-related commands for catalog management:
+  - ```clean```: performs a sanity check of the catalog;
+  - ```expand```: attempts the catalog expansion;
+  - ```stats```: computes some statistics on a catalog;
+  - ```query```: check if a specification is in the catalog.
+  - 
 ## Command line interface
 
 You can use the following commands
 
-### The ```plot``` command
+### The ```elaborate``` command
 Draws a k-LUT map of the given circuit
 
 Usage: 
 ```
-pyALS plot [OPTIONS]
+pyALS elaborate [OPTIONS]
 ```
 Options:
 ```
@@ -92,25 +105,6 @@ Options:
 Example:
 ```
 ./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit -lut 4 -output mult_2_bit.pdf 
-```
-
-### The ```dataset``` command
-Creates a CSV template file to be used to define a dataset while optimizing a given error metric
-
-Usage: 
-```
-pyALS dataset [OPTIONS]
-```
-Options:
-```
-  --source TEXT  specify the input HDL source file  [required]
-  --top TEXT     specify the top-module name  [required]
-  --output TEXT  Output file.  [required]
-  --separator    specify the column separator
-```
-Example:
-```
-./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit --output dataset.csv 
 ```
 
 
@@ -147,6 +141,40 @@ Options:
 Example:
 ```
 ./pyALS als --source /path_to_source --top top_level_entity --catalog /path_to_catalog_cache --output /path_to_output_directory --config /path_to_config.json --improve /path_to_final_archive.json --resume 
+```
+
+### The ```template``` command
+Creates a CSV template file to be used to define a dataset while optimizing a given error metric
+
+Usage:
+```
+pyALS dataset [OPTIONS]
+```
+Options:
+```
+  --source TEXT  specify the input HDL source file  [required]
+  --top TEXT     specify the top-module name  [required]
+  --output TEXT  Output file.  [required]
+  --separator    specify the column separator
+```
+Example:
+```
+./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit --output dataset.csv 
+```
+
+## The  ```randomsplit``` command
+Splits the complete input-set in N partitions, using random sampling without repetitions.
+
+Usage:
+```
+pyALS dataset [OPTIONS]
+```
+Options:
+```
+  --source TEXT  specify the input HDL source file  [required]
+  --top TEXT     specify the top-module name  [required]
+  --splits INT   number of partitions  [required]
+  --outputdir    output directory [required]
 ```
 
 ## The configuration file
