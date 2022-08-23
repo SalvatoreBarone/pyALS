@@ -131,6 +131,10 @@ class MOP(AMOSA.Problem):
                 self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
     def _matter_configuration(self, x):
+        # first, prevent x to be out of range
+        x = [int(np.min(c, ub)) for c, ub in zip(x, self.upper_bound)]
+        x = [int(np.max(0, c)) for c in x]
+        # then, get the corresponding matter configuration
         matter = {}
         for c, l in zip(x, self.graph.get_cells()):
             for e in self.catalog:
