@@ -182,6 +182,11 @@ def als(config, store, improve):
 		check_for_file(configuration.error_conf.dataset)
 	if configuration.output_dir != ".":
 		mkpath(configuration.output_dir)
+	if store is None:
+		count = 1
+		while os.path.exists(os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")):
+			count += 1
+		store = os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")
 	design = ys.Design()
 	ys.run_pass("plugin -i ghdl", design)
 	print("GHDL plugin loaded successfully")
