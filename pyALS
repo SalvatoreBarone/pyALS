@@ -17,7 +17,6 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 
 import sys, os, click, git, shutil
-from pyosys import libyosys as ys
 from distutils.dir_util import mkpath
 from src.ALSCatalog import *
 from src.MOP import *
@@ -33,7 +32,6 @@ def git_updater():
 		repo.remotes.origin.fetch()
 		local_head = repo.heads[0].commit
 		remote_head = repo.remotes.origin.refs[0].commit
-		#print(f"Remote HEAD: {remote_head}, local HEAD: {local_head}")
 		if remote_head != local_head:
 			print("Updating the tool...")
 			repo.remotes.origin.pull()
@@ -45,36 +43,6 @@ def git_updater():
 		print(e)
 		print("\n*** Ensure you have access to the internet! ***\n")
 		exit()
-
-
-def read_source(source_file, top_module, ys_design):
-	if isinstance(source_file, (list, tuple)):
-		for s in source_file:
-			read_single_source(s, ys_design)
-	else:
-		read_single_source(source_file, ys_design)
-	ys.run_pass(f"hierarchy -check -top {top_module}", ys_design)
-
-
-def read_single_source(source_file, ys_design):
-	check_for_file(source_file)
-	name, extension = os.path.splitext(source_file)
-	if extension == ".vhd":
-		#ys.run_pass(f"ghdl {source_file} -e {top_module}", ys_design)
-		ys.run_pass(f"ghdl -a {source_file}", ys_design)
-	elif extension == ".sv":
-		ys.run_pass(f"read_verilog -sv {source_file}", ys_design)
-	elif extension == ".v":
-		ys.run_pass(f"read_verilog {source_file}", ys_design)
-	elif extension == ".blif":
-		ys.run_pass(f"read_blif {source_file}", ys_design)
-	else:
-		raise RuntimeError(f"Error parsing source file {source_file}: unknown extension ({extension})")
-
-
-def synth_design(ys_design, top_module, cut_size, design_name_save="original"):
-	ys.run_pass(f"prep; flatten; splitnets -ports; synth -top {top_module}; flatten; clean -purge; synth -lut {str(cut_size)}", ys_design)
-	ys.run_pass(f"tee -q design -save {design_name_save}", ys_design)
 
 
 def plot_labels(error_conf, hw_conf):
@@ -98,18 +66,6 @@ def plot_labels(error_conf, hw_conf):
 	return [ error_labels[error_conf.metric] ] + [ hw_labels[m] for m in hw_conf.metrics ] if error_conf.builtin_metric else ["Error"] + [ hw_labels[m] for m in hw_conf.metrics ]
 
 
-def check_for_optional_file(file_name):
-	if file_name is not None and not os.path.exists(file_name):
-		print(f"{file_name}: no such file.")
-		exit()
-
-
-def check_for_file(file_name):
-	if not os.path.exists(file_name):
-		print(f"{file_name}: no such file.")
-		exit()
-
-
 def rm_old_implementation(output_directory):
 	for file in os.listdir(output_directory):
 		if file.endswith('.v'):
@@ -131,14 +87,11 @@ def elaborate(source, top, lut, output):
 	"""
 	Draws a k-LUT map of the given circuit
 	"""
-	design = ys.Design()
-	ys.run_pass("plugin -i ghdl", design)
-	print("GHDL plugin loaded successfully")
-	read_source(source, top, design)
-	print(f"{source} read successfully")
-	synth_design(design, top, lut)
-	print(f"{lut}-LUT synthesis successful")
-	graph = ALSGraph(design)
+	helper = YosysHelper()
+	helper.load_ghdl()
+	helper.read_sources(source, top)
+	helper.prep_design(lut)
+	graph = ALSGraph(helper.design)
 	print(f"Graph generation completed")
 	graph.save(output)
 
@@ -153,15 +106,13 @@ def es_synth(config):
 	check_for_file(config)
 	configuration = ConfigParser(config, "es")
 	check_for_file(configuration.lut_cache)
-	design = ys.Design()
-	ys.run_pass("plugin -i ghdl", design)
-	print("GHDL plugin loaded successfully")
-	read_source(configuration.source_hdl, configuration.top_module, design)
-	print(f"{configuration.source_hdl} read successfully")
-	synth_design(design, configuration.top_module, configuration.als_conf.cut_size)
-	print(f"{configuration.als_conf.cut_size}-LUT synthesis successful")
+	helper = YosysHelper()
+	helper.load_ghdl()
+	helper.read_sources(configuration.source_hdl, configuration.top_module)
+	helper.prep_design(configuration.als_conf.cut_size)
+	luts_set = helper.get_luts_set()
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
+	ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
 	print("Done!")
 
 
@@ -187,20 +138,19 @@ def als(config, store, improve):
 		while os.path.exists(os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")):
 			count += 1
 		store = os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")
-	design = ys.Design()
-	ys.run_pass("plugin -i ghdl", design)
-	print("GHDL plugin loaded successfully")
-	read_source(configuration.source_hdl, configuration.top_module, design)
-	print(f"{configuration.source_hdl} read successfully")
-	synth_design(design, configuration.top_module, configuration.als_conf.cut_size)
-	print(f"{configuration.als_conf.cut_size}-LUT synthesis successful")
-	graph = ALSGraph(design)
+	helper = YosysHelper()
+	helper.load_ghdl()
+	helper.read_sources(configuration.source_hdl, configuration.top_module)
+	helper.prep_design(configuration.als_conf.cut_size)
+	luts_set = helper.get_luts_set()
+	graph = ALSGraph(helper.design)
 	print(f"Graph generation completed")
+	helper.save_design("original")
 	if configuration.error_conf.weights is not None and len(configuration.error_conf.weights) != 0:
 		configuration.error_conf.validate_weights(graph)
 		print("Output-weight parsing completed successfully")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
+	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
 	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
 	optimizer = AMOSA(configuration.amosa_conf)
@@ -214,12 +164,11 @@ def als(config, store, improve):
 	optimizer.archive_to_csv(problem, f"{configuration.output_dir}/final_archive.csv")
 	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", plot_labels(configuration.error_conf, configuration.hw_conf))
 	pareto_set = optimizer.pareto_set()
-	print(f"Performing AIG-rewriting.")
 	rm_old_implementation(configuration.output_dir)
-	rewriter = ALSRewriter(graph, lut_catalog)
+	print(f"Performing AIG-rewriting.")
+	rewriter = ALSRewriter(graph, lut_catalog, helper.module_id, helper.PIs, helper.POs)
 	for c, n in zip(pareto_set, range(len(pareto_set))):
 		rewriter.rewrite_and_save("original", c, f"{configuration.output_dir}/variant_{n:05d}")
-		print(f"{configuration.output_dir}/variant_{n:05d} written successfully")
 	print(f"All done! Take a look at {configuration.output_dir}!")
 
 
@@ -237,32 +186,30 @@ def generate(config):
 	if configuration.output_dir != ".":
 		mkpath(configuration.output_dir)
 	check_for_file(f"{configuration.output_dir}/final_archive.json")
-	design = ys.Design()
-	ys.run_pass("plugin -i ghdl", design)
-	print("GHDL plugin loaded successfully")
-	read_source(configuration.source_hdl, configuration.top_module, design)
-	print(f"{configuration.source_hdl} read successfully")
-	synth_design(design, configuration.top_module, configuration.als_conf.cut_size)
-	print(f"{configuration.als_conf.cut_size}-LUT synthesis successful")
-	graph = ALSGraph(design)
+	helper = YosysHelper()
+	helper.load_ghdl()
+	helper.read_sources(configuration.source_hdl, configuration.top_module)
+	helper.prep_design(configuration.als_conf.cut_size)
+	luts_set = helper.get_luts_set()
+	graph = ALSGraph(helper.design)
 	print(f"Graph generation completed")
+	helper.save_design("original")
 	if configuration.error_conf.weights is not None and len(configuration.error_conf.weights) != 0:
 		configuration.error_conf.validate_weights(graph)
 		print("Output-weight parsing completed successfully")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(design, configuration.als_conf.timeout)
+	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
 	print(f"Reading the Pareto front.")
 	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
 	optimizer = AMOSA(configuration.amosa_conf)
 	optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
 	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", plot_labels(configuration.error_conf, configuration.hw_conf))
 	pareto_set = optimizer.pareto_set()
-	print(f"Performing AIG-rewriting.")
 	rm_old_implementation(configuration.output_dir)
-	rewriter = ALSRewriter(graph, lut_catalog)
+	print(f"Performing AIG-rewriting.")
+	rewriter = ALSRewriter(graph, lut_catalog, helper.module_id, helper.PIs, helper.POs)
 	for c, n in zip(pareto_set, range(len(pareto_set))):
 		rewriter.rewrite_and_save("original", c, f"{configuration.output_dir}/variant_{n:05d}")
-		print(f"{configuration.output_dir}/variant_{n:05d} written successfully")
 	print(f"All done! Take a look at {configuration.output_dir}!")
 
 
@@ -274,14 +221,11 @@ def template(source, top, output):
 	"""
 	Generates a CSV file for specifying the input dataset to be used for error assessment
 	"""
-	design = ys.Design()
-	ys.run_pass("plugin -i ghdl", design)
-	print("GHDL plugin loaded successfully")
-	read_source(source, top, design)
-	print(f"{source} read successfully")
-	synth_design(design, top, "4")
-	print(f"Synthesis successful")
-	graph = ALSGraph(design)
+	helper = YosysHelper()
+	helper.load_ghdl()
+	helper.read_sources(source, top)
+	helper.prep_design(4)
+	graph = ALSGraph(helper.design)
 	print(f"Graph generation completed")
 	PI = graph.get_pi()
 	original_stdout = sys.stdout
@@ -302,14 +246,11 @@ def randomsplit(source, top, splits, outputdir):
 	Split the input-set in N partitions, using random sampling without repetitions.
 	"""
 	mkpath(outputdir)
-	design = ys.Design()
-	ys.run_pass("plugin -i ghdl", design)
-	print("GHDL plugin loaded successfully")
-	read_source(source, top, design)
-	print(f"{source} read successfully")
-	synth_design(design, top, "4")
-	print(f"Synthesis successful")
-	graph = ALSGraph(design)
+	helper = YosysHelper()
+	helper.load_ghdl()
+	helper.read_sources(source, top)
+	helper.prep_design(4)
+	graph = ALSGraph(helper.design)
 	print(f"Graph generation completed")
 	PI = graph.get_pi()
 	PI = [i["name"] for i in PI]

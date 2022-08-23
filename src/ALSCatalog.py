@@ -15,7 +15,6 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import math, random, sys
-from pyosys import libyosys as ys
 from multiprocessing import Pool, cpu_count
 from .ALSCatalogCache import *
 from .ALSSMT import *
@@ -27,15 +26,7 @@ class ALSCatalog:
 		self.__solver = solver
 		ALSCatalogCache(self.__cache_file).init()
 
-	def generate_catalog(self, design, es_timeout):
-		luts_set = set()
-		for module in design.selected_whole_modules_warn():
-			for cell in module.selected_cells():
-				if ys.IdString("\LUT") in cell.parameters:
-					spec = cell.parameters[ys.IdString("\LUT")].as_string()[::-1]
-					if negate(spec) not in luts_set and spec not in luts_set:
-						luts_set.add(spec)
-		luts_set = list(luts_set)
+	def generate_catalog(self, luts_set, es_timeout):
 		random.shuffle(luts_set)
 		luts_sets = list_partitioning(luts_set, cpu_count())
 		args = [ [self.__cache_file, lut_set, es_timeout, self.__solver] for lut_set in luts_sets ]
@@ -83,8 +74,6 @@ def generate_catalog(catalog_cache_file, luts_set, smt_timeout, solver):
 						cache.add_lut(lut_conf, hamming_distance, synt_spec, S, P, out_p, out, depth)
 					gates = len(S[0])
 					hamming_distance += 1
-
-
 		catalog.append(lut_specifications)
 	return catalog
 

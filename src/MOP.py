@@ -16,7 +16,6 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import sys, os, itertools, collections, functools, operator, json
 from multiprocessing import cpu_count, Pool
-
 import numpy as np
 
 from .HwMetrics import *
@@ -50,7 +49,6 @@ class MOP(AMOSA.Problem):
         self.top_module = top_module
         self.graph = graph
         self.graphs = [copy.deepcopy(graph)] * cpu_count()
-        self.rewriter = ALSRewriter(graph, catalog)
         self.n_vars = graph.get_num_cells()
         self.catalog = catalog
         self.error_config = error_config
