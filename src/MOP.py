@@ -87,7 +87,7 @@ class MOP(AMOSA.Problem):
     def evaluate(self, x, out):
         out["f"] = []
         out["g"] = []
-        configuration = self._matter_configuration(x)
+        configuration = self.matter_configuration(x)
         if self.error_config.builtin_metric:
             out["f"].append(getattr(self, self.error_ffs[self.error_config.metric])(configuration))
         else:
@@ -128,7 +128,7 @@ class MOP(AMOSA.Problem):
                 inputs = {i["name"]: p for i, p in zip(PI, perm)}
                 self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
-    def _matter_configuration(self, x):
+    def matter_configuration(self, x):
         # first, prevent x to be out of range
         x = list(np.minimum(np.maximum(np.array([0] * self.n_vars), np.array(x)), np.array(self.upper_bound)))        # then, get the corresponding matter configuration
         matter = {}
@@ -151,13 +151,13 @@ class MOP(AMOSA.Problem):
         return [ o for output in outputs for o in output ]
 
     def _get_baseline_gates(self):
-        return get_gates(self._matter_configuration([0] * self.n_vars))
+        return get_gates(self.matter_configuration([0] * self.n_vars))
 
     def _get_baseline_depth(self):
-        return get_depth(self._matter_configuration([0] * self.n_vars,), self.graph)
+        return get_depth(self.matter_configuration([0] * self.n_vars, ), self.graph)
 
     def _get_baseline_switching(self):
-        return get_switching(self._matter_configuration([0] * self.n_vars))
+        return get_switching(self.matter_configuration([0] * self.n_vars))
 
     def get_ep(self, configuration):
         for a in self._args:

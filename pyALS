@@ -166,9 +166,8 @@ def als(config, store, improve):
 	pareto_set = optimizer.pareto_set()
 	rm_old_implementation(configuration.output_dir)
 	print(f"Performing AIG-rewriting.")
-	rewriter = ALSRewriter(graph, lut_catalog, helper.module_id, helper.PIs, helper.POs)
-	for c, n in zip(pareto_set, range(len(pareto_set))):
-		rewriter.rewrite_and_save("original", c, f"{configuration.output_dir}/variant_{n:05d}")
+	rewriter = ALSRewriter(helper, problem)
+	rewriter.generate_hdl(pareto_set, configuration.output_dir)
 	print(f"All done! Take a look at {configuration.output_dir}!")
 
 
@@ -207,9 +206,8 @@ def generate(config):
 	pareto_set = optimizer.pareto_set()
 	rm_old_implementation(configuration.output_dir)
 	print(f"Performing AIG-rewriting.")
-	rewriter = ALSRewriter(graph, lut_catalog, helper.module_id, helper.PIs, helper.POs)
-	for c, n in zip(pareto_set, range(len(pareto_set))):
-		rewriter.rewrite_and_save("original", c, f"{configuration.output_dir}/variant_{n:05d}")
+	rewriter = ALSRewriter(helper, problem)
+	rewriter.generate_hdl(pareto_set, configuration.output_dir)
 	print(f"All done! Take a look at {configuration.output_dir}!")
 
 
