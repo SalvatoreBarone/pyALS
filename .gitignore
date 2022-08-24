@@ -147,3 +147,5 @@ run.sh
 
 run_experiments.sh
 *.pdf
+result_m2b
+result_x2

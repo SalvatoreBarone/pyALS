@@ -127,29 +127,31 @@ class YosysHelper:
 		wires, modules = YosysHelper.get_wires_and_modules(self.design)
 		sigmap = ys.SigMap(module)
 		for pi in self.PIs:
-			wire = module.addWire(pi[0])
-			wire.width = pi[1]
-			wire.port_input = True
-			old_pis = [modules[module.name]["PI"][ys.IdString(f"{pi[0].str()}[{i}]")] for i in range(pi[1])]
-			for b, o in zip(sigmap(wire).to_sigbit_vector(), old_pis):
-				o.port_input = False
-				module.connect(ys.SigSpec(o), ys.SigSpec(b, 1))
+			if pi[1] > 1:
+				wire = module.addWire(pi[0])
+				wire.width = pi[1]
+				wire.port_input = True
+				old_pis = [modules[module.name]["PI"][ys.IdString(f"{pi[0].str()}[{i}]")] for i in range(pi[1])]
+				for b, o in zip(sigmap(wire).to_sigbit_vector(), old_pis):
+					o.port_input = False
+					module.connect(ys.SigSpec(o), ys.SigSpec(b, 1))
 
 	def __add_POs(self, module):
 		wires, modules = YosysHelper.get_wires_and_modules(self.design)
 		sigmap = ys.SigMap(module)
 		for po in self.POs:
-			wire = module.addWire(po[0])
-			wire.width = po[1]
-			wire.port_output = True
-			old_pos = [modules[module.name]["PO"][ys.IdString(f"{po[0].str()}[{i}]")] for i in range(po[1])]
-			for b, o in zip(sigmap(wire).to_sigbit_vector(), old_pos):
-				o.port_output = False
-				module.connect(ys.SigSpec(b, 1), ys.SigSpec(o))
-				#driving_cell = YosysHelper.get_driving_cell(o)
-				#if driving_cell is not None:
-				#	driving_cell.unsetPort(ys.IdString("\Y"))
-				#	driving_cell.setPort(ys.IdString("\Y"), ys.SigSpec(b, 1))
+			if po[1] > 1:
+				wire = module.addWire(po[0])
+				wire.width = po[1]
+				wire.port_output = True
+				old_pos = [modules[module.name]["PO"][ys.IdString(f"{po[0].str()}[{i}]")] for i in range(po[1])]
+				for b, o in zip(sigmap(wire).to_sigbit_vector(), old_pos):
+					o.port_output = False
+					module.connect(ys.SigSpec(b, 1), ys.SigSpec(o))
+					#driving_cell = YosysHelper.get_driving_cell(o)
+					#if driving_cell is not None:
+					#	driving_cell.unsetPort(ys.IdString("\Y"))
+					#	driving_cell.setPort(ys.IdString("\Y"), ys.SigSpec(b, 1))
 
 	@staticmethod
 	def get_driving_cell(wire):

@@ -1,8 +1,8 @@
 {
     "hdl" : {
-        "source" : "example/mult_2_bit/mult_2_bit.sv",
-        "top"    : "mult_2_bit",
-        "output" : "result_m2b"
+        "source" : "example/x2/x2.v",
+        "top"    : "x2",
+        "output" : "result_x2"
     },
     "als" : {
         "cache"    : "lut_catalog.db",
@@ -11,16 +11,11 @@
         "timeout"  : 60000
     },
     "error" : {
-        "metric"       : "awce",
-        "threshold"    : 16,
-        "vectors"      : 10,
-        "dataset"      : "example/mult_2_bit/dataset.csv",
-        "weights"      : {
-            "\\o[0]" : 1,
-            "\\o[1]" : 2,
-            "\\o[2]" : 4,
-            "\\o[3]" : 8
-        }
+        "metric"    : "ep",
+        "threshold" : 1,
+        "vectors"   : 10,
+        "_dataset"   : "example/x2/dataset.csv",
+        "weights"   : {}
 
     },
     "hardware" : {
