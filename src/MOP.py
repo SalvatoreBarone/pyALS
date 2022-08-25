@@ -140,6 +140,26 @@ class MOP(AMOSA.Problem):
                     matter[l["name"]] = {"dist": c, "spec": negate(e[0]["spec"]), "axspec": negate(e[c]["spec"]), "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": 1 - e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]}
         return matter
 
+    def plot_labels(self):
+        error_labels = {
+            ErrorConfig.Metric.EPROB: "Error probability",
+            ErrorConfig.Metric.AWCE: "AWCE",
+            ErrorConfig.Metric.MAE: "MAE",
+            ErrorConfig.Metric.WRE: "WRE",
+            ErrorConfig.Metric.MRE: "MRE",
+            ErrorConfig.Metric.MSE: "MSE",
+            ErrorConfig.Metric.MED: "MED",
+            ErrorConfig.Metric.MRED: "MRED",
+            ErrorConfig.Metric.RMSED: "RMSED",
+            ErrorConfig.Metric.VARED: "VarED"
+        }
+        hw_labels = {
+            HwConfig.Metric.GATES: "#AIG nodes",
+            HwConfig.Metric.DEPTH: "AIG depth",
+            HwConfig.Metric.SWITCHING: "Switching activity"
+        }
+        return [error_labels[self.error_config.metric]] + [hw_labels[m] for m in self.hw_config.metrics] if self.error_config.builtin_metric else ["Error"] + [hw_labels[m] for m in self.hw_config.metrics]
+
     def _get_upper_bound(self):
         return [len(e) - 1 for c in [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()] for e in self.catalog if e[0]["spec"] == c["spec"] or negate(e[0]["spec"]) == c["spec"] ]
 

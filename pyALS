@@ -45,27 +45,6 @@ def git_updater():
 		exit()
 
 
-def plot_labels(error_conf, hw_conf):
-	error_labels = {
-		ErrorConfig.Metric.EPROB: "Error probability",
-		ErrorConfig.Metric.AWCE: "AWCE",
-		ErrorConfig.Metric.MAE: "MAE",
-		ErrorConfig.Metric.WRE: "WRE",
-		ErrorConfig.Metric.MRE: "MRE",
-		ErrorConfig.Metric.MSE: "MSE",
-		ErrorConfig.Metric.MED: "MED",
-		ErrorConfig.Metric.MRED: "MRED",
-		ErrorConfig.Metric.RMSED: "RMSED",
-		ErrorConfig.Metric.VARED: "VarED"
-	}
-	hw_labels = {
-		HwConfig.Metric.GATES : "#AIG nodes",
-		HwConfig.Metric.DEPTH : "AIG depth",
-		HwConfig.Metric.SWITCHING : "Switching activity"
-	}
-	return [ error_labels[error_conf.metric] ] + [ hw_labels[m] for m in hw_conf.metrics ] if error_conf.builtin_metric else ["Error"] + [ hw_labels[m] for m in hw_conf.metrics ]
-
-
 def rm_old_implementation(output_directory):
 	for file in os.listdir(output_directory):
 		if file.endswith('.v'):
@@ -161,8 +140,9 @@ def als(config, store, improve):
 	minutes = int((optimizer.duration - hours * 3600) / 60)
 	print(f"Took {hours} hours, {minutes} minutes")
 	optimizer.archive_to_json(f"{configuration.output_dir}/final_archive.json")
-	optimizer.archive_to_csv(problem, f"{configuration.output_dir}/final_archive.csv")
-	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", plot_labels(configuration.error_conf, configuration.hw_conf))
+	fitness_labels = problem.plot_labels()
+	optimizer.archive_to_csv(problem, f"{configuration.output_dir}/final_archive.csv", fitness_labels)
+	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", configuration.top_module, fitness_labels)
 	pareto_set = optimizer.pareto_set()
 	rm_old_implementation(configuration.output_dir)
 	print(f"Performing AIG-rewriting.")
@@ -202,7 +182,7 @@ def generate(config):
 	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
 	optimizer = AMOSA(configuration.amosa_conf)
 	optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
-	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", plot_labels(configuration.error_conf, configuration.hw_conf))
+	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", problem.plot_labels())
 	pareto_set = optimizer.pareto_set()
 	rm_old_implementation(configuration.output_dir)
 	print(f"Performing AIG-rewriting.")
