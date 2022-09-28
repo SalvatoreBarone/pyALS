@@ -14,7 +14,7 @@
         "metric"    : "ep",
         "threshold" : 1,
         "vectors"   : 1000,
-        "dataset"   : "result_x2/random_dataset_00002.json",
+        "_dataset"   : "result_x2/random_dataset_00001.json",
         "weights"   : {}
 
     },
