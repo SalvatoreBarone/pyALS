@@ -211,7 +211,7 @@ In the following, each field of the JSON file is described using C-Style comment
             "\\o[3]" : 8
         }
     },
-    "hardware]" : {                                     // Hardware related stuff
+    "hardware" : {                                     // Hardware related stuff
         "metric" : ["gates", "depth", "switching"]      // hardware metric(s) to be optimized (AIG-gates, AIG-depth, or LUT switching activity). Please note you can specify more than one metric.
     },
     "amosa" : {                                         // Parameters governing the Archived Multi-Objective Simulated-Annealing optimization heuristic 
