@@ -139,7 +139,7 @@ def als(configfile, store, improve):
 	optimizer = AMOSA(configuration.amosa_conf)
 	optimizer.hill_climb_checkpoint_file = f"{configuration.output_dir}/{optimizer.hill_climb_checkpoint_file}"
 	optimizer.minimize_checkpoint_file = f"{configuration.output_dir}/{optimizer.minimize_checkpoint_file}"
-	optimizer.cache_file = f"{configuration.output_dir}/{optimizer.cache_file}"
+	optimizer.cache_dir = f"{configuration.output_dir}/{optimizer.cache_dir}"
 	optimizer.run(problem, improve)
 	hours = int(optimizer.duration / 3600)
 	minutes = int((optimizer.duration - hours * 3600) / 60)

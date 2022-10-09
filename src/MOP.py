@@ -268,5 +268,5 @@ class MOP(AMOSA.Problem):
         for a in self._args:
             a[2] = configuration
         with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_squared_ed, self._args)
+            error = pool.starmap(evaluate_signed_ed, self._args)
         return float(np.var(np.concatenate(error).flat))
