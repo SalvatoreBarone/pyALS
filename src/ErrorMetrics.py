@@ -82,12 +82,12 @@ class ErrorConfig:
                 raise ValueError(f"{k} not found in POs {po_names}")
 
 
-def evaluate_output(graph, samples, configuration):
-    return [{"e" : s["output"], "a" : graph.evaluate(s["input"], configuration)} for s in samples]
+def evaluate_output(graph, samples, configuration, weights):
+    return [{"i" : s["input"], "e" : s["output"], "a" : graph.evaluate(s["input"], configuration)} for s in samples]
 
 
-def bool_to_value(output, weights):
-    return np.sum([float(weights[o]) * output[o] for o in weights.keys()])
+def bool_to_value(signal, weights):
+    return np.sum([float(weights[o]) * signal[o] for o in weights.keys()])
 
 
 def evaluate_ep(graph, samples, configuration, weights):

@@ -55,28 +55,28 @@ class MOP(AMOSA.Problem):
         self.hw_config = hw_config
         self.samples = None
         if self.error_config.dataset is None:
-            self._generate_samples()
-            self._store_dataset(dataset_outfile)
+            self.generate_samples()
+            self.store_dataset(dataset_outfile)
         else:
-            self._load_dataset()
+            self.load_dataset()
         print("Done!")
         self._args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
-        self.upper_bound = self._get_upper_bound()
-        self.baseline_and_gates = self._get_baseline_gates()
-        self.baseline_depth = self._get_baseline_depth()
-        self.baseline_switching = self._get_baseline_switching()
+        self.upper_bound = self.get_upper_bound()
+        self.baseline_and_gates = self.get_baseline_gates()
+        self.baseline_depth = self.get_baseline_depth()
+        self.baseline_switching = self.get_baseline_switching()
         print(f"#vars: {self.n_vars}, ub:{self.upper_bound}, #conf.s {np.prod([ float(x + 1) for x in self.upper_bound ])}.")
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
         AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.hw_config.metrics) + 1, 1)
 
-    def _load_dataset(self):
+    def load_dataset(self):
         print(f"Reading input data from {self.error_config.dataset} ...")
         if self.error_config.dataset.endswith(".json"):
             self.samples = json.load(open(self.error_config.dataset))
         else:
-            self._read_samples(self.error_config.dataset)
+            self.read_samples(self.error_config.dataset)
 
-    def _store_dataset(self, dataset_outfile):
+    def store_dataset(self, dataset_outfile):
         if dataset_outfile is not None:
             if not dataset_outfile.endswith(".json"):
                 dataset_outfile += ".json"
@@ -96,7 +96,7 @@ class MOP(AMOSA.Problem):
         for metric in self.hw_config.metrics:
             out["f"].append(self.hw_ffs[metric](configuration))
 
-    def _read_samples(self, dataset):
+    def read_samples(self, dataset):
         self.samples = []
         PI = self.graph.get_pi()
         file = open(dataset, "r")
@@ -112,7 +112,7 @@ class MOP(AMOSA.Problem):
             inputs = { k["name"] :  True if input_dict[k["name"]][i] == '1' else False for k in PI }
             self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
-    def _generate_samples(self):
+    def generate_samples(self):
         self.samples = []
         PI = self.graph.get_pi()
         if self.error_config.n_vectors != 0:
@@ -160,23 +160,23 @@ class MOP(AMOSA.Problem):
         }
         return [error_labels[self.error_config.metric]] + [hw_labels[m] for m in self.hw_config.metrics] if self.error_config.builtin_metric else ["Error"] + [hw_labels[m] for m in self.hw_config.metrics]
 
-    def _get_upper_bound(self):
+    def get_upper_bound(self):
         return [len(e) - 1 for c in [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()] for e in self.catalog if e[0]["spec"] == c["spec"] or negate(e[0]["spec"]) == c["spec"] ]
 
-    def _get_outputs(self, configuration):
+    def get_outputs(self, configuration):
         for a in self._args:
             a[2] = configuration
         with Pool(cpu_count()) as pool:
             outputs = pool.starmap(evaluate_output, self._args)
-        return [ o for output in outputs for o in output ]
+        return list(flatten(outputs))
 
-    def _get_baseline_gates(self):
+    def get_baseline_gates(self):
         return get_gates(self.matter_configuration([0] * self.n_vars))
 
-    def _get_baseline_depth(self):
+    def get_baseline_depth(self):
         return get_depth(self.matter_configuration([0] * self.n_vars, ), self.graph)
 
-    def _get_baseline_switching(self):
+    def get_baseline_switching(self):
         return get_switching(self.matter_configuration([0] * self.n_vars))
 
     def get_ep(self, configuration):

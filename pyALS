@@ -23,6 +23,7 @@ from src.MOP import *
 from src.ALSRewriter import *
 from src.stats import *
 from src.ConfigParser import *
+from src.ALSArithModel import *
 
 
 def git_updater():
@@ -76,14 +77,15 @@ def elaborate(source, top, lut, output):
 
 
 @click.command("es")
-@click.option("--config",  required = True, type=str, help="path of the configuration file")
-def es_synth(config):
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+def es_synth(configfile):
 	"""
 	Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and
 	exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
+
+	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
 	"""
-	check_for_file(config)
-	configuration = ConfigParser(config, "es")
+	configuration = ConfigParser(configfile, "es")
 	check_for_file(configuration.lut_cache)
 	helper = YosysHelper()
 	helper.load_ghdl()
@@ -96,16 +98,17 @@ def es_synth(config):
 
 
 @click.command("als")
-@click.option("--config",  type=str, required = True, help="path of the configuration file")
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.option("--store", type=str, help = "Store the random vectors adopted for error estimation on file, for further use.", default = None)
 @click.option("--improve", type=str, help="Path of the file containing results from previous runs to be improved (JSON file)", default=None)
-def als(config, store, improve):
+def als(configfile, store, improve):
 	"""
 	Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
 	cuts, design space exploration and rewriting.
+
+	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
 	"""
-	check_for_file(config)
-	configuration = ConfigParser(config, "als")
+	configuration = ConfigParser(configfile, "als")
 	check_for_file(configuration.lut_cache)
 	check_for_optional_file(improve)
 	if configuration.error_conf.dataset is not None:
@@ -130,6 +133,7 @@ def als(config, store, improve):
 		print("Output-weight parsing completed successfully")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+	print(f"Catalog generation completed.")
 	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
 	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
 	optimizer = AMOSA(configuration.amosa_conf)
@@ -155,16 +159,15 @@ def als(config, store, improve):
 
 
 @click.command('generate')
-@click.option("--config",  type=str, help="path of the configuration file")
-def generate(config):
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+def generate(configfile):
 	"""
 	Performs the rewriting step of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command
+
+	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
 	"""
-	check_for_file(config)
-	configuration = ConfigParser(config, "als")
+	configuration = ConfigParser(configfile, "als")
 	check_for_file(configuration.lut_cache)
-	if configuration.error_conf.dataset is not None:
-		check_for_file(configuration.error_conf.dataset)
 	if configuration.output_dir != ".":
 		mkpath(configuration.output_dir)
 	check_for_file(f"{configuration.output_dir}/final_archive.json")
@@ -181,6 +184,7 @@ def generate(config):
 		print("Output-weight parsing completed successfully")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+	print(f"Catalog generation completed.")
 	print(f"Reading the Pareto front.")
 	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
 	optimizer = AMOSA(configuration.amosa_conf)
@@ -192,6 +196,56 @@ def generate(config):
 	rewriter = ALSRewriter(helper, problem)
 	rewriter.generate_hdl(pareto_set, configuration.output_dir)
 	print(f"All done! Take a look at {configuration.output_dir}!")
+
+
+@click.command("arithmodel")
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('modeldescriptionfile', type=click.Path(exists=True, dir_okay=False))
+@click.option("-l", "--enable_lookup", is_flag=True, help="Enable the generation of look-up table based Python models")
+@click.option("-r", "--enable_regression", is_flag=True, help="Enables the generation of linear regression based Python models")
+@click.option("-o", "--output",  type=str, required = True, help="Output file")
+def get_model(configfile, modeldescriptionfile, enable_lookup, enable_regression, output):
+	"""
+	Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations.
+	You can select which models to be generated using the available options.
+
+	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+	MODELDESCRIPTION is the path of the JSON file describing the circuit. See the README.md for details.
+	"""
+	assert enable_lookup or enable_regression, "You should enable at least one between look-up table or regression based models"
+	configuration = ConfigParser(configfile, "als")
+	check_for_file(configuration.lut_cache)
+	check_for_file(f"{configuration.output_dir}/final_archive.json")
+	helper = YosysHelper()
+	helper.load_ghdl()
+	helper.read_sources(configuration.source_hdl, configuration.top_module)
+	helper.prep_design(configuration.als_conf.cut_size)
+	luts_set = helper.get_luts_set()
+	graph = ALSGraph(helper.design)
+	print(f"Graph generation completed")
+	helper.save_design("original")
+	assert configuration.error_conf.weights is not None and len(configuration.error_conf.weights) != 0, "This command is meant for arithmetic circuits. Please, privide the 'weight' field in your configuration file."
+	configuration.error_conf.validate_weights(graph)
+	print("Output-weight parsing completed successfully")
+	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time....")
+	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+	print(f"Catalog generation completed.")
+	# Forcing the MOP to generate exhaustive test patterns
+	configuration.error_conf.dataset = None
+	configuration.error_conf.n_vectors = 0
+	problem = MOP(configuration.top_module, graph, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
+	optimizer = AMOSA(configuration.amosa_conf)
+	print(f"Reading the Pareto front.")
+	optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
+	pareto_set = optimizer.pareto_set()
+	print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
+	print("Performing model generation...")
+	generator = ALSArithModel(helper, problem, modeldescriptionfile)
+	if enable_lookup:
+		generator.get_lookup_table_models(configuration.top_module, pareto_set, output)
+	if enable_regression:
+		generator.get_regression_models(pareto_set, output)
+	print(f"All done! Take a look at {output}!")
 
 
 @click.command("template")
@@ -371,6 +425,7 @@ cli.add_command(elaborate)
 cli.add_command(es_synth)
 cli.add_command(als)
 cli.add_command(generate)
+cli.add_command(get_model)
 cli.add_command(clean)
 cli.add_command(expand)
 cli.add_command(query)

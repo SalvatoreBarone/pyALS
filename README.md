@@ -58,11 +58,24 @@ If, on the other hand, you really feel the need to install everything by hand, f
 I'm sure it will be very helpful.
 
 # Running pyALS
+You can run
+```
+pyALS --help
+```
+to obtain the list of currently supported commands (I always forgot to update this readme file...), and
+```
+pyALS command --help
+```
+to obtain the list of options available for the command ```command```.
+
+## Main commands
+
 pyALS supports the following main commands, each with its own set of options:
   - ```es```: performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting;
   - ```generate```: performs only the rewriting step, of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command;
   - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
   - ```elaborate```: only draws the k-LUT map of the given circuit;
+  - ```arithmodel```: generates software models (in python) for software simulations. 
 
 Please kindly note you will need the file where synthesized Boolean functions are stored, i.e., the catalog-cache file. 
 You can mine, which is ready-to-use, frequently updated and freely available at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
@@ -113,15 +126,15 @@ Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e.
 
 Usage: 
 ```
-pyALS es [OPTIONS]
+pyALS es CONFIGFILE
 ```
-Options:
+where:
 ```
-  --config TEXT  path of the configuration file
+  CONFIGFILE is the path of the configuration file
 ```
 Example:
 ```
-./pyALS es --config /path_to_config.json 
+./pyALS es /path_to_config.json 
 ```
 
 
@@ -130,7 +143,11 @@ Performs the full catalog-based AIG-rewriting workflow, including cut enumeratio
 
 Usage: 
 ```
-pyALS als [OPTIONS]
+pyALS als CONFIGFILE [OPTIONS]
+```
+where:
+```
+  CONFIGFILE is the path of the configuration file
 ```
 Options:
 ```
@@ -143,12 +160,78 @@ Example:
 ./pyALS als --source /path_to_source --top top_level_entity --catalog /path_to_catalog_cache --output /path_to_output_directory --config /path_to_config.json --improve /path_to_final_archive.json --resume 
 ```
 
+### The ```generate``` command
+Performs the rewriting step of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command
+
+Usage: 
+```
+pyALS generate CONFIGFILE
+```
+where:
+```
+  CONFIGFILE is the path of the configuration file
+```
+
+### The ```arithmodel``` command
+Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations. You can select which models to be generated using the available options.
+Usage: 
+```
+pyALS arithmodel [OPTIONS] CONFIGFILE MODELDESCRIPTIONFILE
+```
+where:
+
+ - ```CONFIGFILE``` is the path of the JSON configuration file containing all   parameters which are needed to the tool. 
+  - ```MODELDESCRIPTION``` is the path of the JSON file describing the circuit. This is meant to describe how to deal with input and outputs. You can use the one which is reported below, modifying is as needed.
+  ```
+  {
+    "operand1" : {          // Description of the first operand
+        "name" : "a",       // Operand name
+        "width" : "2",      // Operand width, in terms of bits
+        "weights" : {       // Specify weights for each bit; you can also define weights as floating point, or even negative numbers;
+            "\\a[0]" : 1,
+            "\\a[1]" : 2
+        }
+    },
+    "operand2" : {          // Desctipion of the second operand, same as above...
+        "name" : "b",     
+        "width" : "2",
+        "weights" : {
+            "\\b[0]" : 1,
+            "\\b[1]" : 2
+        }
+    },
+    "result" : {            // Desctipion of the output signal. Once again...
+        "name" : "o",
+        "width" : "4",
+        "weights" : {
+            "\\o[0]" : 1,
+            "\\o[1]" : 2,
+            "\\o[2]" : 4,
+            "\\o[3]" : 8
+        }
+    }
+  }
+  ```
+
+Options:
+```
+  -l, --enable_lookup      Enable the generation of look-up table based Python
+                           models
+  -r, --enable_regression  Enables the generation of linear regression based
+                           Python models
+  -o, --output TEXT        Output file  [required]
+```
+Example:
+```
+pyALS arithmodel example/mult_2_bit/config_awce.json example/mult_2_bit/model_description.json -o prova.py -l
+```
+
 ### The ```template``` command
 Creates a CSV template file to be used to define a dataset while optimizing a given error metric
 
 Usage:
 ```
-pyALS dataset [OPTIONS]
+pyALS template [OPTIONS]
 ```
 Options:
 ```
@@ -201,7 +284,7 @@ In the following, each field of the JSON file is described using C-Style comment
         "metric"       : "med",                         // Error metric to be used during Design-Space exploration. It can be "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively; The "ia-ep" and "ia-ed" stand for "input-aware" error-probability and error-distance, which require the user to provide the probability-distribution for input vectors  
         "threshold"    : 16,                            // The error threshold
         "vectors"      : 5,                             // The number of test vectors for error assessment. Using the value "0" will unlock exhaustive evaluation, i.e., it will cause the tool to evaluate the error for every possible input assignment.
-        "distribution" : "input_distribution.csv",      // Input dataset to be used for error assessment. Its format depend on the specific error metric being adopted (simple csv for builin, json for custom assessment).
+        "dataset" : "dataset.csv",                      // Input dataset to be used for error assessment, in csv or json format. A csv template can be generated using the "template" command of the tool.
         "weigths" : {                                   // specify weights for outputs; you can also define weights as floating point, or even negative numbers;
             "signal_name" : weight,
             // for instance:

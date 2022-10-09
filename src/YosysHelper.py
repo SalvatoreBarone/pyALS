@@ -95,10 +95,10 @@ class YosysHelper:
 		print(f"{file_name} written successfully")
 
 	def reverse_splitnets(self):
-		module = self.__get_module(self.module_id)
+		module = self.get_module(self.module_id)
 		if module is not None:
-			self.__add_PIs(module)
-			self.__add_POs(module)
+			self.add_PIs(module)
+			self.add_POs(module)
 			module.fixup_ports()
 
 	def get_luts_set(self):
@@ -117,13 +117,26 @@ class YosysHelper:
 				if ys.IdString("\LUT") in cell.parameters:
 					YosysHelper.cell_to_aig(configuration, module, cell)
 
-	def __get_module(self, module_id):
+	def get_module(self, module_id):
 		for module in self.design.selected_whole_modules_warn():
 			if module.name == module_id:
 				return module
 		return None
 
-	def __add_PIs(self, module):
+	def get_PIs_and_Pos(self):
+		wires = {"PI": {}, "PO": {}}
+		module = self.get_module(self.module_id)
+		if module is not None:
+			for wire in module.selected_wires():
+				if (wire.port_input):  # the wire is a primary input
+					if wire.name not in wires["PI"]:
+						wires["PI"][wire.name] = wire
+				if (wire.port_output):  # the wire is a primary output
+					if wire.name not in wires["PO"]:
+						wires["PO"][wire.name] = wire
+		return wires
+
+	def add_PIs(self, module):
 		wires, modules = YosysHelper.get_wires_and_modules(self.design)
 		sigmap = ys.SigMap(module)
 		for pi in self.PIs:
@@ -136,7 +149,7 @@ class YosysHelper:
 					o.port_input = False
 					module.connect(ys.SigSpec(o), ys.SigSpec(b, 1))
 
-	def __add_POs(self, module):
+	def add_POs(self, module):
 		wires, modules = YosysHelper.get_wires_and_modules(self.design)
 		sigmap = ys.SigMap(module)
 		for po in self.POs:

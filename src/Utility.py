@@ -69,5 +69,14 @@ def string_to_nested_list_int(s):
   return [[int(i) for i in l[0]], [int(i) for i in l[1]]]
 
 
+def flatten(container):
+	for i in container:
+		if isinstance(i, (list, tuple)):
+			for j in flatten(i):
+				yield j
+		else:
+			yield i
+
+
 def negate(spec):
     return spec.translate(spec.maketrans({"1": "0", "0": "1"}))
