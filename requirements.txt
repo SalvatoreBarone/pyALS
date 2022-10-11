@@ -7,3 +7,5 @@ numpy
 GitPython
 fixedpoint
 jinja2
+seaborn
+bitstring

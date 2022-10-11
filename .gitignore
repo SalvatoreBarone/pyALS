@@ -147,6 +147,7 @@ run.sh
 
 run_experiments.sh
 *.pdf
+*.csv
 result_m2b
 result_x2
 prova.py

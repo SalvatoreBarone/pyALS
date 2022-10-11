@@ -24,6 +24,7 @@ from src.ALSRewriter import *
 from src.stats import *
 from src.ConfigParser import *
 from src.ALSArithModel import *
+from src.DatasetGenerator import *
 
 
 def git_updater():
@@ -304,6 +305,38 @@ def randomsplit(source, top, splits, outputdir):
 	print("Dataset generation completed")
 
 
+@click.command("ia-dataset")
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('jsonfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('outfile', type=click.Path(dir_okay=False))
+@click.option("-i", "--input", type=str, required = True, help="Name of the primary input for which profiled values are provided",)
+@click.option("-a", "--alpha", type=float, help="Proportion factor on the basis of which the random test vectors to be generated, given a profiled value, is determined", default=1)
+@click.option("-m", "--minv", type=int, help="Minimum number of random test vectors to be generated, given a profiled value", default=1)
+@click.option("--hist", type=str, help="Name for the hystogram plot", default="occurrence_frequency.pdf")
+@click.option("--nhist", type=str, help="Name for the normalized hystogram plot", default="normalized_occurrence_frequency.pdf")
+@click.option("--boxp", type=str, help="Name for the box and wisker plot", default="occurrence_frequency_boxplot.pdf")
+@click.option("--cov", type=str, help="Name for the coverage plot", default="coverage_of_values.pdf")
+def ia_dataset(configfile, jsonfile, outfile, input, alpha, minv, hist, nhist, boxp, cov):
+	"""
+	Generates dataset for input-aware approximation flow, given input profiling in JSON format
+
+	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+
+	JSONFILE is the path of the json file containing the profiled values.
+
+	OUTFILE is the path of the generated dataset, in csv format
+	
+	"""
+	configuration = ConfigParser(configfile, "als")
+	helper = YosysHelper()
+	helper.load_ghdl()
+	helper.read_sources(configuration.source_hdl, configuration.top_module)
+	helper.prep_design(configuration.als_conf.cut_size)
+	helper.reverse_splitnets()
+	generator = DatasetGenerator(helper, jsonfile, alpha, minv, input, hist, nhist, boxp, cov, outfile)
+	generator.generate()
+	
+
 @click.command('clean')
 @click.option('--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
 def clean(catalog):
@@ -421,6 +454,7 @@ def stats(catalog, gates, power_gates, power_truth, power_truth_k):
 
 cli.add_command(randomsplit)
 cli.add_command(template)
+cli.add_command(ia_dataset)
 cli.add_command(elaborate)
 cli.add_command(es_synth)
 cli.add_command(als)
