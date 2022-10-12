@@ -16,7 +16,6 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import random, json, sys, numpy as np, matplotlib.pyplot as plt, seaborn as sns
 from fixedpoint import FixedPoint
-from bitstring import BitArray
 from .Utility import *
 from .YosysHelper import *
 

@@ -45,9 +45,10 @@ class MOP(AMOSA.Problem):
         HwConfig.Metric.SWITCHING:  get_switching
     }
 
-    def __init__(self, top_module, graph, catalog, error_config, hw_config, dataset_outfile):
+    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, dataset_outfile):
         self.top_module = top_module
         self.graph = graph
+        self.output_weights = output_weights
         self.graphs = [copy.deepcopy(graph)] * cpu_count()
         self.n_vars = graph.get_num_cells()
         self.catalog = catalog
@@ -60,7 +61,7 @@ class MOP(AMOSA.Problem):
         else:
             self.load_dataset()
         print("Done!")
-        self._args = [[g, s, [0] * self.n_vars, self.error_config.weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
+        self._args = [[g, s, [0] * self.n_vars, self.output_weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
         self.baseline_and_gates = self.get_baseline_gates()
         self.baseline_depth = self.get_baseline_depth()
@@ -91,7 +92,7 @@ class MOP(AMOSA.Problem):
         if self.error_config.builtin_metric:
             out["f"].append(getattr(self, self.error_ffs[self.error_config.metric])(configuration))
         else:
-            out["f"].append(self.error_config.function(self.graph, self.samples, configuration, self.error_config.weights))
+            out["f"].append(self.error_config.function(self.graph, self.samples, configuration, self.output_weights))
         out["g"].append(out["f"][-1] - self.error_config.threshold)
         for metric in self.hw_config.metrics:
             out["f"].append(self.hw_ffs[metric](configuration))

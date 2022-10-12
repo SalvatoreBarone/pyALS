@@ -1,9 +1,19 @@
 {
-    "hdl" : {
-        "source" : "example/mult_2_bit/mult_2_bit.sv",
-        "top"    : "mult_2_bit",
-        "output" : "result_m2b"
+    "circuit" : {
+        "sources" : "example/mult_2_bit/mult_2_bit.sv",
+        "top_module" : "mult_2_bit",
+        "io_weights" : {
+            "\\a[0]" : 1,
+            "\\a[1]" : 2,
+            "\\b[0]" : 1,
+            "\\b[1]" : 2,
+            "\\o[0]" : 1,
+            "\\o[1]" : 2,
+            "\\o[2]" : 4,
+            "\\o[3]" : 8
+        }
     },
+    "output_path" : "mult_2_bit_awce",
     "als" : {
         "cache"    : "lut_catalog.db",
         "cut_size" : 4,
@@ -14,14 +24,7 @@
         "metric"       : "awce",
         "threshold"    : 16,
         "vectors"      : 10,
-        "dataset"      : "example/mult_2_bit/dataset.csv",
-        "weights"      : {
-            "\\o[0]" : 1,
-            "\\o[1]" : 2,
-            "\\o[2]" : 4,
-            "\\o[3]" : 8
-        }
-
+        "dataset"      : "example/mult_2_bit/dataset.csv"
     },
     "hardware" : {
         "metrics" : ["gates"]

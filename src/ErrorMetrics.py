@@ -34,12 +34,11 @@ class ErrorConfig:
         RMSED = 9           # Root Mean Squared Error Distance
         VARED = 10          # Variance of the Error Distance
 
-    def __init__(self, metric, threshold, vectors, dataset = None, weights = None):
+    def __init__(self, metric, threshold, vectors, dataset = None):
         self.metric = None
         self.threshold = threshold
         self.n_vectors = vectors
         self.dataset = dataset
-        self.weights = weights
         self.function = None
         self.builtin_metric = None
         if type(metric) == str:
@@ -73,14 +72,6 @@ class ErrorConfig:
             raise ValueError(f"'function' field not specified")
         self.function = dynamic_import(metric["module"], metric["function"])
         self.builtin_metric = False
-
-    def validate_weights(self, graph):
-        po_names = [o["name"] for o in graph.get_po()]
-        for k in self.weights.keys():
-            if k not in po_names:
-                graph.plot()
-                raise ValueError(f"{k} not found in POs {po_names}")
-
 
 def evaluate_output(graph, samples, configuration, weights):
     return [{"i" : s["input"], "e" : s["output"], "a" : graph.evaluate(s["input"], configuration)} for s in samples]

@@ -75,7 +75,7 @@ pyALS supports the following main commands, each with its own set of options:
   - ```generate```: performs only the rewriting step, of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command;
   - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
   - ```elaborate```: only draws the k-LUT map of the given circuit;
-  - ```arithmodel```: generates software models (in python) for software simulations. 
+  - ```pymodels```: generates software models (in python) for software simulations. 
 
 Please kindly note you will need the file where synthesized Boolean functions are stored, i.e., the catalog-cache file. 
 You can mine, which is ready-to-use, frequently updated and freely available at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
@@ -172,58 +172,23 @@ where:
   CONFIGFILE is the path of the configuration file
 ```
 
-### The ```arithmodel``` command
+### The ```pymodels``` command
 Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations. You can select which models to be generated using the available options.
 Usage: 
 ```
-pyALS arithmodel [OPTIONS] CONFIGFILE MODELDESCRIPTIONFILE
+pyALS pymodels [OPTIONS] CONFIGFILE MODELDESCRIPTIONFILE
 ```
 where:
 
- - ```CONFIGFILE``` is the path of the JSON configuration file containing all   parameters which are needed to the tool. 
-  - ```MODELDESCRIPTION``` is the path of the JSON file describing the circuit. This is meant to describe how to deal with input and outputs. You can use the one which is reported below, modifying is as needed.
-  ```
-  {
-    "operand1" : {          // Description of the first operand
-        "name" : "a",       // Operand name
-        "width" : "2",      // Operand width, in terms of bits
-        "weights" : {       // Specify weights for each bit; you can also define weights as floating point, or even negative numbers;
-            "\\a[0]" : 1,
-            "\\a[1]" : 2
-        }
-    },
-    "operand2" : {          // Desctipion of the second operand, same as above...
-        "name" : "b",     
-        "width" : "2",
-        "weights" : {
-            "\\b[0]" : 1,
-            "\\b[1]" : 2
-        }
-    },
-    "result" : {            // Desctipion of the output signal. Once again...
-        "name" : "o",
-        "width" : "4",
-        "weights" : {
-            "\\o[0]" : 1,
-            "\\o[1]" : 2,
-            "\\o[2]" : 4,
-            "\\o[3]" : 8
-        }
-    }
-  }
-  ```
+  - ```CONFIGFILE``` is the path of the JSON configuration file containing all   parameters which are needed to the tool. 
+  - ```OUTFILE``` it is the path to the output file containing generated models.
 
 Options:
-```
-  -l, --enable_lookup      Enable the generation of look-up table based Python
-                           models
-  -r, --enable_regression  Enables the generation of linear regression based
-                           Python models
-  -o, --output TEXT        Output file  [required]
-```
+  - ```-f```: Enables using the floating-point representation for look-up tables
+
 Example:
 ```
-pyALS arithmodel example/mult_2_bit/config_awce.json example/mult_2_bit/model_description.json -o prova.py -l
+pyALS pymodels example/mult_2_bit/config_awce.json output.py
 ```
 
 ### The ```template``` command
@@ -269,11 +234,22 @@ In the following, each field of the JSON file is described using C-Style comment
 
 ```json
 {
-    "hdl" : {
-        "source" : "path_to_hdl_source",                // the HDL source file; VHDL, Verilog and System Verilog are supported. You can also pass more than one source file, using a list, i.e., ["source1", "source2"];
-        "top"    : "mult_2_bit",                        // the top-level entity name
-        "output" : "results"                            // path to the output directory
+      "circuit" : {
+        "sources" : "path_to_hdl_source",             // the HDL source file; VHDL, Verilog and System Verilog are supported. You can also pass more than one source file, using a list, i.e., ["source1", "source2"];
+        "top_module" : "mult_2_bit",                  // name of the top-level entity
+        // Semantic weights for input and output; you can also define weights as floating point, or even negative numbers; this is required if you want to use some of the error metrics and if you want to generate python models for simulations. Note you can omit this if you're going to use the error probability as error metric.
+        "io_weights" : {
+            "\\a[0]" : 1,
+            "\\a[1]" : 2,
+            "\\b[0]" : 1,
+            "\\b[1]" : 2,
+            "\\o[0]" : 1,
+            "\\o[1]" : 2,
+            "\\o[2]" : 4,
+            "\\o[3]" : 8
+        }
     },
+    "output_path" : "mult_2_bit_awce",                 // path to the output directory
     "als" : {
         "cache"    : "lut_catalog.db",                  // path to the catalog-cache
         "cut_size" : 4,                                 // specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration, always required
@@ -281,18 +257,10 @@ In the following, each field of the JSON file is described using C-Style comment
         "timeout"  : 60000                              // Timeout (in ms) for the exact synthesis process, always required. It is better you don't change its default value.              
     },
     "error" : {                                         // This section defines error-related stuff
-        "metric"       : "med",                         // Error metric to be used during Design-Space exploration. It can be "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively; The "ia-ep" and "ia-ed" stand for "input-aware" error-probability and error-distance, which require the user to provide the probability-distribution for input vectors  
-        "threshold"    : 16,                            // The error threshold
-        "vectors"      : 5,                             // The number of test vectors for error assessment. Using the value "0" will unlock exhaustive evaluation, i.e., it will cause the tool to evaluate the error for every possible input assignment.
-        "dataset" : "dataset.csv",                      // Input dataset to be used for error assessment, in csv or json format. A csv template can be generated using the "template" command of the tool.
-        "weigths" : {                                   // specify weights for outputs; you can also define weights as floating point, or even negative numbers;
-            "signal_name" : weight,
-            // for instance:
-            "\\o[0]" : 1,
-            "\\o[1]" : 2,
-            "\\o[2]" : 4,
-            "\\o[3]" : 8
-        }
+        "metric"       : "mse",                         // Error metric to be used during Design-Space exploration. It can be "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively; The "ia-ep" and "ia-ed" stand for "input-aware" error-probability and error-distance, which require the user to provide the probability-distribution for input vectors  
+        "threshold"    : 1e+3,                         // The error threshold
+        "vectors"      : 10000,                        // The number of test vectors for error assessment. Using the value "0" will unlock exhaustive evaluation, i.e., it will cause the tool to evaluate the error for every possible input assignment.
+        "dataset" : "/path_to_csv_or_json_dataset"     // Input dataset to be used for error assessment, in csv or json format. A csv template can be generated using the "template" command of the tool.
     },
     "hardware" : {                                     // Hardware related stuff
         "metric" : ["gates", "depth", "switching"]      // hardware metric(s) to be optimized (AIG-gates, AIG-depth, or LUT switching activity). Please note you can specify more than one metric.
@@ -464,11 +432,11 @@ The last thing to be done is to tell ```pyALS```everything needed using the JSON
    ```
 The content of the JSON file defined using the ```dataset``` field will be passed ***as is*** to the ```compute_psnr()```.
 
-
-
 ## Manual installation
 
-The guide has been tested on Debian 11.
+Come on... Do you really want to install everything by hand!? [You can use a ready to use Docker container!](#using-the-ready-to-use-docker-container)
+
+No? Ok, then... Note that this guide has been tested on Debian 11.
 
 ### Preliminaries
 You need to install some basic dependencies. So, run
