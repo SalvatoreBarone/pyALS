@@ -200,7 +200,8 @@ def generate(configfile):
 @click.command("pymodels")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.argument('outfile', type=click.Path(dir_okay=False))
-def get_model(configfile, outfile):
+@click.option("-f", "--usefloat", is_flag = True, help = "Enables using the floating-point representation for look-up tables")
+def get_model(configfile, outfile, usefloat):
 	"""
 	Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations.
 	You can select which models to be generated using the available options.
@@ -302,7 +303,7 @@ def randomsplit(source, top, splits, outputdir):
 
 @click.command("ia-dataset")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.argument('jsonfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('profiledvalues', type=click.Path(exists=True, dir_okay=False))
 @click.argument('outfile', type=click.Path(dir_okay=False))
 @click.option("-i", "--input", type=str, required = True, help="Name of the primary input for which profiled values are provided",)
 @click.option("-a", "--alpha", type=float, help="Proportion factor on the basis of which the random test vectors to be generated, given a profiled value, is determined", default=1)
@@ -311,13 +312,13 @@ def randomsplit(source, top, splits, outputdir):
 @click.option("--nhist", type=str, help="Name for the normalized hystogram plot", default="normalized_occurrence_frequency.pdf")
 @click.option("--boxp", type=str, help="Name for the box and wisker plot", default="occurrence_frequency_boxplot.pdf")
 @click.option("--cov", type=str, help="Name for the coverage plot", default="coverage_of_values.pdf")
-def ia_dataset(configfile, jsonfile, outfile, input, alpha, minv, hist, nhist, boxp, cov):
+def ia_dataset(configfile, profiledvalues, outfile, input, alpha, minv, hist, nhist, boxp, cov):
 	"""
 	Generates dataset for input-aware approximation flow, given input profiling in JSON format
 
 	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
 
-	JSONFILE is the path of the json file containing the profiled values.
+	PROFILEDVALUES is the path of the file containing the profiled values (both JSON and HDF5 files format are supported)
 
 	OUTFILE is the path of the generated dataset, in csv format
 	
@@ -328,7 +329,7 @@ def ia_dataset(configfile, jsonfile, outfile, input, alpha, minv, hist, nhist, b
 	helper.read_sources(configuration.source_hdl, configuration.top_module)
 	helper.prep_design(configuration.als_conf.cut_size)
 	helper.reverse_splitnets()
-	generator = DatasetGenerator(helper, jsonfile, alpha, minv, input, hist, nhist, boxp, cov, outfile)
+	generator = DatasetGenerator(helper, profiledvalues, alpha, minv, input, hist, nhist, boxp, cov, outfile)
 	generator.generate()
 	
 

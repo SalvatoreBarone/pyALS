@@ -20,7 +20,7 @@ from .Utility import *
 from .YosysHelper import *
 
 class DatasetGenerator:
-	def __init__(self, yosis_helper, jsonfile, alpha, minv, name, 
+	def __init__(self, yosis_helper, profiledvalues, alpha, minv, name, 
 		hist = "occurrence_frequency.pdf", 
 		nhist = "normalized_occurrence_frequency.pdf", 
 		boxp = "occurrence_frequency_boxplot.pdf",
@@ -29,7 +29,7 @@ class DatasetGenerator:
 		""" 
 		Creates a new generator
 
-		param jsonfile 	JSON file containing the profiled values
+		param profiledvalues 	JSON file containing the profiled values
 		param alpha		Proportion factor on the basis of which the random test vectors to be generated, given a profiled value, is determined
 		param minv		Minimum number of random test vectors to be generated, given a profiled value
 		param name 		Name of the primary input for which profiled values are provided
@@ -40,7 +40,7 @@ class DatasetGenerator:
 		param csv		Path for the generated dataset
 		"""
 		self.helper = yosis_helper
-		self.json_file = jsonfile
+		self.profiledvalues = profiledvalues
 		self.alpha = alpha
 		self.minv = minv
 		self.name = name
@@ -50,14 +50,23 @@ class DatasetGenerator:
 		self.cov = cov
 		self.out = out
 
+	def get_data(self):
+		data = [] 
+		if self.profiledvalues.endswith(".json"):
+			with open(self.profiledvalues) as f:
+				data = json.load(f)
+			data = list(flatten(data))
+			data = list(map(int, data))
+		else:
+			print("Unsupported file format")
+			exit()
+		return data
 
 	def generate(self):
-		data = [] 
-		with open(self.json_file) as f:
-			data = json.load(f)
+		data = self.get_data()
 		# Computing the hystogram of utilization of each int8-value a weight
 		hystogram = {}
-		for w in list(flatten(data)):
+		for w in data:
 			if w in hystogram.keys():
 				hystogram[int(w)] += 1
 			else:
