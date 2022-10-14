@@ -235,9 +235,9 @@ class DatasetGenerator:
 		profiled_name = PIs["Profiled"][0][0]
 		profiled_nbit = PIs["Profiled"][0][1]
 		nbits = 0
-		header = ",".join([f"\\{profiled_name}[{i}]" for i in reversed(range(profiled_nbit))]) 
+		header = ",".join([f"{profiled_name}[{i}]" for i in reversed(range(profiled_nbit))]) 
 		for pi in PIs["Non-Profiled"]:
-			header += "," + ",".join([f"\\{pi[0]}[{i}]" for i in reversed(range(pi[1]))]) 
+			header += "," + ",".join([f"{pi[0]}[{i}]" for i in reversed(range(pi[1]))]) 
 			nbits += pi[1]
 		orig_stdout = sys.stdout
 		with open(outfile, 'w') as f:
