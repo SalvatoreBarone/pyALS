@@ -73,7 +73,7 @@ def elaborate(source, top, lut, output):
 	helper.read_sources(source, top)
 	helper.prep_design(lut)
 	graph = ALSGraph(helper.design)
-	print(f"Graph generation completed")
+	print("Graph generation completed")
 	graph.save(output)
 
 
@@ -127,7 +127,7 @@ def als(configfile, store, improve):
 	helper.prep_design(configuration.als_conf.cut_size)
 	luts_set = helper.get_luts_set()
 	graph = ALSGraph(helper.design)
-	print(f"Graph generation completed")
+	print("Graph generation completed")
 	output_weights = None
 	if configuration.weights is not None and len(configuration.weights) != 0:
 		output_weights = graph.validate_po_weights(configuration.weights)
@@ -135,8 +135,8 @@ def als(configfile, store, improve):
 	helper.save_design("original")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-	print(f"Catalog generation completed.")
-	print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
+	print("Catalog generation completed.")
+	print("Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
 	problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
 	optimizer = AMOSA(configuration.amosa_conf)
 	optimizer.hill_climb_checkpoint_file = f"{configuration.output_dir}/{optimizer.hill_climb_checkpoint_file}"
@@ -154,7 +154,7 @@ def als(configfile, store, improve):
 	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", configuration.top_module, fitness_labels)
 	pareto_set = optimizer.pareto_set()
 	rm_old_implementation(configuration.output_dir)
-	print(f"Performing AIG-rewriting.")
+	print("Performing AIG-rewriting.")
 	rewriter = ALSRewriter(helper, problem)
 	rewriter.generate_hdl(pareto_set, configuration.output_dir)
 	print(f"All done! Take a look at {configuration.output_dir}!")
@@ -179,19 +179,19 @@ def generate(configfile):
 	helper.prep_design(configuration.als_conf.cut_size)
 	luts_set = helper.get_luts_set()
 	graph = ALSGraph(helper.design)
-	print(f"Graph generation completed")
+	print("Graph generation completed")
 	helper.save_design("original")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-	print(f"Catalog generation completed.")
-	print(f"Reading the Pareto front.")
+	print("Catalog generation completed.")
+	print("Reading the Pareto front.")
 	problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
 	optimizer = AMOSA(configuration.amosa_conf)
 	optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
 	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", problem.plot_labels())
 	pareto_set = optimizer.pareto_set()
 	rm_old_implementation(configuration.output_dir)
-	print(f"Performing AIG-rewriting.")
+	print("Performing AIG-rewriting.")
 	rewriter = ALSRewriter(helper, problem)
 	rewriter.generate_hdl(pareto_set, configuration.output_dir)
 	print(f"All done! Take a look at {configuration.output_dir}!")
@@ -221,7 +221,7 @@ def get_model(configfile, outfile, usefloat):
 	helper.prep_design(configuration.als_conf.cut_size)
 	luts_set = helper.get_luts_set()
 	graph = ALSGraph(helper.design)
-	print(f"Graph generation completed")
+	print("Graph generation completed")
 	print("Validading weights for primary input signals")
 	graph.validate_pi_weights(configuration.weights)
 	print("Validading weights for primary output signals")
@@ -229,13 +229,13 @@ def get_model(configfile, outfile, usefloat):
 	helper.save_design("original")
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time....")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-	print(f"Catalog generation completed.")
+	print("Catalog generation completed.")
 	# Forcing the MOP to generate exhaustive test patterns
 	configuration.error_conf.dataset = None
 	configuration.error_conf.n_vectors = 0
 	problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
 	optimizer = AMOSA(configuration.amosa_conf)
-	print(f"Reading the Pareto front.")
+	print("Reading the Pareto front.")
 	optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
 	pareto_set = optimizer.pareto_set()
 	print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
@@ -258,7 +258,7 @@ def template(source, top, output):
 	helper.read_sources(source, top)
 	helper.prep_design(4)
 	graph = ALSGraph(helper.design)
-	print(f"Graph generation completed")
+	print("Graph generation completed")
 	PI = graph.get_pi()
 	original_stdout = sys.stdout
 	row_format = ",".join([i["name"] for i in PI])
@@ -283,11 +283,11 @@ def randomsplit(source, top, splits, outputdir):
 	helper.read_sources(source, top)
 	helper.prep_design(4)
 	graph = ALSGraph(helper.design)
-	print(f"Graph generation completed")
+	print("Graph generation completed")
 	PI = graph.get_pi()
 	PI = [i["name"] for i in PI]
 	permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
-	assignments = [{i: p for i, p in zip(PI, perm)} for perm in permutations]
+	assignments = [dict(zip(PI, perm)) for perm in permutations]
 	random.shuffle(assignments)
 	splitsize = len(assignments) // splits
 	for i in range(splits):
@@ -332,32 +332,6 @@ def ia_dataset(configfile, profiledvalues, outfile, input, alpha, minv, hist, nh
 	generator = DatasetGenerator(helper, profiledvalues, alpha, minv, input, hist, nhist, boxp, cov, outfile)
 	generator.generate()
 	
-
-@click.command("h5")
-@click.argument('h5file', type=click.Path(exists=True, dir_okay=False))
-@click.argument('outdir', type=click.Path(dir_okay=True))
-def h5extract(h5file, outdir):
-	"""
-	Extracts H5DF models to JSON, in order to facilitate you building input-aware datasets
-
-	H5FILE is the H5DF file containing the DNN model
-
-	OUTDIR is the directory where JSONs will be placed
-	"""
-	import tensorflow as tf
-	model=tf.keras.models.load_model(h5file)
-	a = model.get_weights()
-	mkpath(outdir)
-	data = []
-	for i, w in enumerate(a):
-		tmp = list(flatten(w.astype(int).tolist()))
-		with open(f"{outdir}/layer_{i}.json", 'w') as outfile:
-			outfile.write(json.dumps(tmp))
-		data.append(tmp)
-	data = list(flatten(data))
-	with open("{outdir}/complete.json", 'w') as outfile:
-		outfile.write(json.dumps(data))
-
 
 @click.command('clean')
 @click.option('--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
@@ -446,7 +420,7 @@ def query(catalog, spec, dist, neg):
 		print(f"{catalog}: no such file.")
 		exit()
 	cache = ALSCatalogCache(catalog)
-	x = cache.get_lut_at_dist(spec if not neg else negate(spec), dist)
+	x = cache.get_lut_at_dist(negate(spec) if neg else spec, dist)
 	if x is None:
 		print(f"{spec}@{dist} not in the catalog cache")
 	else:
