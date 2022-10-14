@@ -14,8 +14,8 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import random, json, sys, numpy as np, matplotlib.pyplot as plt, seaborn as sns
-from fixedpoint import FixedPoint
+import random, json, sys, numpy as np, matplotlib.pyplot as plt, seaborn as sns 
+from fixedpoint import FixedPoint			
 from .Utility import *
 from .YosysHelper import *
 
@@ -81,7 +81,6 @@ class DatasetGenerator:
 
 	def get_PIs(self):
 		wires = self.helper.get_PIs_and_Pos()
-		print(wires)
 		PIs = {"Profiled" : [], "Non-Profiled" : []}
 		for k, w in wires["PI"].items():
 			if k.str()[1:] == self.name:
