@@ -67,7 +67,7 @@ class DatasetGenerator:
 		# Computing the hystogram of utilization of each int8-value a weight
 		hystogram = {}
 		for w in data:
-			if w in hystogram.keys():
+			if w in hystogram:
 				hystogram[int(w)] += 1
 			else:
 				hystogram[int(w)] = 1
@@ -94,11 +94,9 @@ class DatasetGenerator:
 	def generate_dataset(self, hystogram, PIs):
 		# computing nbits for the profiled input
 		profiled_nbits = PIs["Profiled"][0][1]
-		non_profiled_nbits = sum([ i[1] for i in PIs["Non-Profiled"]])
-		
-		# computing the normalized frequency
-		h_range = list(hystogram.keys())
-		h_range.sort()
+		non_profiled_nbits = sum(i[1] for i in PIs["Non-Profiled"])
+
+		h_range = sorted(hystogram.keys())
 		total_weights = sum(hystogram.values())
 		normalized_frequency = [hystogram[i] / total_weights for i in h_range]
 
@@ -109,7 +107,7 @@ class DatasetGenerator:
 		print(f"Freq. (min, mean, max): {np.min(normalized_frequency)}, {np.mean(normalized_frequency)}, {np.max(normalized_frequency)}\
 				\nFreq. (Q1, Q2, Q3): {np.quantile(normalized_frequency, .25)}, {np.quantile(normalized_frequency, .5)}, {np.quantile(normalized_frequency, .75)}\
 				\n\nSuggested alpha (max, Q2, Q3): {suggested_alpha} {(2 ** non_profiled_nbits) / np.quantile(normalized_frequency, .50)} {(2 ** non_profiled_nbits) / np.quantile(normalized_frequency, .75)}.")
-		
+
 		print("Generating dataset...")
 		nvec = 0
 		dataset = []
@@ -135,11 +133,10 @@ class DatasetGenerator:
 			else:
 				test_vectors = random.sample(input_set, n_vectors)
 
-			for b in test_vectors:
-				dataset.append((FixedPoint(a, signed=True, m=profiled_nbits, n=0), FixedPoint(b, signed=True, m=non_profiled_nbits, n=0)))
+			dataset.extend((FixedPoint(a, signed=True, m=profiled_nbits, n=0), FixedPoint(b, signed=True, m=non_profiled_nbits, n=0)) for b in test_vectors)
 
 		print("Done!")
-		
+
 		rho = list(coverage.values())
 		print(f"\nDataset coverage is {100 * nvec / (2 ** (2 * non_profiled_nbits))}%.\
 				\nVector coverage (min, mean, max): {np.min(rho)}, {np.mean(rho)}, {np.max(rho)}.\
@@ -148,9 +145,7 @@ class DatasetGenerator:
 		return dataset, coverage
 
 	def plot_hystogram(self, hystogram):
-		# computing stuff
-		h_range = list(hystogram.keys())
-		h_range.sort()
+		h_range = sorted(hystogram.keys())
 		frequency = [hystogram[i] for i in h_range]
 		total_weights = sum(hystogram.values())
 		normalized_frequency = [hystogram[i] / total_weights for i in h_range]
@@ -172,8 +167,7 @@ class DatasetGenerator:
 		
 
 	def plot_boxandwisker(self, hystogram):
-		h_range = list(hystogram.keys())
-		h_range.sort()
+		h_range = sorted(hystogram.keys())
 		total_weights = sum(hystogram.values())
 		normalized_frequency = [hystogram[i] / total_weights for i in h_range]
 		self.plot_box_pdf_cdf(normalized_frequency)
@@ -218,8 +212,7 @@ class DatasetGenerator:
 
 
 	def plot_coverage(self, coverage):
-		h_range = list(coverage.keys())
-		h_range.sort()
+		h_range = sorted(coverage.keys())
 		rho = [coverage[i] for i in h_range]
 		plt.figure(figsize=[8, 4])
 		plt.bar(h_range, rho, width=0.5)

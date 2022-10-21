@@ -1,12 +1,3 @@
-
-{% for function_name, lut in items["variants"] -%}
-def {{function_name}}({{items["operand1"]}}, {{items["operand2"]}}):
-	model = {{lut}}
-	return model[{{items["operand1"]}}, {{items["operand2"]}}]
-
-{% endfor %}
-
-{{items["top_module"]}} = [
-{% for function_name, _ in items["variants"] -%}
-	{{function_name}}{{"," if not loop.last else "]"}}
-{% endfor %}
+def {{items["top_module"]}}({{items["operand1"]}}, {{items["operand2"]}}, variant):
+	model = {{items["lut"]}}
+	return model[{{items["operand1"]}}, {{items["operand2"]}}][variant]

@@ -55,11 +55,7 @@ def apply_mask_to_int(i, nab):
 
 
 def list_partitioning(a_list, num_of_partitions):
-    list_of_list = []
-    np_split = np.array_split(a_list, num_of_partitions)
-    for item in np_split:
-      list_of_list.append(list(item))
-    return list_of_list
+    return [list(item) for item in np.array_split(a_list, num_of_partitions)]
 
 
 def string_to_nested_list_int(s):
@@ -69,11 +65,14 @@ def string_to_nested_list_int(s):
   return [[int(i) for i in l[0]], [int(i) for i in l[1]]]
 
 
+def grouped(iterable, n):
+	return zip(*[iter(iterable)]*n)
+
+
 def flatten(container):
 	for i in container:
 		if isinstance(i, (list, tuple)):
-			for j in flatten(i):
-				yield j
+			yield from flatten(i)
 		else:
 			yield i
 
