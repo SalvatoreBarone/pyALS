@@ -208,8 +208,6 @@ def get_model(configfile, outfile, usefloat):
 
 	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
 	
-	MODELDESCRIPTION is the path of the JSON file describing the circuit. See the README.md for details.
-
 	OUTFILE is the path of the output python implementation
 	"""
 	configuration = ConfigParser(configfile)
