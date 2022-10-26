@@ -47,9 +47,9 @@ def git_updater():
 		exit()
 
 
-def rm_old_implementation(output_directory):
+def rm_old_implementation(output_directory, files =  ".v"):
 	for file in os.listdir(output_directory):
-		if file.endswith('.v'):
+		if file.endswith(files):
 			print(f"Removing old source-file {output_directory}/{file}")
 			os.remove(f"{output_directory}/{file}")
 
@@ -199,16 +199,17 @@ def generate(configfile):
 
 @click.command("pymodels")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.argument('outfile', type=click.Path(dir_okay=False))
+@click.argument('outfile', type=click.Path(dir_okay=True))
 @click.option("-f", "--usefloat", is_flag = True, help = "Enables using the floating-point representation for look-up tables")
-def get_model(configfile, outfile, usefloat):
+@click.option("-l", "--library", is_flag = True, help = "Generate a single wrapper for each of the variants.")
+def get_model(configfile, outfile, usefloat, library):
 	"""
 	Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations.
 	You can select which models to be generated using the available options.
 
 	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
 	
-	OUTFILE is the path of the output python implementation
+	OUTFILE is the path of the output python implementation (either single file or directory)
 	"""
 	configuration = ConfigParser(configfile)
 	check_for_file(configuration.lut_cache)
@@ -239,7 +240,15 @@ def get_model(configfile, outfile, usefloat):
 	print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
 	print("Performing model generation...")
 	generator = ALSArithModel(helper, problem, configuration.weights)
-	generator.get_lookup_table_models(configuration.top_module, pareto_set, outfile, usefloat)
+	if library:
+		if not outfile.endswith(".py"):
+			outfile = f"{os.path.splitext(outfile)[0]}.py"
+		generator.generate_library(configuration.top_module, pareto_set, outfile, usefloat)
+	else:
+		outfile = os.path.splitext(outfile)[0]
+		mkpath(outfile)
+		rm_old_implementation(outfile, ".py")
+		generator.generate_single_circuits(configuration.top_module, pareto_set, outfile, usefloat)
 	print(f"All done! Take a look at {outfile}!")
 
 

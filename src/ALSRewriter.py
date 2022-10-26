@@ -23,7 +23,7 @@ class ALSRewriter:
         self.problem = problem
 
     def generate_hdl(self, pareto_set, out_dir):
-        for c, n in zip(pareto_set, range(len(pareto_set))):
+        for n, c in enumerate(pareto_set):
             self.rewrite_and_save("original", c, f"{out_dir}/variant_{n:05d}")
 
     def rewrite_and_save(self, design_name, solution, destination):

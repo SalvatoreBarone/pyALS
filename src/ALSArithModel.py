@@ -23,12 +23,14 @@ from .template_render import template_render
 
 class ALSArithModel:
 	__resource_dir = "../resources/"
-	__lut_mode_py = "lut_model.py.template"
+	__library_model_py = "library_model.py.template"
+	__single_circuit_model_py = "single_circuit_model.py.template"
 
 	def __init__(self, helper, problem, signal_weights, design_name = "original"):
 		dir_path = os.path.dirname(os.path.abspath(__file__))
 		self.resource_dir =  f"{dir_path}/{self.__resource_dir}"
-		self.lut_mode_py = f"{self.resource_dir}{self.__lut_mode_py}"
+		self.lut_model_py = f"{self.resource_dir}{self.__library_model_py}"
+		self.single_circuit_model = f"{self.resource_dir}{self.__single_circuit_model_py}"
 		self.helper = helper
 		self.problem = problem
 		self.design_name = design_name
@@ -41,9 +43,9 @@ class ALSArithModel:
 		for po, w in self.wires["PO"].items():
 			self.po_weights = { f"{po.str()}[{i}]": signal_weights[f"{po.str()}[{i}]"] for i in range(w.width)}
 	
-	def get_lookup_table_models(self, top_module, pareto_set, destination, use_float):
+	def generate_library(self, top_module, pareto_set, destination, use_float):
 		items = {"top_module" : top_module,	"lut" : {} } | { f"operand{i+1}" : k.str()[1:] for i, k in zip(range(2), self.wires["PI"].keys())}
-		for c, n in zip(pareto_set, range(len(pareto_set))):
+		for n, c in enumerate(pareto_set):
 			print(f"Generating model {n}/{len(pareto_set)}")
 			configuration = self.problem.matter_configuration(c)
 			computed_circuit_output = self.problem.get_outputs(configuration)
@@ -52,7 +54,18 @@ class ALSArithModel:
 				if k not in items["lut"].keys():
 					items["lut"][k] = []
 				items["lut"][k].append(v)
-		template_render(self.resource_dir, self.__lut_mode_py, items, destination)
+		template_render(self.resource_dir, self.__library_model_py, items, destination)
+  
+	def generate_single_circuits(self, top_module, pareto_set, destination, use_float):
+		items = {"top_module" : top_module,	"lut" : {} } | { f"operand{i+1}" : k.str()[1:] for i, k in zip(range(2), self.wires["PI"].keys())}
+		for n, c in enumerate(pareto_set):
+			print(f"Generating model {n}/{len(pareto_set)}")
+			configuration = self.problem.matter_configuration(c)
+			computed_circuit_output = self.problem.get_outputs(configuration)
+			model = self.get_lut_for_variant(computed_circuit_output, use_float)
+			items["lut"] = model
+			template_render(self.resource_dir, self.__single_circuit_model_py, items, f"{destination}/variant_{n:05d}.py")
+  
 		
 	def get_lut_for_variant(self, computed_circuit_outputs, use_float):
 		if use_float:
