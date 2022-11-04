@@ -61,7 +61,7 @@ class MOP(AMOSA.Problem):
         else:
             self.load_dataset()
         print("Done!")
-        self._args = [[g, s, [0] * self.n_vars, self.output_weights] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
+        self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
         self.baseline_and_gates = self.get_baseline_gates()
         self.baseline_depth = self.get_baseline_depth()
@@ -90,8 +90,10 @@ class MOP(AMOSA.Problem):
         out["g"] = []
         configuration = self.matter_configuration(x)
         if self.error_config.builtin_metric:
-            out["f"].append(getattr(self, self.error_ffs[self.error_config.metric])(configuration))
-        else:
+            outputs = self.get_outputs(configuration)
+            for m in self.error_config.metrics:
+                out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
+        else:            
             out["f"].append(self.error_config.function(self.graph, self.samples, configuration, self.output_weights))
         out["g"].append(out["f"][-1] - self.error_config.threshold)
         for metric in self.hw_config.metrics:
@@ -110,7 +112,7 @@ class MOP(AMOSA.Problem):
             for i, v in zip(input_values, input_dict.values()):
                 v.append(i)
         for i in range(len(list(input_dict.values())[0])):
-            inputs = { k["name"] :  True if input_dict[k["name"]][i] == '1' else False for k in PI }
+            inputs = {k["name"]: input_dict[k["name"]][i] == '1' for k in PI}
             self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
 
     def generate_samples(self):
@@ -159,7 +161,7 @@ class MOP(AMOSA.Problem):
             HwConfig.Metric.DEPTH: "AIG depth",
             HwConfig.Metric.SWITCHING: "Switching activity"
         }
-        return [error_labels[self.error_config.metric]] + [hw_labels[m] for m in self.hw_config.metrics] if self.error_config.builtin_metric else ["Error"] + [hw_labels[m] for m in self.hw_config.metrics]
+        return [error_labels[m] for m in self.error_config.metrics] + [hw_labels[m] for m in self.hw_config.metrics] if self.error_config.builtin_metric else ["Error"] + [hw_labels[m] for m in self.hw_config.metrics]
 
     def get_upper_bound(self):
         return [len(e) - 1 for c in [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()] for e in self.catalog if e[0]["spec"] == c["spec"] or negate(e[0]["spec"]) == c["spec"] ]
@@ -180,94 +182,50 @@ class MOP(AMOSA.Problem):
     def get_baseline_switching(self):
         return get_switching(self.matter_configuration([0] * self.n_vars))
 
-    def get_ep(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_ep, self._args)
-        rs = np.sum(error) / self.error_config.n_vectors
+    def get_ep(self, outputs, weights):
+        rs = sum(o["e"] != o["a"] for o in outputs) / self.error_config.n_vectors
         if self.error_config.n_vectors != 0:
             return float(np.min([1.0, rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))]))
         else:
             return float(rs)
 
-    def get_awce(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_absolute_ed, self._args)
-        return float(np.max(np.concatenate(error).flat))
+    def get_awce(self, outputs, weights):
+        return np.max(evaluate_abs_ed(outputs, weights))
 
-    def get_mae(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_absolute_ed, self._args)
-        return float(np.average(np.concatenate(error).flat))
+    def get_mae(self, outputs, weights):
+        return np.mean(evaluate_abs_ed(outputs, weights))
 
-    def get_mre(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_relative_ed, self._args)
-        return float(np.average(np.concatenate(error).flat))
+    def get_mre(self, outputs, weights):
+        return np.mean(evaluate_relative_ed(outputs, weights))
 
-    def get_wre(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_relative_ed, self._args)
-        return float(np.max(np.concatenate(error).flat))
+    def get_wre(self, outputs, weights):
+        return np.max(evaluate_relative_ed(outputs, weights))
 
-    def get_mse(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_squared_ed, self._args)
-        return float(np.average(np.concatenate(error).flat))
+    def get_mse(self, outputs, weights):
+        return np.mean(evaluate_squared_ed(outputs, weights))
 
-    def get_med(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            hystogram = pool.starmap(evaluate_med, self._args)
-        final_fistogram = {}
-        total = 0
-        for h in hystogram:
-            for k, v in h.items():
-                total += v
-                if k in final_fistogram.keys():
-                    final_fistogram[k] += v
-                else:
-                    final_fistogram[k] = v
-        return float(np.sum([ k * v / total for k, v in final_fistogram.items()]))
+    @staticmethod
+    def get_error_hystogram(error, decimals = 2):
+        error_hystogram = {}
+        for e in error:
+            index = round(e, decimals)
+            if index in error_hystogram:
+                error_hystogram[index] += 1
+            else:
+                error_hystogram[index] = 1
+           
+    @staticmethod     
+    def get_mxxd(hystogram):
+        return np.sum(k * v for k, v in hystogram.items()) / np.sum(hystogram.values())
 
-    def get_mred(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            hystogram = pool.starmap(evaluate_mred, self._args)
-        final_fistogram = {}
-        total = 0
-        for h in hystogram:
-            for k, v in h.items():
-                total += v
-                if k in final_fistogram.keys():
-                    final_fistogram[k] += v
-                else:
-                    final_fistogram[k] = v
-        return float(np.sum([k * v / total for k, v in final_fistogram.items()]))
+    def get_med(self, outputs, weights):
+        return MOP.get_mxxd(MOP.get_error_hystogram(evaluate_abs_ed(outputs, weights)))
 
-    def get_rmsed(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_squared_ed, self._args)
-        return float(np.sqrt(np.average(np.concatenate(error).flat)))
+    def get_mred(self, outputs, weights):
+        return MOP.get_mxxd(MOP.get_error_hystogram(evaluate_relative_ed(outputs, weights)))
 
-    def get_vared(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(cpu_count()) as pool:
-            error = pool.starmap(evaluate_signed_ed, self._args)
-        return float(np.var(np.concatenate(error).flat))
+    def get_rmsed(self, outputs, weights):
+        return np.sqrt(np.mean(evaluate_squared_ed(outputs, weights)))
+
+    def get_vared(self, outputs, weights):
+        return np.var(evaluate_signed_ed(outputs, weights))

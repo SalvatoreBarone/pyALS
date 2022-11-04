@@ -14,8 +14,6 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import json
-
 import numpy as np
 from .ALSGraph import *
 from .Utility import *
@@ -34,19 +32,20 @@ class ErrorConfig:
         RMSED = 9           # Root Mean Squared Error Distance
         VARED = 10          # Variance of the Error Distance
 
-    def __init__(self, metric, threshold, vectors, dataset = None):
-        self.metric = None
+    def __init__(self, metrics, threshold, vectors, dataset = None):
+        self.metrics = None
         self.threshold = threshold
         self.n_vectors = vectors
         self.dataset = dataset
         self.function = None
         self.builtin_metric = None
-        if type(metric) == str:
-            self.get_builin_metric(metric)
-        elif type(metric) == dict:
-           self.get_custom_metric(metric)
+        if isinstance(metrics, (list, tuple, str)):
+            self.builtin_metric = True
+            self.get_builin_metric(metrics)
+        elif isinstance(metrics, dict):
+           self.get_custom_metric(metrics)
 
-    def get_builin_metric(self, metric):
+    def get_builin_metric(self, metrics):
         error_metrics = {
             "ep": ErrorConfig.Metric.EPROB,
             "awce": ErrorConfig.Metric.AWCE,
@@ -59,21 +58,20 @@ class ErrorConfig:
             "rmsed" : ErrorConfig.Metric.RMSED,
             "vared" : ErrorConfig.Metric.VARED
         }
-        if metric not in error_metrics.keys():
-            raise ValueError(f"{metric}: error-metric not recognized")
-        else:
-            self.builtin_metric = True
-            self.metric = error_metrics[metric]
+        if isinstance(metrics, str):
+            self.metrics = [error_metrics[metrics]]
+        elif isinstance(metrics, (list, tuple)):
+            self.metrics = [ error_metrics[m] for m in metrics ]
 
     def get_custom_metric(self, metric):
         if "module" not in metric.keys():
-            raise ValueError(f"'module' field not specified")
+            raise ValueError("'module' field not specified")
         if "function" not in metric.keys():
-            raise ValueError(f"'function' field not specified")
+            raise ValueError("'function' field not specified")
         self.function = dynamic_import(metric["module"], metric["function"])
         self.builtin_metric = False
 
-def evaluate_output(graph, samples, configuration, weights):
+def evaluate_output(graph, samples, configuration):
     return [{"i" : s["input"], "e" : s["output"], "a" : graph.evaluate(s["input"], configuration)} for s in samples]
 
 
@@ -81,53 +79,20 @@ def bool_to_value(signal, weights):
     return np.sum([float(weights[o]) * signal[o] for o in weights.keys()])
 
 
-def evaluate_ep(graph, samples, configuration, weights):
-    return sum([0 if sample["output"] == graph.evaluate(sample["input"], configuration) else 1 for sample in samples])
+def evaluate_abs_ed(outputs, weights):
+    return [np.abs( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights) ) for o in outputs]
 
 
-def evaluate_absolute_ed(graph, samples, configuration, weights):
-    current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return [ np.abs( bool_to_value(current, weights) - bool_to_value(sample["output"], weights) ) for sample, current in zip(samples, current_outputs) ]
+def evaluate_signed_ed(outputs, weights):
+    return [bool_to_value(o["a"], weights) - bool_to_value(o["e"], weights) for o in outputs]
 
 
-def evaluate_signed_ed(graph, samples, configuration, weights):
-    current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return [ bool_to_value(current, weights) - bool_to_value(sample["output"], weights) for sample, current in zip(samples, current_outputs) ]
+def evaluate_squared_ed(outputs, weights):
+    return [( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights))**2 for o in outputs]
 
 
-def evaluate_squared_ed(graph, samples, configuration, weights):
-    current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return [ ( bool_to_value(current, weights) - bool_to_value(sample["output"], weights) )**2 for sample, current in zip(samples, current_outputs) ]
+def evaluate_relative_ed(outputs, weights):
+    return [ np.abs ( (1 + bool_to_value(o["e"], weights)) / (1 + bool_to_value(o["a"], weights)) ) for o in outputs]
 
-
-def evaluate_relative_ed(graph, samples, configuration, weights):
-    current_outputs = [ graph.evaluate(sample["input"], configuration) for sample in samples ]
-    return [ np.abs ( (1 + bool_to_value(sample["output"], weights)) / (1 + bool_to_value(current, weights)) ) for sample, current in zip(samples, current_outputs) ]
-
-
-def evaluate_med(graph, samples, configuration, weights):
-    error_hystogram = {}
-    for sample in samples:
-        current = graph.evaluate(sample["input"], configuration)
-        error = np.abs( bool_to_value(current, weights) - bool_to_value(sample["output"], weights) )
-        index = round(error, 2)
-        if index in error_hystogram.keys():
-            error_hystogram[index] += 1
-        else:
-            error_hystogram[index] = 1
-    return error_hystogram
-
-
-def evaluate_mred(graph, samples, configuration, weights):
-    error_hystogram = {}
-    for sample in samples:
-        current = graph.evaluate(sample["input"], configuration)
-        error = np.abs ( (1 + bool_to_value(sample["output"], weights)) / (1 + bool_to_value(current, weights)) )
-        index = round(error, 2)
-        if index in error_hystogram.keys():
-            error_hystogram[index] += 1
-        else:
-            error_hystogram[index] = 1
-    return error_hystogram
 
 
