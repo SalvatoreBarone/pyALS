@@ -222,9 +222,6 @@ class DatasetGenerator:
 
 
 	def save_dataset(self, dataset, PIs, outfile):
-		if not outfile.endswith(".csv"):
-			print(f"Warning: {outfile} renamed as {outfile}.csv")
-			outfile = f"{outfile}.csv"
 		profiled_name = PIs["Profiled"][0][0]
 		profiled_nbit = PIs["Profiled"][0][1]
 		nbits = 0

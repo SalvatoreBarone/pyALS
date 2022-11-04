@@ -315,11 +315,7 @@ def randomsplit(source, top, splits, outputdir):
 @click.option("-i", "--input", type=str, required = True, help="Name of the primary input for which profiled values are provided",)
 @click.option("-a", "--alpha", type=float, help="Proportion factor on the basis of which the random test vectors to be generated, given a profiled value, is determined", default=1)
 @click.option("-m", "--minv", type=int, help="Minimum number of random test vectors to be generated, given a profiled value", default=1)
-@click.option("--hist", type=str, help="Name for the hystogram plot", default="occurrence_frequency.pdf")
-@click.option("--nhist", type=str, help="Name for the normalized hystogram plot", default="normalized_occurrence_frequency.pdf")
-@click.option("--boxp", type=str, help="Name for the box and wisker plot", default="occurrence_frequency_boxplot.pdf")
-@click.option("--cov", type=str, help="Name for the coverage plot", default="coverage_of_values.pdf")
-def ia_dataset(configfile, profiledvalues, outfile, input, alpha, minv, hist, nhist, boxp, cov):
+def ia_dataset(configfile, profiledvalues, outfile, input, alpha, minv):
 	"""
 	Generates dataset for input-aware approximation flow, given input profiling in JSON format
 
@@ -336,6 +332,16 @@ def ia_dataset(configfile, profiledvalues, outfile, input, alpha, minv, hist, nh
 	helper.read_sources(configuration.source_hdl, configuration.top_module)
 	helper.prep_design(configuration.als_conf.cut_size)
 	helper.reverse_splitnets()
+    
+    if not outfile.endswith(".csv"):
+        print(f"Warning: {outfile} renamed as {outfile}.csv")
+        outfile = f"{outfile}.csv"
+    outdir = os.path.splitext(outfile)[0]
+    mkpath(outdir)
+    hist = f"{outdir}/occurrence_frequency.pdf"
+    nhist = f"{outdir}/normalized_occurrence_frequency.pdf"
+    boxp = f"{outdir}/occurrence_frequency_boxplot.pdf"
+    cov = f"{outdir}/coverage_of_values.pdf"   
 	generator = DatasetGenerator(helper, profiledvalues, alpha, minv, input, hist, nhist, boxp, cov, outfile)
 	generator.generate()
 	
