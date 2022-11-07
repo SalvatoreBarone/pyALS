@@ -314,8 +314,9 @@ def randomsplit(source, top, splits, outputdir):
 @click.argument('outfile', type=click.Path(dir_okay=False))
 @click.option("-i", "--input", type=str, required = True, help="Name of the primary input for which profiled values are provided",)
 @click.option("-a", "--alpha", type=float, help="Proportion factor on the basis of which the random test vectors to be generated, given a profiled value, is determined", default=1)
+@click.option("-f", "--freq", type=float, help="Reference frequency on the basis of which alpha will be derived. When specified, --alpha is ignored.", default=None)
 @click.option("-m", "--minv", type=int, help="Minimum number of random test vectors to be generated, given a profiled value", default=1)
-def ia_dataset(configfile, profiledvalues, outfile, input, alpha, minv):
+def ia_dataset(configfile, profiledvalues, outfile, input, alpha, freq, minv):
 	"""
 	Generates dataset for input-aware approximation flow, given input profiling in JSON format
 
@@ -342,7 +343,7 @@ def ia_dataset(configfile, profiledvalues, outfile, input, alpha, minv):
     nhist = f"{outdir}/normalized_occurrence_frequency.pdf"
     boxp = f"{outdir}/occurrence_frequency_boxplot.pdf"
     cov = f"{outdir}/coverage_of_values.pdf"   
-	generator = DatasetGenerator(helper, profiledvalues, alpha, minv, input, hist, nhist, boxp, cov, outfile)
+    generator = DatasetGenerator(helper, profiledvalues, alpha, freq, minv, input, hist, nhist, boxp, cov, outfile)
 	generator.generate()
 	
 
