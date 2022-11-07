@@ -68,7 +68,7 @@ class MOP(AMOSA.Problem):
         self.baseline_switching = self.get_baseline_switching()
         print(f"#vars: {self.n_vars}, ub:{self.upper_bound}, #conf.s {np.prod([ float(x + 1) for x in self.upper_bound ])}.")
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
-        AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.hw_config.metrics) + 1, 1)
+        AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
 
     def load_dataset(self):
         print(f"Reading input data from {self.error_config.dataset} ...")
@@ -91,13 +91,23 @@ class MOP(AMOSA.Problem):
         configuration = self.matter_configuration(x)
         if self.error_config.builtin_metric:
             outputs = self.get_outputs(configuration)
-            for m in self.error_config.metrics:
+            for m, t in zip(self.error_config.metrics, self.error_config.threshold):
                 out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
+                out["g"].append(out["f"][-1] - t)
         else:            
             out["f"].append(self.error_config.function(self.graph, self.samples, configuration, self.output_weights))
-        out["g"].append(out["f"][-1] - self.error_config.threshold)
         for metric in self.hw_config.metrics:
-            out["f"].append(self.hw_ffs[metric](configuration))
+            out["f"].append(self.hw_ffs[metric](configuration, self.graph))
+
+    def evaluate_ffs(self, x):
+        out = { "f" : [], "g": []}
+        configuration = self.matter_configuration(x)
+        outputs = self.get_outputs(configuration)
+        for m in self.error_config.metrics:
+            out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
+        for metric in self.hw_config.metrics:
+            out["f"].append(self.hw_ffs[metric](configuration, self.graph))
+        return out
 
     def read_samples(self, dataset):
         self.samples = []
@@ -174,13 +184,13 @@ class MOP(AMOSA.Problem):
         return list(flatten(outputs))
 
     def get_baseline_gates(self):
-        return get_gates(self.matter_configuration([0] * self.n_vars))
+        return get_gates(self.matter_configuration([0] * self.n_vars), self.graph)
 
     def get_baseline_depth(self):
         return get_depth(self.matter_configuration([0] * self.n_vars, ), self.graph)
 
     def get_baseline_switching(self):
-        return get_switching(self.matter_configuration([0] * self.n_vars))
+        return get_switching(self.matter_configuration([0] * self.n_vars), self.graph)
 
     def get_ep(self, outputs, weights):
         rs = sum(o["e"] != o["a"] for o in outputs) / self.error_config.n_vectors
@@ -213,10 +223,11 @@ class MOP(AMOSA.Problem):
                 error_hystogram[index] += 1
             else:
                 error_hystogram[index] = 1
+        return error_hystogram
            
     @staticmethod     
     def get_mxxd(hystogram):
-        return np.sum(k * v for k, v in hystogram.items()) / np.sum(hystogram.values())
+        return np.sum([k * v for k, v in hystogram.items()]) / np.sum(list(hystogram.values()))
 
     def get_med(self, outputs, weights):
         return MOP.get_mxxd(MOP.get_error_hystogram(evaluate_abs_ed(outputs, weights)))

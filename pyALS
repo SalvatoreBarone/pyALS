@@ -251,6 +251,65 @@ def get_model(configfile, outfile, usefloat, library):
 		generator.generate_single_circuits(configuration.top_module, pareto_set, outfile, usefloat)
 	print(f"All done! Take a look at {outfile}!")
 
+@click.command("metrics")
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('outfile', type=click.Path(dir_okay=True))
+def fitnesses(configfile, outfile):
+    """
+    Computes the all the builtin metrics (both error and hardware) for points coming from a given Pareto front.
+
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    
+    OUTFILE is the csv output file containing all the fitness values for each of the entries of the Pareto front
+    """
+    configuration = ConfigParser(configfile)
+    check_for_file(configuration.lut_cache)
+    if configuration.output_dir != ".":
+        mkpath(configuration.output_dir)
+    check_for_file(f"{configuration.output_dir}/final_archive.json")
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
+    luts_set = helper.get_luts_set()
+    graph = ALSGraph(helper.design)
+    print("Graph generation completed")
+    output_weights = None
+    if configuration.weights is not None and len(configuration.weights) != 0:
+        output_weights = graph.validate_po_weights(configuration.weights)
+        print("Output-weight parsing completed successfully")
+    helper.save_design("original")
+    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print("Catalog generation completed.")
+    
+    # Ignoring configurations for error and hardware metrics
+    metrics = list(ErrorConfig.get_builtin_metrics().keys())
+    error_conf = ErrorConfig(
+        metrics = list(metrics),
+        thresholds = [np.inf] * len(metrics),
+        n_vectors = configuration.error_conf.n_vectors,
+        dataset = configuration.error_conf.dataset)
+    hw_conf = HwConfig(list(HwConfig.get_hw_metrics().keys()))
+    
+    print("Reading the Pareto front.")
+    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, None)
+    optimizer = AMOSA(configuration.amosa_conf)
+    optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
+    print("Computing the full characterization of the Pareto front. Please wait...")
+    pareto_set = optimizer.pareto_set()
+    archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in pareto_set]
+    fitness_labels = problem.plot_labels()
+    original_stdout = sys.stdout
+    row_format = "{:};" + "{:};" * problem.num_of_objectives + "{:};" * problem.num_of_variables
+    with open(outfile, "w") as file:
+        sys.stdout = file
+        print(row_format.format("", *fitness_labels, *[f"x{i}" for i in range(problem.num_of_variables)]))
+        for i, s in enumerate(archive):
+            print(row_format.format(i, *s["f"], *s["x"]))
+    sys.stdout = original_stdout
+    print(f"All done! Take a look at {outfile}!")
+    
 
 @click.command("template")
 @click.option("--source",  type=str, multiple=True, help="specify the input HDL source file")
@@ -470,6 +529,7 @@ cli.add_command(es_synth)
 cli.add_command(als)
 cli.add_command(generate)
 cli.add_command(get_model)
+cli.add_command(fitnesses)
 cli.add_command(clean)
 cli.add_command(expand)
 cli.add_command(query)

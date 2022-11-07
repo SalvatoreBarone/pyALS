@@ -22,7 +22,7 @@
     },
     "error" : {
         "metrics"      : ["awce"],
-        "threshold"    : 16,
+        "threshold"    : [16],
         "vectors"      : 10,
         "dataset"      : "example/mult_2_bit/dataset.csv"
     },

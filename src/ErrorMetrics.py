@@ -20,6 +20,7 @@ from .Utility import *
 from .DynLoader import *
 
 class ErrorConfig:
+    
     class Metric(Enum):
         EPROB = 1           # Classic error probability
         AWCE = 2            # Absolute worst-case error
@@ -31,11 +32,13 @@ class ErrorConfig:
         MRED = 8            # Relative mean error distance
         RMSED = 9           # Root Mean Squared Error Distance
         VARED = 10          # Variance of the Error Distance
+        
+    
 
-    def __init__(self, metrics, threshold, vectors, dataset = None):
+    def __init__(self, metrics, thresholds, n_vectors, dataset = None):
         self.metrics = None
-        self.threshold = threshold
-        self.n_vectors = vectors
+        self.thresholds = thresholds if isinstance(thresholds, (list, tuple)) else [thresholds]
+        self.n_vectors = n_vectors
         self.dataset = dataset
         self.function = None
         self.builtin_metric = None
@@ -44,9 +47,11 @@ class ErrorConfig:
             self.get_builin_metric(metrics)
         elif isinstance(metrics, dict):
            self.get_custom_metric(metrics)
-
-    def get_builin_metric(self, metrics):
-        error_metrics = {
+        assert len(self.metrics) == len(self.thresholds), "Please, specify as much thresholds as error metrics you want to use!"
+    
+    @staticmethod       
+    def get_builtin_metrics():
+        return {
             "ep": ErrorConfig.Metric.EPROB,
             "awce": ErrorConfig.Metric.AWCE,
             "mae" : ErrorConfig.Metric.MAE,
@@ -58,6 +63,9 @@ class ErrorConfig:
             "rmsed" : ErrorConfig.Metric.RMSED,
             "vared" : ErrorConfig.Metric.VARED
         }
+
+    def get_builin_metric(self, metrics):
+        error_metrics = ErrorConfig.get_builtin_metrics()
         if isinstance(metrics, str):
             self.metrics = [error_metrics[metrics]]
         elif isinstance(metrics, (list, tuple)):
