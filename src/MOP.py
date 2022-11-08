@@ -14,10 +14,8 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import sys, os, itertools, collections, functools, operator, json
+import itertools, json, numpy as np
 from multiprocessing import cpu_count, Pool
-import numpy as np
-
 from .HwMetrics import *
 from .ErrorMetrics import *
 from .ALSGraph import *
@@ -49,23 +47,23 @@ class MOP(AMOSA.Problem):
         self.top_module = top_module
         self.graph = graph
         self.output_weights = output_weights
-        self.graphs = [copy.deepcopy(graph)] * cpu_count()
+        self.graphs = [copy.deepcopy(graph) for _ in range(cpu_count())]
         self.n_vars = graph.get_num_cells()
         self.catalog = catalog
         self.error_config = error_config
         self.hw_config = hw_config
         self.samples = None
         if self.error_config.dataset is None:
-            self.generate_samples()
+            lut_io_info = self.generate_samples()
             self.store_dataset(dataset_outfile)
         else:
-            self.load_dataset()
+            lut_io_info = self.load_dataset()
         print("Done!")
         self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
-        self.baseline_and_gates = self.get_baseline_gates()
-        self.baseline_depth = self.get_baseline_depth()
-        self.baseline_switching = self.get_baseline_switching()
+        self.baseline_and_gates = self.get_baseline_gates(None)
+        self.baseline_depth = self.get_baseline_depth(None)
+        self.baseline_switching = self.get_baseline_switching(lut_io_info)
         print(f"#vars: {self.n_vars}, ub:{self.upper_bound}, #conf.s {np.prod([ float(x + 1) for x in self.upper_bound ])}.")
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
         AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
@@ -89,24 +87,21 @@ class MOP(AMOSA.Problem):
         out["f"] = []
         out["g"] = []
         configuration = self.matter_configuration(x)
-        if self.error_config.builtin_metric:
-            outputs = self.get_outputs(configuration)
-            for m, t in zip(self.error_config.metrics, self.error_config.threshold):
-                out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
-                out["g"].append(out["f"][-1] - t)
-        else:            
-            out["f"].append(self.error_config.function(self.graph, self.samples, configuration, self.output_weights))
+        outputs, lut_io_info = self.get_outputs(configuration)    
+        for m, t in zip(self.error_config.metrics, self.error_config.threshold):
+            out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
+            out["g"].append(out["f"][-1] - t)
         for metric in self.hw_config.metrics:
-            out["f"].append(self.hw_ffs[metric](configuration, self.graph))
+            out["f"].append(self.hw_ffs[metric](configuration, lut_io_info, self.graph))
 
     def evaluate_ffs(self, x):
         out = { "f" : [], "g": []}
         configuration = self.matter_configuration(x)
-        outputs = self.get_outputs(configuration)
+        outputs, lut_io_info = self.get_outputs(configuration)
         for m in self.error_config.metrics:
             out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
         for metric in self.hw_config.metrics:
-            out["f"].append(self.hw_ffs[metric](configuration, self.graph))
+            out["f"].append(self.hw_ffs[metric](configuration, lut_io_info, self.graph))
         return out
 
     def read_samples(self, dataset):
@@ -121,25 +116,32 @@ class MOP(AMOSA.Problem):
             assert len(input_values) == len(PI), f"{dataset}: wrong amount of inputs"
             for i, v in zip(input_values, input_dict.values()):
                 v.append(i)
+        lut_io_info = {}
         for i in range(len(list(input_dict.values())[0])):
             inputs = {k["name"]: input_dict[k["name"]][i] == '1' for k in PI}
-            self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
+            output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
+            self.samples.append({"input": inputs, "output": output})
+        return lut_io_info
 
     def generate_samples(self):
         self.samples = []
         PI = self.graph.get_pi()
+        lut_io_info = {}
         if self.error_config.n_vectors != 0:
             print(f"Generating {self.error_config.n_vectors} input-vectors for error assessment...")
             for _ in range(self.error_config.n_vectors):
                 inputs = {i["name"]: bool(random.getrandbits(1)) for i in PI}
-                self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
+                output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
+                self.samples.append({"input": inputs, "output": output})
         else:
             self.error_config.n_vectors = 2 ** len(PI)
             print(f"Generating {self.error_config.n_vectors} input-vectors for error assessment...")
             permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
             for perm in permutations:
                 inputs = {i["name"]: p for i, p in zip(PI, perm)}
-                self.samples.append({"input": inputs, "output": self.graph.evaluate(inputs)})
+                output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
+                self.samples.append({"input": inputs, "output": output})
+        return lut_io_info
 
     def matter_configuration(self, x):
         # first, prevent x to be out of range
@@ -180,17 +182,23 @@ class MOP(AMOSA.Problem):
         for a in self._args:
             a[2] = configuration
         with Pool(cpu_count()) as pool:
-            outputs = pool.starmap(evaluate_output, self._args)
-        return list(flatten(outputs))
+           outputs = pool.starmap(evaluate_output, self._args)
+        out = [o[0] for o in outputs]
+        swc = [o[1] for o in outputs]
+        lut_io_info = {}
+        for k in swc[0].keys():
+            C = [s[k]["freq"] for s in swc]
+            lut_io_info[k] = { "spec": swc[0][k]["spec"], "freq" : [sum(x) for x in zip(*C)]}
+        return list(flatten(out)), lut_io_info
 
-    def get_baseline_gates(self):
-        return get_gates(self.matter_configuration([0] * self.n_vars), self.graph)
+    def get_baseline_gates(self, lut_io_info):
+        return get_gates(self.matter_configuration([0] * self.n_vars), lut_io_info, self.graph)
 
-    def get_baseline_depth(self):
-        return get_depth(self.matter_configuration([0] * self.n_vars, ), self.graph)
+    def get_baseline_depth(self, lut_io_info):
+        return get_depth(self.matter_configuration([0] * self.n_vars), lut_io_info, self.graph)
 
-    def get_baseline_switching(self):
-        return get_switching(self.matter_configuration([0] * self.n_vars), self.graph)
+    def get_baseline_switching(self, lut_io_info):
+        return get_switching(self.matter_configuration([0] * self.n_vars), lut_io_info, self.graph)
 
     def get_ep(self, outputs, weights):
         rs = sum(o["e"] != o["a"] for o in outputs) / self.error_config.n_vectors

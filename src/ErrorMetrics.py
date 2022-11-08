@@ -80,7 +80,12 @@ class ErrorConfig:
         self.builtin_metric = False
 
 def evaluate_output(graph, samples, configuration):
-    return [{"i" : s["input"], "e" : s["output"], "a" : graph.evaluate(s["input"], configuration)} for s in samples]
+    lut_io_info = {}
+    outputs = []
+    for s in samples:
+        ax_output, lut_io_info = graph.evaluate(s["input"], lut_io_info, configuration)
+        outputs.append({"i" : s["input"], "e" : s["output"], "a" : ax_output })
+    return outputs, lut_io_info
 
 
 def bool_to_value(signal, weights):
@@ -88,18 +93,26 @@ def bool_to_value(signal, weights):
 
 
 def evaluate_abs_ed(outputs, weights):
+    if weights is None:
+        return [0]
     return [np.abs( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights) ) for o in outputs]
 
 
 def evaluate_signed_ed(outputs, weights):
+    if weights is None:
+        return [0]
     return [bool_to_value(o["a"], weights) - bool_to_value(o["e"], weights) for o in outputs]
 
 
 def evaluate_squared_ed(outputs, weights):
+    if weights is None:
+        return [0]
     return [( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights))**2 for o in outputs]
 
 
 def evaluate_relative_ed(outputs, weights):
+    if weights is None:
+        return [0]
     return [ np.abs ( (1 + bool_to_value(o["e"], weights)) / (1 + bool_to_value(o["a"], weights)) ) for o in outputs]
 
 

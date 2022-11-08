@@ -41,13 +41,13 @@ class HwConfig:
             "switching" : HwConfig.Metric.SWITCHING
         }
 
-def get_gates(configuration, graph):
+def get_gates(configuration, lut_io_info, graph):
     return sum(c["gates"] for c in configuration.values())
 
 
-def get_depth(configuration, graph):
+def get_depth(configuration, lut_io_info, graph):
     return graph.get_depth(configuration)
 
 
-def get_switching(configuration, graph):
-    return sum(internal_node_activity(c["axspec"])[0] for c in configuration.values())
+def get_switching(configuration, lut_io_info, graph):
+    return np.sum([internal_node_activity(v["spec"], np.array(np.array(v["freq"], dtype=float) / np.sum(v["freq"])).tolist())[0] for v in lut_io_info.values()])

@@ -181,22 +181,6 @@ class DatasetGenerator:
     def plot_box_pdf_cdf(self, data):	
         q1, q2, q3 = np.percentile(data, [25, 50, 75])
         iqr = q3 - q1
-
-        # if q1 != q2 != q3:
-        #     gamma = 1 - (q3 - q2) / (q2 - q1)
-        #     gamma_percentile = np.percentile(data, gamma*100)
-        #     print(f"gamma: {gamma}, => gamma percentile: {gamma_percentile}")
-            
-        # m = np.min(data)
-        # x = np.mean(data)
-        # M = np.max(data)
-        
-        # if m != x != M:
-        #     delta = 1 - (M-x) / (x-m)
-        #     print(m, x, M, (M-x) / (x-m), delta)
-        #     delta_percentile = np.percentile(data, delta*100)
-        #     print(f"delta: {delta}, => delta percentile: {delta_percentile}")
-
         fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, sharex=True)
         ax1.boxplot(data, vert = False, whis = 1.5)
         ax1.set_yticks([])
