@@ -60,21 +60,27 @@ def cli():
 
 
 @click.command("elaborate")
-@click.option("--source",  type=str, required=True, help="specify the input HDL source file", multiple=True)
-@click.option("--top",     type=str, required=True, help="specify the top-module name")
-@click.option("--lut",     type=str, required=True, help="specify the LUT size")
-@click.option("--output",  type=str, required=True, help="Output file.")
-def elaborate(source, top, lut, output):
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('outfile', type=click.Path(dir_okay=False))
+def elaborate(configfile, outfile):
 	"""
 	Draws a k-LUT map of the given circuit
+    
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    
+    OUTFILE is the name of the file where the circuit graph will be saved
 	"""
+    configuration = ConfigParser(configfile)
+    check_for_file(configuration.lut_cache)
 	helper = YosysHelper()
 	helper.load_ghdl()
-	helper.read_sources(source, top)
-	helper.prep_design(lut)
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
 	graph = ALSGraph(helper.design)
 	print("Graph generation completed")
-	graph.save(output)
+    for v in graph.get_cells():
+        print(v["name"], v["spec"])
+    graph.save(outfile)
 
 
 @click.command("es")
@@ -136,7 +142,7 @@ def als(configfile, store, improve):
 	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
 	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
 	print("Catalog generation completed.")
-	print("Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
+    print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
 	problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
 	optimizer = AMOSA(configuration.amosa_conf)
 	optimizer.hill_climb_checkpoint_file = f"{configuration.output_dir}/{optimizer.hill_climb_checkpoint_file}"
