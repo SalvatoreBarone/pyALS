@@ -34,7 +34,14 @@ def reorder_conf(lut_conf, perm):
     for i in range(len(lut_conf)):
         truth_values = [truth_value(j, i) for j in perm]
         reordering += lut_conf[int(''.join(map(str, truth_values)), 2)]
-    return reordering[::-1]
+    return reordering
+
+def reorder_freq(leaf_freq, perm):
+    freqs = [0] * len(leaf_freq)
+    for i in range(len(leaf_freq)):
+        truth_values = [truth_value(j, i) for j in perm]
+        freqs[i] = leaf_freq[int(''.join(map(str, truth_values)), 2)]
+    return freqs
 
 
 def get_K(lut_conf):
@@ -102,13 +109,11 @@ def internal_node_activity_helper(lut_conf, leaf_freq=None):
     else:
         leaf_freq = [1 / 2 ** K] * 2 ** K
     f = frequencies_by_level(leaf_freq)
-    cost = [0] * (2 ** K - 1)
     p_0 = [0] * (2 ** K - 1) + [0 if x == '1' else 1 for x in lut_conf]
     for k in reversed(range(K)):
         for i in range(2 ** k - 1, 2 ** (k + 1) - 1):
             p_0[i] = f[k]["l"] * p_0[2 * i + 1] + f[k]["r"] * p_0[2 * i + 2]
-            cost[i] = (p_0[i] - p_0[i] ** 2)  # + cost[2 * i + 1] + cost[2 * i + 2]
-    return sum(cost)
+    return sum(p_0[i]-p_0[i]**2 for i in range(2 ** K - 1))
 
 
 def internal_node_activity(lut_conf, leaf_freq=None):
@@ -120,11 +125,8 @@ def internal_node_activity(lut_conf, leaf_freq=None):
     of the leaves on the left-hand side and the right-hand of the 2k trees rooted at level k.
     """
     num_vars = math.ceil(math.log2(len(lut_conf)))
-    
     orig_vars = range(num_vars, 0, -1)
     perms = list(permutations(orig_vars))
-    
-    reord_power = [internal_node_activity_helper(reorder_conf(lut_conf, perm), leaf_freq) for perm in perms]
-    best_reord = argmin(reord_power)
-    
+    reord_power = [internal_node_activity_helper(reorder_conf(lut_conf, perm), reorder_freq(leaf_freq, perm)) for perm in perms]
+    best_reord = argmin(reord_power)    
     return reord_power[best_reord], reorder_conf(lut_conf, perms[best_reord])

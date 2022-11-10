@@ -72,8 +72,11 @@ class MOP(AMOSA.Problem):
         print(f"Reading input data from {self.error_config.dataset} ...")
         if self.error_config.dataset.endswith(".json"):
             self.samples = json.load(open(self.error_config.dataset))
-        else:
-            self.read_samples(self.error_config.dataset)
+            lut_io_info = {}
+            for s in self.samples:
+                _, lut_io_info = self.graph.evaluate(s["input"], lut_io_info)
+            return lut_io_info
+        return self.read_samples(self.error_config.dataset)
 
     def store_dataset(self, dataset_outfile):
         if dataset_outfile is not None:
