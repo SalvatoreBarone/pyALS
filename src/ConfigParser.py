@@ -36,12 +36,12 @@ class ConfigParser:
 			timeout = int(ConfigParser.search_subfield_in_config(configuration, "als", "timeout", True)))
 
 		self.error_conf = ErrorConfig(
-				metric = ConfigParser.search_subfield_in_config(configuration, "error", "metric", True),
-				threshold = float(ConfigParser.search_subfield_in_config(configuration, "error", "threshold", True)),
-				vectors = int(ConfigParser.search_subfield_in_config(configuration, "error", "vectors", True)),
+				metrics = ConfigParser.search_subfield_in_config(configuration, "error", "metrics", True),
+				thresholds = ConfigParser.search_subfield_in_config(configuration, "error", "threshold", True),
+				n_vectors = int(ConfigParser.search_subfield_in_config(configuration, "error", "vectors", True)),
 				dataset = ConfigParser.search_subfield_in_config(configuration, "error", "dataset", False))
 
-		self.weights = ConfigParser.search_subfield_in_config(configuration, "circuit", "io_weights", self.error_conf.builtin_metric and self.error_conf.metric in [ErrorConfig.Metric.AWCE, ErrorConfig.Metric.MED])
+		self.weights = ConfigParser.search_subfield_in_config(configuration, "circuit", "io_weights", self.error_conf.builtin_metric and self.error_conf.metrics in [ErrorConfig.Metric.AWCE, ErrorConfig.Metric.MED])
 		
 		self.hw_conf = HwConfig(ConfigParser.search_subfield_in_config(configuration, "hardware", "metrics", True))
 
@@ -64,11 +64,10 @@ class ConfigParser:
 		try:
 			return configuration[field]
 		except KeyError as e:
-			if mandatory:
-				print(f"{e} not found in the configuration. Please see the README.md file for details concerning the configuration file")
-				exit()
-			else:
+			if not mandatory:
 				return default_value
+			print(f"{e} not found in the configuration. Please see the README.md file for details concerning the configuration file")
+			exit()
 
 
 	@staticmethod
@@ -76,8 +75,7 @@ class ConfigParser:
 		try:
 			return configuration[section][field]
 		except KeyError as e:
-			if mandatory:
-				print(f"{e} not found in the configuration. Please see the README.md file for details concerning the configuration file")
-				exit()
-			else:
+			if not mandatory:
 				return default_value
+			print(f"{e} not found in the configuration. Please see the README.md file for details concerning the configuration file")
+			exit()

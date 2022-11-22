@@ -37,7 +37,7 @@ class ALSCatalogCache:
         try:
             connection = sqlite3.connect(self.__file_name)
             cursor = connection.cursor()
-            cursor.execute(f"select spec, distance, synth_spec, S, P, out_p, out, depth from luts;")
+            cursor.execute("select spec, distance, synth_spec, S, P, out_p, out, depth from luts;")
             specs = []
             while item := cursor.fetchone():
                 specs.append((item[0], item[1], item[2], string_to_nested_list_int(item[3]), string_to_nested_list_int(item[4]), item[5], item[6], item[7]))
@@ -50,7 +50,7 @@ class ALSCatalogCache:
         try:
             connection = sqlite3.connect(self.__file_name)
             cursor = connection.cursor()
-            cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where distance = 0;")
+            cursor.execute("select synth_spec, S, P, out_p, out, depth from luts where distance = 0;")
             specs = []
             while item := cursor.fetchone():
                 specs.append((item[0], string_to_nested_list_int(item[1]), string_to_nested_list_int(item[2]), item[3], item[4], item[5]))
@@ -87,7 +87,7 @@ class ALSCatalogCache:
             cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{spec}' and distance > 0 order by distance;")
             while res := cursor.fetchone():
                 specs.append((res[0], string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), res[3], res[4], res[5]))
-            if len(specs) == 0:
+            if not specs:
                 cursor.execute(f"select synth_spec, S, P, out_p, out, depth from luts where spec = '{negate(spec)}' and distance > 0 order by distance;")
                 while res := cursor.fetchone():
                     specs.append((negate(res[0]), string_to_nested_list_int(res[1]), string_to_nested_list_int(res[2]), 1 - res[3], res[4], res[5]))

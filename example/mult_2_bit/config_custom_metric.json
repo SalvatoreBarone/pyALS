@@ -21,10 +21,10 @@
         "timeout"  : 60000
     },
     "error" : {
-        "metric"       : {"module" : "metrics/relative_error_magnitude", "function" : "compute_rem"},
+        "metrics"      : {"module" : "metrics/relative_error_magnitude", "function" : "compute_rem"},
         "threshold"    : 16,
         "vectors"      : 0,
-        "dataset"      : "example/mult_2_bit/dataset.csv",
+        "dataset"      : "example/mult_2_bit/dataset.csv"
     },
     "hardware" : {
         "metrics" : ["gates"]

@@ -25,26 +25,29 @@ class HwConfig:
         SWITCHING = 3
 
     def __init__(self, metrics):
-        hw_metrics = {
+        self.metrics = []
+        hw_metrics = HwConfig.get_hw_metrics()
+        for metric in metrics:
+            if metric in hw_metrics:
+                self.metrics.append(hw_metrics[metric])
+            else:
+                raise ValueError(f"{metric}: hw-metric not recognized")
+            
+    @staticmethod
+    def get_hw_metrics():
+         return {
             "gates"     : HwConfig.Metric.GATES,
             "depth"     : HwConfig.Metric.DEPTH,
             "switching" : HwConfig.Metric.SWITCHING
         }
-        self.metrics = []
-        for metric in metrics:
-            if metric not in hw_metrics.keys():
-                raise ValueError(f"{metric}: hw-metric not recognized")
-            else:
-                self.metrics.append(hw_metrics[metric])
+
+def get_gates(configuration, lut_io_info, graph):
+    return sum(c["gates"] for c in configuration.values())
 
 
-def get_gates(configuration):
-    return sum([c["gates"] for c in configuration.values()])
-
-
-def get_depth(configuration, graph):
+def get_depth(configuration, lut_io_info, graph):
     return graph.get_depth(configuration)
 
 
-def get_switching(configuration):
-    return sum([internal_node_activity(c["axspec"])[0] for c in configuration.values()])
+def get_switching(configuration, lut_io_info, graph):
+    return np.sum([internal_node_activity(v["spec"], np.array(np.array(v["freq"], dtype=float) / np.sum(v["freq"])).tolist())[0] for v in lut_io_info.values()])

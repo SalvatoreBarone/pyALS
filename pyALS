@@ -28,74 +28,80 @@ from src.DatasetGenerator import *
 
 
 def git_updater():
-	try:
-		dir_path = os.path.dirname(os.path.realpath(__file__))
-		repo = git.Repo(dir_path)
-		repo.remotes.origin.fetch()
-		local_head = repo.heads[0].commit
-		remote_head = repo.remotes.origin.refs[0].commit
-		if remote_head != local_head:
-			print("Updating the tool...")
-			repo.remotes.origin.pull()
-			for submodule in repo.submodules:
-				submodule.update(init = True, recursive = True)
-			return True
-		return False
-	except git.exc.GitCommandError as e:
-		print(e)
-		print("\n*** Ensure you have access to the internet! ***\n")
-		exit()
+    try:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        repo = git.Repo(dir_path)
+        repo.remotes.origin.fetch()
+        local_head = repo.heads[0].commit
+        remote_head = repo.remotes.origin.refs[0].commit
+        if remote_head != local_head:
+            print("Updating the tool...")
+            repo.remotes.origin.pull()
+            for submodule in repo.submodules:
+                submodule.update(init = True, recursive = True)
+            return True
+        return False
+    except git.exc.GitCommandError as e:
+        print(e)
+        print("\n*** Ensure you have access to the internet! ***\n")
+        exit()
 
 
 def rm_old_implementation(output_directory, files =  ".v"):
-	for file in os.listdir(output_directory):
-		if file.endswith(files):
-			print(f"Removing old source-file {output_directory}/{file}")
-			os.remove(f"{output_directory}/{file}")
+    for file in os.listdir(output_directory):
+        if file.endswith(files):
+            print(f"Removing old source-file {output_directory}/{file}")
+            os.remove(f"{output_directory}/{file}")
 
 
 @click.group()
 def cli():
-	pass
+    pass
 
 
 @click.command("elaborate")
-@click.option("--source",  type=str, required=True, help="specify the input HDL source file", multiple=True)
-@click.option("--top",     type=str, required=True, help="specify the top-module name")
-@click.option("--lut",     type=str, required=True, help="specify the LUT size")
-@click.option("--output",  type=str, required=True, help="Output file.")
-def elaborate(source, top, lut, output):
-	"""
-	Draws a k-LUT map of the given circuit
-	"""
-	helper = YosysHelper()
-	helper.load_ghdl()
-	helper.read_sources(source, top)
-	helper.prep_design(lut)
-	graph = ALSGraph(helper.design)
-	print("Graph generation completed")
-	graph.save(output)
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('outfile', type=click.Path(dir_okay=False))
+def elaborate(configfile, outfile):
+    """
+    Draws a k-LUT map of the given circuit
+    
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    
+    OUTFILE is the name of the file where the circuit graph will be saved
+    """
+    configuration = ConfigParser(configfile)
+    check_for_file(configuration.lut_cache)
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
+    graph = ALSGraph(helper.design)
+    print("Graph generation completed")
+    for v in graph.get_cells():
+        print(v["name"], v["spec"])
+    graph.save(outfile)
 
 
 @click.command("es")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 def es_synth(configfile):
-	"""
-	Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and
-	exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
+    """
+    Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and
+    exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
 
-	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-	"""
-	configuration = ConfigParser(configfile)
-	check_for_file(configuration.lut_cache)
-	helper = YosysHelper()
-	helper.load_ghdl()
-	helper.read_sources(configuration.source_hdl, configuration.top_module)
-	helper.prep_design(configuration.als_conf.cut_size)
-	luts_set = helper.get_luts_set()
-	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-	print("Done!")
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    """
+    configuration = ConfigParser(configfile)
+    check_for_file(configuration.lut_cache)
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
+    luts_set = helper.get_luts_set()
+    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+    ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print("Done!")
 
 
 @click.command("als")
@@ -103,98 +109,98 @@ def es_synth(configfile):
 @click.option("--store", type=str, help = "Store the random vectors adopted for error estimation on file, for further use.", default = None)
 @click.option("--improve", type=str, help="Path of the file containing results from previous runs to be improved (JSON file)", default=None)
 def als(configfile, store, improve):
-	"""
-	Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
-	cuts, design space exploration and rewriting.
+    """
+    Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
+    cuts, design space exploration and rewriting.
 
-	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-	"""
-	configuration = ConfigParser(configfile)
-	check_for_file(configuration.lut_cache)
-	check_for_optional_file(improve)
-	if configuration.error_conf.dataset is not None:
-		check_for_file(configuration.error_conf.dataset)
-	if configuration.output_dir != ".":
-		mkpath(configuration.output_dir)
-	if store is None:
-		count = 1
-		while os.path.exists(os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")):
-			count += 1
-		store = os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")
-	helper = YosysHelper()
-	helper.load_ghdl()
-	helper.read_sources(configuration.source_hdl, configuration.top_module)
-	helper.prep_design(configuration.als_conf.cut_size)
-	luts_set = helper.get_luts_set()
-	graph = ALSGraph(helper.design)
-	print("Graph generation completed")
-	output_weights = None
-	if configuration.weights is not None and len(configuration.weights) != 0:
-		output_weights = graph.validate_po_weights(configuration.weights)
-		print("Output-weight parsing completed successfully")
-	helper.save_design("original")
-	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-	print("Catalog generation completed.")
-	print("Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-	problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
-	optimizer = AMOSA(configuration.amosa_conf)
-	optimizer.hill_climb_checkpoint_file = f"{configuration.output_dir}/{optimizer.hill_climb_checkpoint_file}"
-	optimizer.minimize_checkpoint_file = f"{configuration.output_dir}/{optimizer.minimize_checkpoint_file}"
-	optimizer.cache_dir = f"{configuration.output_dir}/{optimizer.cache_dir}"
-	optimizer.run(problem, improve)
-	hours = int(optimizer.duration / 3600)
-	minutes = int((optimizer.duration - hours * 3600) / 60)
-	print(f"Took {hours} hours, {minutes} minutes")
-	print(f"Cache hits: {problem.cache_hits} over {problem.total_calls} evaluations.")
-	print(f"{len(problem.cache)} cache entries collected")
-	optimizer.archive_to_json(f"{configuration.output_dir}/final_archive.json")
-	fitness_labels = problem.plot_labels()
-	optimizer.archive_to_csv(problem, f"{configuration.output_dir}/final_archive.csv", fitness_labels)
-	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", configuration.top_module, fitness_labels)
-	pareto_set = optimizer.pareto_set()
-	rm_old_implementation(configuration.output_dir)
-	print("Performing AIG-rewriting.")
-	rewriter = ALSRewriter(helper, problem)
-	rewriter.generate_hdl(pareto_set, configuration.output_dir)
-	print(f"All done! Take a look at {configuration.output_dir}!")
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    """
+    configuration = ConfigParser(configfile)
+    check_for_file(configuration.lut_cache)
+    check_for_optional_file(improve)
+    if configuration.error_conf.dataset is not None:
+        check_for_file(configuration.error_conf.dataset)
+    if configuration.output_dir != ".":
+        mkpath(configuration.output_dir)
+    if store is None:
+        count = 1
+        while os.path.exists(os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")):
+            count += 1
+        store = os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
+    luts_set = helper.get_luts_set()
+    graph = ALSGraph(helper.design)
+    print("Graph generation completed")
+    output_weights = None
+    if configuration.weights is not None and len(configuration.weights) != 0:
+        output_weights = graph.validate_po_weights(configuration.weights)
+        print("Output-weight parsing completed successfully")
+    helper.save_design("original")
+    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print("Catalog generation completed.")
+    print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
+    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
+    optimizer = AMOSA(configuration.amosa_conf)
+    optimizer.hill_climb_checkpoint_file = f"{configuration.output_dir}/{optimizer.hill_climb_checkpoint_file}"
+    optimizer.minimize_checkpoint_file = f"{configuration.output_dir}/{optimizer.minimize_checkpoint_file}"
+    optimizer.cache_dir = f"{configuration.output_dir}/{optimizer.cache_dir}"
+    optimizer.run(problem, improve)
+    hours = int(optimizer.duration / 3600)
+    minutes = int((optimizer.duration - hours * 3600) / 60)
+    print(f"Took {hours} hours, {minutes} minutes")
+    print(f"Cache hits: {problem.cache_hits} over {problem.total_calls} evaluations.")
+    print(f"{len(problem.cache)} cache entries collected")
+    optimizer.archive_to_json(f"{configuration.output_dir}/final_archive.json")
+    fitness_labels = problem.plot_labels()
+    optimizer.archive_to_csv(problem, f"{configuration.output_dir}/final_archive.csv", fitness_labels)
+    optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", configuration.top_module, fitness_labels)
+    pareto_set = optimizer.pareto_set()
+    rm_old_implementation(configuration.output_dir)
+    print("Performing AIG-rewriting.")
+    rewriter = ALSRewriter(helper, problem)
+    rewriter.generate_hdl(pareto_set, configuration.output_dir)
+    print(f"All done! Take a look at {configuration.output_dir}!")
 
 
 @click.command('generate')
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 def generate(configfile):
-	"""
-	Performs the rewriting step of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command
+    """
+    Performs the rewriting step of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command
 
-	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-	"""
-	configuration = ConfigParser(configfile)
-	check_for_file(configuration.lut_cache)
-	if configuration.output_dir != ".":
-		mkpath(configuration.output_dir)
-	check_for_file(f"{configuration.output_dir}/final_archive.json")
-	helper = YosysHelper()
-	helper.load_ghdl()
-	helper.read_sources(configuration.source_hdl, configuration.top_module)
-	helper.prep_design(configuration.als_conf.cut_size)
-	luts_set = helper.get_luts_set()
-	graph = ALSGraph(helper.design)
-	print("Graph generation completed")
-	helper.save_design("original")
-	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-	print("Catalog generation completed.")
-	print("Reading the Pareto front.")
-	problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
-	optimizer = AMOSA(configuration.amosa_conf)
-	optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
-	optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", problem.plot_labels())
-	pareto_set = optimizer.pareto_set()
-	rm_old_implementation(configuration.output_dir)
-	print("Performing AIG-rewriting.")
-	rewriter = ALSRewriter(helper, problem)
-	rewriter.generate_hdl(pareto_set, configuration.output_dir)
-	print(f"All done! Take a look at {configuration.output_dir}!")
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    """
+    configuration = ConfigParser(configfile)
+    check_for_file(configuration.lut_cache)
+    if configuration.output_dir != ".":
+        mkpath(configuration.output_dir)
+    check_for_file(f"{configuration.output_dir}/final_archive.json")
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
+    luts_set = helper.get_luts_set()
+    graph = ALSGraph(helper.design)
+    print("Graph generation completed")
+    helper.save_design("original")
+    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print("Catalog generation completed.")
+    print("Reading the Pareto front.")
+    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
+    optimizer = AMOSA(configuration.amosa_conf)
+    optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
+    optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", problem.plot_labels())
+    pareto_set = optimizer.pareto_set()
+    rm_old_implementation(configuration.output_dir)
+    print("Performing AIG-rewriting.")
+    rewriter = ALSRewriter(helper, problem)
+    rewriter.generate_hdl(pareto_set, configuration.output_dir)
+    print(f"All done! Take a look at {configuration.output_dir}!")
 
 
 @click.command("pymodels")
@@ -203,76 +209,135 @@ def generate(configfile):
 @click.option("-f", "--usefloat", is_flag = True, help = "Enables using the floating-point representation for look-up tables")
 @click.option("-l", "--library", is_flag = True, help = "Generate a single wrapper for each of the variants.")
 def get_model(configfile, outfile, usefloat, library):
-	"""
-	Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations.
-	You can select which models to be generated using the available options.
+    """
+    Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations.
+    You can select which models to be generated using the available options.
 
-	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-	
-	OUTFILE is the path of the output python implementation (either single file or directory)
-	"""
-	configuration = ConfigParser(configfile)
-	check_for_file(configuration.lut_cache)
-	check_for_file(f"{configuration.output_dir}/final_archive.json")
-	helper = YosysHelper()
-	helper.load_ghdl()
-	helper.read_sources(configuration.source_hdl, configuration.top_module)
-	helper.prep_design(configuration.als_conf.cut_size)
-	luts_set = helper.get_luts_set()
-	graph = ALSGraph(helper.design)
-	print("Graph generation completed")
-	print("Validading weights for primary input signals")
-	graph.validate_pi_weights(configuration.weights)
-	print("Validading weights for primary output signals")
-	graph.validate_po_weights(configuration.weights)
-	helper.save_design("original")
-	print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time....")
-	lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-	print("Catalog generation completed.")
-	# Forcing the MOP to generate exhaustive test patterns
-	configuration.error_conf.dataset = None
-	configuration.error_conf.n_vectors = 0
-	problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
-	optimizer = AMOSA(configuration.amosa_conf)
-	print("Reading the Pareto front.")
-	optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
-	pareto_set = optimizer.pareto_set()
-	print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
-	print("Performing model generation...")
-	generator = ALSArithModel(helper, problem, configuration.weights)
-	if library:
-		if not outfile.endswith(".py"):
-			outfile = f"{os.path.splitext(outfile)[0]}.py"
-		generator.generate_library(configuration.top_module, pareto_set, outfile, usefloat)
-	else:
-		outfile = os.path.splitext(outfile)[0]
-		mkpath(outfile)
-		rm_old_implementation(outfile, ".py")
-		generator.generate_single_circuits(configuration.top_module, pareto_set, outfile, usefloat)
-	print(f"All done! Take a look at {outfile}!")
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    
+    OUTFILE is the path of the output python implementation (either single file or directory)
+    """
+    configuration = ConfigParser(configfile)
+    check_for_file(configuration.lut_cache)
+    check_for_file(f"{configuration.output_dir}/final_archive.json")
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
+    luts_set = helper.get_luts_set()
+    graph = ALSGraph(helper.design)
+    print("Graph generation completed")
+    print("Validading weights for primary input signals")
+    graph.validate_pi_weights(configuration.weights)
+    print("Validading weights for primary output signals")
+    graph.validate_po_weights(configuration.weights)
+    helper.save_design("original")
+    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time....")
+    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print("Catalog generation completed.")
+    # Forcing the MOP to generate exhaustive test patterns
+    configuration.error_conf.dataset = None
+    configuration.error_conf.n_vectors = 0
+    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
+    optimizer = AMOSA(configuration.amosa_conf)
+    print("Reading the Pareto front.")
+    optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
+    pareto_set = optimizer.pareto_set()
+    print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
+    print("Performing model generation...")
+    generator = ALSArithModel(helper, problem, configuration.weights)
+    if library:
+        if not outfile.endswith(".py"):
+            outfile = f"{os.path.splitext(outfile)[0]}.py"
+        generator.generate_library(configuration.top_module, pareto_set, outfile, usefloat)
+    else:
+        outfile = os.path.splitext(outfile)[0]
+        mkpath(outfile)
+        rm_old_implementation(outfile, ".py")
+        generator.generate_single_circuits(configuration.top_module, pareto_set, outfile, usefloat)
+    print(f"All done! Take a look at {outfile}!")
 
+@click.command("metrics")
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('outfile', type=click.Path(dir_okay=True))
+def fitnesses(configfile, outfile):
+    """
+    Computes the all the builtin metrics (both error and hardware) for points coming from a given Pareto front.
+
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    
+    OUTFILE is the csv output file containing all the fitness values for each of the entries of the Pareto front
+    """
+    configuration = ConfigParser(configfile)
+    check_for_file(configuration.lut_cache)
+    if configuration.output_dir != ".":
+        mkpath(configuration.output_dir)
+    check_for_file(f"{configuration.output_dir}/final_archive.json")
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
+    luts_set = helper.get_luts_set()
+    graph = ALSGraph(helper.design)
+    print("Graph generation completed")
+    output_weights = None
+    if configuration.weights is not None and len(configuration.weights) != 0:
+        output_weights = graph.validate_po_weights(configuration.weights)
+        print("Output-weight parsing completed successfully")
+    helper.save_design("original")
+    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print("Catalog generation completed.")
+    
+    # Ignoring configurations for error and hardware metrics
+    metrics = list(ErrorConfig.get_builtin_metrics().keys())
+    error_conf = ErrorConfig(
+        metrics = list(metrics),
+        thresholds = [np.inf] * len(metrics),
+        n_vectors = configuration.error_conf.n_vectors,
+        dataset = configuration.error_conf.dataset)
+    hw_conf = HwConfig(list(HwConfig.get_hw_metrics().keys()))
+    
+    print("Reading the Pareto front.")
+    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, None)
+    optimizer = AMOSA(configuration.amosa_conf)
+    optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
+    print("Computing the full characterization of the Pareto front. Please wait...")
+    pareto_set = optimizer.pareto_set()
+    archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in pareto_set]
+    fitness_labels = problem.plot_labels()
+    original_stdout = sys.stdout
+    row_format = "{:};" + "{:};" * problem.num_of_objectives + "{:};" * problem.num_of_variables
+    with open(outfile, "w") as file:
+        sys.stdout = file
+        print(row_format.format("", *fitness_labels, *[f"x{i}" for i in range(problem.num_of_variables)]))
+        for i, s in enumerate(archive):
+            print(row_format.format(i, *s["f"], *s["x"]))
+    sys.stdout = original_stdout
+    print(f"All done! Take a look at {outfile}!")
+    
 
 @click.command("template")
 @click.option("--source",  type=str, multiple=True, help="specify the input HDL source file")
 @click.option("--top",     type=str, required=True, help="specify the top-module name")
 @click.option("--output",  type=str, required=True, help="Output file.")
 def template(source, top, output):
-	"""
-	Generates a CSV file for specifying the input dataset to be used for error assessment
-	"""
-	helper = YosysHelper()
-	helper.load_ghdl()
-	helper.read_sources(source, top)
-	helper.prep_design(4)
-	graph = ALSGraph(helper.design)
-	print("Graph generation completed")
-	PI = graph.get_pi()
-	original_stdout = sys.stdout
-	row_format = ",".join([i["name"] for i in PI])
-	with open(output, "w") as file:
-		sys.stdout = file
-		print(row_format)
-	sys.stdout = original_stdout
+    """
+    Generates a CSV file for specifying the input dataset to be used for error assessment
+    """
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(source, top)
+    helper.prep_design(4)
+    graph = ALSGraph(helper.design)
+    print("Graph generation completed")
+    PI = graph.get_pi()
+    original_stdout = sys.stdout
+    row_format = ",".join([i["name"] for i in PI])
+    with open(output, "w") as file:
+        sys.stdout = file
+        print(row_format)
+    sys.stdout = original_stdout
 
 
 @click.command("randomsplit")
@@ -281,31 +346,31 @@ def template(source, top, output):
 @click.option("--splits",  type=int, required=True, help="amount of dataset partitions")
 @click.option("--outputdir",  type=str, required=True, help="output directory")
 def randomsplit(source, top, splits, outputdir):
-	"""
-	Split the input-set in N partitions, using random sampling without repetitions.
-	"""
-	mkpath(outputdir)
-	helper = YosysHelper()
-	helper.load_ghdl()
-	helper.read_sources(source, top)
-	helper.prep_design(4)
-	graph = ALSGraph(helper.design)
-	print("Graph generation completed")
-	PI = graph.get_pi()
-	PI = [i["name"] for i in PI]
-	permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
-	assignments = [dict(zip(PI, perm)) for perm in permutations]
-	random.shuffle(assignments)
-	splitsize = len(assignments) // splits
-	for i in range(splits):
-		original_stdout = sys.stdout
-		with open(f"{outputdir}/split_{i}.csv", "w") as file:
-			sys.stdout = file
-			print(",".join(PI))
-			for r in range(i*splitsize, (i+1)*splitsize):
-				print(",".join(["1" if assignments[r][p] else "0" for p in PI]))
-		sys.stdout = original_stdout
-	print("Dataset generation completed")
+    """
+    Split the input-set in N partitions, using random sampling without repetitions.
+    """
+    mkpath(outputdir)
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(source, top)
+    helper.prep_design(4)
+    graph = ALSGraph(helper.design)
+    print("Graph generation completed")
+    PI = graph.get_pi()
+    PI = [i["name"] for i in PI]
+    permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
+    assignments = [dict(zip(PI, perm)) for perm in permutations]
+    random.shuffle(assignments)
+    splitsize = len(assignments) // splits
+    for i in range(splits):
+        original_stdout = sys.stdout
+        with open(f"{outputdir}/split_{i}.csv", "w") as file:
+            sys.stdout = file
+            print(",".join(PI))
+            for r in range(i*splitsize, (i+1)*splitsize):
+                print(",".join(["1" if assignments[r][p] else "0" for p in PI]))
+        sys.stdout = original_stdout
+    print("Dataset generation completed")
 
 
 @click.command("ia-dataset")
@@ -314,106 +379,113 @@ def randomsplit(source, top, splits, outputdir):
 @click.argument('outfile', type=click.Path(dir_okay=False))
 @click.option("-i", "--input", type=str, required = True, help="Name of the primary input for which profiled values are provided",)
 @click.option("-a", "--alpha", type=float, help="Proportion factor on the basis of which the random test vectors to be generated, given a profiled value, is determined", default=1)
+@click.option("-f", "--freq", type=float, help="Reference frequency on the basis of which alpha will be derived. When specified, --alpha is ignored.", default=None)
 @click.option("-m", "--minv", type=int, help="Minimum number of random test vectors to be generated, given a profiled value", default=1)
-@click.option("--hist", type=str, help="Name for the hystogram plot", default="occurrence_frequency.pdf")
-@click.option("--nhist", type=str, help="Name for the normalized hystogram plot", default="normalized_occurrence_frequency.pdf")
-@click.option("--boxp", type=str, help="Name for the box and wisker plot", default="occurrence_frequency_boxplot.pdf")
-@click.option("--cov", type=str, help="Name for the coverage plot", default="coverage_of_values.pdf")
-def ia_dataset(configfile, profiledvalues, outfile, input, alpha, minv, hist, nhist, boxp, cov):
-	"""
-	Generates dataset for input-aware approximation flow, given input profiling in JSON format
+def ia_dataset(configfile, profiledvalues, outfile, input, alpha, freq, minv):
+    """
+    Generates dataset for input-aware approximation flow, given input profiling in JSON format
 
-	CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
 
-	PROFILEDVALUES is the path of the file containing the profiled values in JSON
+    PROFILEDVALUES is the path of the file containing the profiled values in JSON
 
-	OUTFILE is the path of the generated dataset, in csv format
-	
-	"""
-	configuration = ConfigParser(configfile)
-	helper = YosysHelper()
-	helper.load_ghdl()
-	helper.read_sources(configuration.source_hdl, configuration.top_module)
-	helper.prep_design(configuration.als_conf.cut_size)
-	helper.reverse_splitnets()
-	generator = DatasetGenerator(helper, profiledvalues, alpha, minv, input, hist, nhist, boxp, cov, outfile)
-	generator.generate()
-	
+    OUTFILE is the path of the generated dataset, in csv format
+    
+    """
+    configuration = ConfigParser(configfile)
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
+    helper.reverse_splitnets()
+    
+    if not outfile.endswith(".csv"):
+        print(f"Warning: {outfile} renamed as {outfile}.csv")
+        outfile = f"{outfile}.csv"
+    outdir = os.path.splitext(outfile)[0]
+    mkpath(outdir)
+    hist = f"{outdir}/occurrence_frequency.pdf"
+    nhist = f"{outdir}/normalized_occurrence_frequency.pdf"
+    boxp = f"{outdir}/occurrence_frequency_boxplot.pdf"
+    cov = f"{outdir}/coverage_of_values.pdf"   
+    generator = DatasetGenerator(helper, profiledvalues, alpha, freq, minv, input, hist, nhist, boxp, cov, outfile)
+    generator.generate()
+    
 
 @click.command('clean')
 @click.option('--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
 def clean(catalog):
-	"""Performs a sanity check of the catalog """
-	check_for_file(catalog)
-	cache = ALSCatalogCache(catalog)
-	count = 0
-	for s in cache.get_all_exact_luts():
-		exact_synth_spec, exact_S, exact_P, exact_out_p, exact_out, exact_depth = s
-		gates = len(exact_S[0])
-		distance = 0
-		for spec in cache.get_approx_luts(exact_synth_spec):
-			ax_synth_spec, ax_S, ax_P, ax_out_p, ax_out, ax_depth = spec
-			dist = hamming(exact_synth_spec, ax_synth_spec)
-			if len(ax_S[0]) >= gates or dist < distance:
-				cache.del_lut(exact_synth_spec, dist)
-				count += 1
-			else:
-				gates = len(ax_S[0])
-				distance = dist
-	# search for complemented specifications
-	for x in cache.get_all_exact_luts():
-		x_synth_spec, _, _, _, _, _ = x
-		for y in cache.get_all_exact_luts():
-			y_synth_spec, _, _, _, _, _ = y
-			if x_synth_spec == negate(y_synth_spec):
-				cache.del_spec(y_synth_spec)
-				count += 1
-	print(f"Deleted {count} instances")
+    """Performs a sanity check of the catalog """
+    check_for_file(catalog)
+    cache = ALSCatalogCache(catalog)
+    count = 0
+    for s in cache.get_all_exact_luts():
+        exact_synth_spec, exact_S, exact_P, exact_out_p, exact_out, exact_depth = s
+        gates = len(exact_S[0])
+        distance = 0
+        for spec in cache.get_approx_luts(exact_synth_spec):
+            ax_synth_spec, ax_S, ax_P, ax_out_p, ax_out, ax_depth = spec
+            dist = hamming(exact_synth_spec, ax_synth_spec)
+            if len(ax_S[0]) >= gates or dist < distance:
+                cache.del_lut(exact_synth_spec, dist)
+                count += 1
+            else:
+                gates = len(ax_S[0])
+                distance = dist
+    # search for complemented specifications
+    for x in cache.get_all_exact_luts():
+        x_synth_spec, _, _, _, _, _ = x
+        for y in cache.get_all_exact_luts():
+            y_synth_spec, _, _, _, _, _ = y
+            if x_synth_spec == negate(y_synth_spec):
+                cache.del_spec(y_synth_spec)
+                count += 1
+    print(f"Deleted {count} instances")
 
 
 @click.command("expand")
 @click.option('--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
 def expand(catalog):
-	""" Attempts catalog expansion """
-	check_for_file(catalog)
-	cache = ALSCatalogCache(catalog)
-	# try to complete any incomplete path in the catalog
-	luts_to_be_synthesized = set()
-	for x in cache.get_all_exact_luts():
-		ex_spec, ex_dist, ex_synth_spec, ex_S, ex_P, ex_p, ex_out, ex_depth = x
-		axspect = cache.get_approx_luts(ex_spec)
-		ax_synth_spec, ax_S, ax_P, ax_out_p, ax_out, ax_depth = axspect[-1]
-		gates = len(ax_S[0])
-		distance = hamming(ex_spec, ax_synth_spec)
-		if gates > 0:
-			print(f"Incomplete catalog found for spec {ex_spec}. Synthesis will start from Hamming distance {distance + 1}")
-			luts_to_be_synthesized.add((ex_spec, gates, distance + 1))
-	luts_to_be_synthesized = list(luts_to_be_synthesized)
-	random.shuffle(luts_to_be_synthesized)
-	luts_sets = list_partitioning(luts_to_be_synthesized, cpu_count())
-	args = [[catalog, lut_set, 60000, ALSConfig.Solver.Boolector] for lut_set in luts_sets]
-	with Pool(cpu_count()) as pool:
-		ax_added = pool.starmap(synthesize_at_dist, args)
-	print(f"{sum(ax_added)} new approximate LUTs inserted in the catalog cache while attempting catalog completion")
-	# for each lut in the catalog, we add the synthesized approximate lut as exact lut at distance 0, if they do not belong to the catalog
-	# this improves the hit-rate for exact luts
-	exact_added = 0
-	luts_to_be_synthesized = set()
-	for x in cache.get_all_luts():
-		x_spec, x_dist, x_synth_spec, x_S, x_P, x_p, x_out, x_depth = x
-		if cache.get_lut_at_dist(x_synth_spec, 0) is None:
-			cache.add_lut(x_synth_spec, 0, x_synth_spec, x_S, x_P, x_p, x_out, x_depth)
-			if x_synth_spec not in luts_to_be_synthesized and negate(x_synth_spec) not in luts_to_be_synthesized:
-				luts_to_be_synthesized.add(x_synth_spec)
-			exact_added += 1
-	print(f"{exact_added} new exact LUTs inserted in the catalog cache")
-	luts_to_be_synthesized = list(luts_to_be_synthesized)
-	random.shuffle(luts_to_be_synthesized)
-	luts_sets = list_partitioning(luts_to_be_synthesized, cpu_count())
-	args = [[catalog, lut_set, 60000, ALSConfig.Solver.Boolector] for lut_set in luts_sets]
-	with Pool(cpu_count()) as pool:
-		ax_added = pool.starmap(synthesize, args)
-	print(f"{sum(ax_added)} new approximate LUTs inserted in the catalog cache")
+    """ Attempts catalog expansion """
+    check_for_file(catalog)
+    cache = ALSCatalogCache(catalog)
+    # try to complete any incomplete path in the catalog
+    luts_to_be_synthesized = set()
+    for x in cache.get_all_exact_luts():
+        ex_spec, ex_dist, ex_synth_spec, ex_S, ex_P, ex_p, ex_out, ex_depth = x
+        axspect = cache.get_approx_luts(ex_spec)
+        ax_synth_spec, ax_S, ax_P, ax_out_p, ax_out, ax_depth = axspect[-1]
+        gates = len(ax_S[0])
+        distance = hamming(ex_spec, ax_synth_spec)
+        if gates > 0:
+            print(f"Incomplete catalog found for spec {ex_spec}. Synthesis will start from Hamming distance {distance + 1}")
+            luts_to_be_synthesized.add((ex_spec, gates, distance + 1))
+    luts_to_be_synthesized = list(luts_to_be_synthesized)
+    random.shuffle(luts_to_be_synthesized)
+    luts_sets = list_partitioning(luts_to_be_synthesized, cpu_count())
+    args = [[catalog, lut_set, 60000, ALSConfig.Solver.Boolector] for lut_set in luts_sets]
+    with Pool(cpu_count()) as pool:
+        ax_added = pool.starmap(synthesize_at_dist, args)
+    print(f"{sum(ax_added)} new approximate LUTs inserted in the catalog cache while attempting catalog completion")
+    # for each lut in the catalog, we add the synthesized approximate lut as exact lut at distance 0, if they do not belong to the catalog
+    # this improves the hit-rate for exact luts
+    exact_added = 0
+    luts_to_be_synthesized = set()
+    for x in cache.get_all_luts():
+        x_spec, x_dist, x_synth_spec, x_S, x_P, x_p, x_out, x_depth = x
+        if cache.get_lut_at_dist(x_synth_spec, 0) is None:
+            cache.add_lut(x_synth_spec, 0, x_synth_spec, x_S, x_P, x_p, x_out, x_depth)
+            if x_synth_spec not in luts_to_be_synthesized and negate(x_synth_spec) not in luts_to_be_synthesized:
+                luts_to_be_synthesized.add(x_synth_spec)
+            exact_added += 1
+    print(f"{exact_added} new exact LUTs inserted in the catalog cache")
+    luts_to_be_synthesized = list(luts_to_be_synthesized)
+    random.shuffle(luts_to_be_synthesized)
+    luts_sets = list_partitioning(luts_to_be_synthesized, cpu_count())
+    args = [[catalog, lut_set, 60000, ALSConfig.Solver.Boolector] for lut_set in luts_sets]
+    with Pool(cpu_count()) as pool:
+        ax_added = pool.starmap(synthesize, args)
+    print(f"{sum(ax_added)} new approximate LUTs inserted in the catalog cache")
 
 
 @click.command("query")
@@ -422,16 +494,16 @@ def expand(catalog):
 @click.option("--dist",  type=str,                     help="distance", default="0")
 @click.option("--neg",  is_flag=True,                  help="Search for complemented spec")
 def query(catalog, spec, dist, neg):
-	""" Query the catalog for a specific lut implementation """
-	if not os.path.exists(catalog):
-		print(f"{catalog}: no such file.")
-		exit()
-	cache = ALSCatalogCache(catalog)
-	x = cache.get_lut_at_dist(negate(spec) if neg else spec, dist)
-	if x is None:
-		print(f"{spec}@{dist} not in the catalog cache")
-	else:
-		print(x)
+    """ Query the catalog for a specific lut implementation """
+    if not os.path.exists(catalog):
+        print(f"{catalog}: no such file.")
+        exit()
+    cache = ALSCatalogCache(catalog)
+    x = cache.get_lut_at_dist(negate(spec) if neg else spec, dist)
+    if x is None:
+        print(f"{spec}@{dist} not in the catalog cache")
+    else:
+        print(x)
 
 
 @click.command("stats")
@@ -441,18 +513,18 @@ def query(catalog, spec, dist, neg):
 @click.option("--power-truth",             is_flag = True,  help="box-and-whiskers plot of switching activity w.r.t. the truth-density")
 @click.option("--power-truth-k", type=int,                  help="box-and-whiskers plot of switching activity w.r.t. the truth-density for k-luts", default = None)
 def stats(catalog, gates, power_gates, power_truth, power_truth_k):
-	""" Compute statistics on a given catalog """
-	if not os.path.exists(catalog):
-		print(f"{catalog}: no such file.")
-		exit()
-	if gates:
-		gates_histogram(catalog)
-	if power_gates:
-		power_gates_boxplot(catalog)
-	if power_truth:
-		power_truth_boxplot(catalog)
-	if power_truth_k is not None:
-		power_truth_k_boxplot(power_truth_k)
+    """ Compute statistics on a given catalog """
+    if not os.path.exists(catalog):
+        print(f"{catalog}: no such file.")
+        exit()
+    if gates:
+        gates_histogram(catalog)
+    if power_gates:
+        power_gates_boxplot(catalog)
+    if power_truth:
+        power_truth_boxplot(catalog)
+    if power_truth_k is not None:
+        power_truth_k_boxplot(power_truth_k)
 
 
 cli.add_command(randomsplit)
@@ -463,6 +535,7 @@ cli.add_command(es_synth)
 cli.add_command(als)
 cli.add_command(generate)
 cli.add_command(get_model)
+cli.add_command(fitnesses)
 cli.add_command(clean)
 cli.add_command(expand)
 cli.add_command(query)
@@ -470,7 +543,7 @@ cli.add_command(stats)
 
 
 if __name__ == '__main__':
-	if git_updater():
-		os.execv(sys.argv[0], sys.argv)
-	else:
-		cli()
+    if git_updater():
+        os.execv(sys.argv[0], sys.argv)
+    else:
+        cli()

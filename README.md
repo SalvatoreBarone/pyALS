@@ -251,33 +251,33 @@ In the following, each field of the JSON file is described using C-Style comment
     },
     "output_path" : "mult_2_bit_awce",                 // path to the output directory
     "als" : {
-        "cache"    : "lut_catalog.db",                  // path to the catalog-cache
-        "cut_size" : 4,                                 // specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration, always required
-        "solver"   : "btor",                            // SAT-solver to be used. It can be either btor (Boolector) or z3 (Z3-solver), always required
-        "timeout"  : 60000                              // Timeout (in ms) for the exact synthesis process, always required. It is better you don't change its default value.              
+        "cache"    : "lut_catalog.db",                 // path to the catalog-cache
+        "cut_size" : 4,                                // specifies the "k" for AIG-cuts, or, alternatively, the k-LUTs for LUT-mapping during cut-enumeration, always required
+        "solver"   : "btor",                           // SAT-solver to be used. It can be either btor (Boolector) or z3 (Z3-solver), always required
+        "timeout"  : 60000                             // Timeout (in ms) for the exact synthesis process, always required. It is better you don't change its default value.              
     },
-    "error" : {                                         // This section defines error-related stuff
-        "metric"       : "mse",                         // Error metric to be used during Design-Space exploration. It can be "ep", "awce" or "med", for error-probability, absolute worst-case error or mean error distance, respectively; The "ia-ep" and "ia-ed" stand for "input-aware" error-probability and error-distance, which require the user to provide the probability-distribution for input vectors  
+    "error" : {                                        // This section defines error-related stuff
+        "metrics"      : ["mse"],                      // Error metric(s) to be used during Design-Space exploration. . Please note you can specify more than one metric. See supported metrics for more.
         "threshold"    : 1e+3,                         // The error threshold
         "vectors"      : 10000,                        // The number of test vectors for error assessment. Using the value "0" will unlock exhaustive evaluation, i.e., it will cause the tool to evaluate the error for every possible input assignment.
         "dataset" : "/path_to_csv_or_json_dataset"     // Input dataset to be used for error assessment, in csv or json format. A csv template can be generated using the "template" command of the tool.
     },
     "hardware" : {                                     // Hardware related stuff
-        "metric" : ["gates", "depth", "switching"]      // hardware metric(s) to be optimized (AIG-gates, AIG-depth, or LUT switching activity). Please note you can specify more than one metric.
+        "metric" : ["gates", "depth", "switching"]     // hardware metric(s) to be optimized (AIG-gates, AIG-depth, or LUT switching activity). Please note you can specify more than one metric.
     },
-    "amosa" : {                                         // Parameters governing the Archived Multi-Objective Simulated-Annealing optimization heuristic 
-        "archive_hard_limit"       : 100,               // Archive hard limit for the AMOSA optimization heuristic, see [1]
-        "archive_soft_limit"       : 200,               // Archive soft limit for the AMOSA optimization heuristic, see [1]
-        "archive_gamma"            : 2,                 // Gamma parameter for the AMOSA optimization heuristic, see [1]
-        "clustering_iterations"    : 300,               // maximum iterations performed by the clustering algorithm
-        "hill_climbing_iterations" : 500,               // the number of iterations performed during the initial hill-climbing refinement, see [1];
-        "initial_temperature"      : 500,               // Initial temperature of the matter for the AMOSA optimization heuristic, see [1]
-        "final_temperature"        : 0.0000001,         // Final temperature of the matter for the AMOSA optimization heuristic, see [1]
-        "cooling_factor"           : 0.95,              // It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
-        "annealing_iterations"     : 750,               // The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
-        "annealing_strength"       : 1,                 // Governs the strength of random perturbations during the annealing phase; specifically, the number of variables whose value is affected by perturbation.
-        "early_termination"        : 20,                // Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
-        "multiprocess_enabled"     : true               // Enables/disables synchronous multiprocessing with intensive solution exchanges in AMOSA. While using built-in metrics, it should be disabled.
+    "amosa" : {                                        // Parameters governing the Archived Multi-Objective Simulated-Annealing optimization heuristic 
+        "archive_hard_limit"       : 100,              // Archive hard limit for the AMOSA optimization heuristic, see [1]
+        "archive_soft_limit"       : 200,              // Archive soft limit for the AMOSA optimization heuristic, see [1]
+        "archive_gamma"            : 2,                // Gamma parameter for the AMOSA optimization heuristic, see [1]
+        "clustering_iterations"    : 300,              // maximum iterations performed by the clustering algorithm
+        "hill_climbing_iterations" : 500,              // the number of iterations performed during the initial hill-climbing refinement, see [1];
+        "initial_temperature"      : 500,              // Initial temperature of the matter for the AMOSA optimization heuristic, see [1]
+        "final_temperature"        : 0.0000001,        // Final temperature of the matter for the AMOSA optimization heuristic, see [1]
+        "cooling_factor"           : 0.95,             // It governs how quickly the temperature of the matter decreases during the annealing process, see [1]
+        "annealing_iterations"     : 750,              // The amount of refinement iterations performed during the main-loop of the AMOSA heuristic, see [1]
+        "annealing_strength"       : 1,                // Governs the strength of random perturbations during the annealing phase; specifically, the number of variables whose value is affected by perturbation.
+        "early_termination"        : 20,               // Early termination window. See [2]. Set it to zero in order to disable early-termination. Default is 20.
+        "multiprocess_enabled"     : true              // Enables/disables synchronous multiprocessing with intensive solution exchanges in AMOSA. While using built-in metrics, it should be disabled.
     }
 }
 ```
