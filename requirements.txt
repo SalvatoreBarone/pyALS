@@ -9,3 +9,4 @@ fixedpoint
 jinja2
 seaborn
 bitstring
+tdqm

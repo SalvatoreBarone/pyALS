@@ -37,7 +37,7 @@ class ConfigParser:
 
 		self.error_conf = ErrorConfig(
 				metrics = ConfigParser.search_subfield_in_config(configuration, "error", "metrics", True),
-				thresholds = ConfigParser.search_subfield_in_config(configuration, "error", "threshold", True),
+				thresholds = ConfigParser.search_subfield_in_config(configuration, "error", "thresholds", True),
 				n_vectors = int(ConfigParser.search_subfield_in_config(configuration, "error", "vectors", True)),
 				dataset = ConfigParser.search_subfield_in_config(configuration, "error", "dataset", False))
 

@@ -58,12 +58,17 @@ class MOP(AMOSA.Problem):
             self.store_dataset(dataset_outfile)
         else:
             lut_io_info = self.load_dataset()
-        print("Done!")
         self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
         self.baseline_and_gates = self.get_baseline_gates(None)
         self.baseline_depth = self.get_baseline_depth(None)
         self.baseline_switching = self.get_baseline_switching(lut_io_info)
+        print("Optimized error metrics:")
+        for m, t in zip(self.error_config.metrics, self.error_config.thresholds):
+            print(f"\t - {m} with threshold {t}")
+        print("Optimized resources metrics:")
+        for m in self.hw_config.metrics:
+            print(f"\t - {m}")
         print(f"#vars: {self.n_vars}, ub:{self.upper_bound}, #conf.s {np.prod([ float(x + 1) for x in self.upper_bound ])}.")
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
         AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
@@ -76,6 +81,7 @@ class MOP(AMOSA.Problem):
             for s in self.samples:
                 _, lut_io_info = self.graph.evaluate(s["input"], lut_io_info)
             return lut_io_info
+        print("Done!")
         return self.read_samples(self.error_config.dataset)
 
     def store_dataset(self, dataset_outfile):
@@ -91,7 +97,7 @@ class MOP(AMOSA.Problem):
         out["g"] = []
         configuration = self.matter_configuration(x)
         outputs, lut_io_info = self.get_outputs(configuration)    
-        for m, t in zip(self.error_config.metrics, self.error_config.threshold):
+        for m, t in zip(self.error_config.metrics, self.error_config.thresholds):
             out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
             out["g"].append(out["f"][-1] - t)
         for metric in self.hw_config.metrics:
@@ -144,6 +150,7 @@ class MOP(AMOSA.Problem):
                 inputs = {i["name"]: p for i, p in zip(PI, perm)}
                 output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
                 self.samples.append({"input": inputs, "output": output})
+        print("Done!")
         return lut_io_info
 
     def matter_configuration(self, x):

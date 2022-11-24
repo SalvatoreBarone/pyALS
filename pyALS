@@ -18,6 +18,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 import sys, os, click, git
 from distutils.dir_util import mkpath
+from tqdm import tqdm
 from src.ALSCatalog import *
 from src.MOP import *
 from src.ALSRewriter import *
@@ -292,8 +293,8 @@ def fitnesses(configfile, outfile):
     # Ignoring configurations for error and hardware metrics
     metrics = list(ErrorConfig.get_builtin_metrics().keys())
     error_conf = ErrorConfig(
-        metrics = list(metrics),
-        thresholds = [np.inf] * len(metrics),
+        metrics = list(metrics) if configuration.weights is not None else ["ep"],
+        thresholds = [np.inf] * len(metrics) if configuration.weights is not None else 1,
         n_vectors = configuration.error_conf.n_vectors,
         dataset = configuration.error_conf.dataset)
     hw_conf = HwConfig(list(HwConfig.get_hw_metrics().keys()))
@@ -303,8 +304,8 @@ def fitnesses(configfile, outfile):
     optimizer = AMOSA(configuration.amosa_conf)
     optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
     print("Computing the full characterization of the Pareto front. Please wait...")
-    pareto_set = optimizer.pareto_set()
-    archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in pareto_set]
+    #archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in pareto_set]
+    archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in tqdm(optimizer.pareto_set())]
     fitness_labels = problem.plot_labels()
     original_stdout = sys.stdout
     row_format = "{:};" + "{:};" * problem.num_of_objectives + "{:};" * problem.num_of_variables
