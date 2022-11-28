@@ -145,7 +145,7 @@ def als(configfile, store, improve):
     print("Catalog generation completed.")
     print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
     problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
-    optimizer = AMOSA(configuration.amosa_conf)
+    optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     optimizer.hill_climb_checkpoint_file = f"{configuration.output_dir}/{optimizer.hill_climb_checkpoint_file}"
     optimizer.minimize_checkpoint_file = f"{configuration.output_dir}/{optimizer.minimize_checkpoint_file}"
     optimizer.cache_dir = f"{configuration.output_dir}/{optimizer.cache_dir}"
@@ -193,7 +193,7 @@ def generate(configfile):
     print("Catalog generation completed.")
     print("Reading the Pareto front.")
     problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
-    optimizer = AMOSA(configuration.amosa_conf)
+    optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
     optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", problem.plot_labels())
     pareto_set = optimizer.pareto_set()
@@ -240,7 +240,7 @@ def get_model(configfile, outfile, usefloat, library):
     configuration.error_conf.dataset = None
     configuration.error_conf.n_vectors = 0
     problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
-    optimizer = AMOSA(configuration.amosa_conf)
+    optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     print("Reading the Pareto front.")
     optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
     pareto_set = optimizer.pareto_set()
@@ -301,7 +301,7 @@ def fitnesses(configfile, outfile):
     
     print("Reading the Pareto front.")
     problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, None)
-    optimizer = AMOSA(configuration.amosa_conf)
+    optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
     print("Computing the full characterization of the Pareto front. Please wait...")
     #archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in pareto_set]

@@ -12,7 +12,7 @@
     },
     "error" : {
         "metrics"    : ["ep"],
-        "threshold" : 1,
+        "thresholds" : 1,
         "vectors"   : 32,
         "_dataset"  : "result_x2/random_dataset_00001.json"
     },

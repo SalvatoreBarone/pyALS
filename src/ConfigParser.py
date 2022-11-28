@@ -15,8 +15,7 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 
-import json
-from pyAMOSA.AMOSA import *
+import json, pyamosa
 from .ALSSMT import *
 from .ErrorMetrics import *
 from .HwMetrics import *
@@ -45,7 +44,7 @@ class ConfigParser:
 		
 		self.hw_conf = HwConfig(ConfigParser.search_subfield_in_config(configuration, "hardware", "metrics", True))
 
-		self.amosa_conf = AMOSAConfig(
+		self.amosa_conf = pyamosa.Optimizer.Config(
 				archive_hard_limit = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "archive_hard_limit", True)),
 				archive_soft_limit = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "archive_soft_limit", True)),
 				archive_gamma = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "archive_gamma", True)),

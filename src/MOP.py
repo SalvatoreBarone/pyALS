@@ -14,17 +14,16 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import itertools, json, numpy as np
+import itertools, json, pyamosa, numpy as np, random
 from multiprocessing import cpu_count, Pool
 from .HwMetrics import *
 from .ErrorMetrics import *
 from .ALSGraph import *
 from .Utility import *
 from .ALSRewriter import *
-from pyAMOSA.AMOSA import *
 
 
-class MOP(AMOSA.Problem):
+class MOP(pyamosa.Optimizer.Problem):
     error_ffs = {
         ErrorConfig.Metric.EPROB : "get_ep",
         ErrorConfig.Metric.AWCE  : "get_awce",
@@ -71,7 +70,7 @@ class MOP(AMOSA.Problem):
             print(f"\t - {m}")
         print(f"#vars: {self.n_vars}, ub:{self.upper_bound}, #conf.s {np.prod([ float(x + 1) for x in self.upper_bound ])}.")
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
-        AMOSA.Problem.__init__(self, self.n_vars, [AMOSA.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
+        pyamosa.Optimizer.Problem.__init__(self, self.n_vars, [pyamosa.Optimizer.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
 
     def load_dataset(self):
         print(f"Reading input data from {self.error_config.dataset} ...")
