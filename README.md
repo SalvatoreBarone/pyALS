@@ -529,7 +529,24 @@ $ make
 ```
 
 ### Installing python dependencies
-You're almost done, the last step is to install python dependencies. It's quite simple, and you just need to issue the following command from within the pyALS directory.
+You're almost done, the last step is to install python dependencies. Some of them can be installed automatically, some others must be installed manually.Let's start with the latter ones. 
+
+You must install the [pyAMOSA](https://github.com/SalvatoreBarone/pyAMOSA) module
+```
+$ git clone https://github.com/SalvatoreBarone/pyAMOSA.git
+$ cd pyAMOSA
+# python3 setup.py install
+$ cd ..
+```
+and the [pyALSlib](https://github.com/SalvatoreBarone/pyALSlib) module
+```
+$ git clone https://github.com/SalvatoreBarone/pyALSlib.git
+$ cd pyALSlib
+# python3 setup.py install
+$ cd ..
+```
+
+Pertaining to other dependencies, installing them is quite simple, and you just need to issue the following command from within the pyALS directory.
 ```bash
 pip3 install -r requirements.txt 
 ```
