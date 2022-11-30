@@ -25,7 +25,7 @@ from src.ALSRewriter import *
 from src.stats import *
 from src.ConfigParser import *
 from src.ALSArithModel import *
-from src.DatasetGenerator import *
+from src.IADatasetGenerator import *
 
 
 def git_updater():
@@ -373,6 +373,50 @@ def randomsplit(source, top, splits, outputdir):
         sys.stdout = original_stdout
     print("Dataset generation completed")
 
+@click.command("random-dataset")
+@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('outfile', type=click.Path(dir_okay=False))
+@click.option("-v", "--vectors",  type=int, default = None, help="Number of random vectors to be generated.")
+def random_dataset(configfile, outfile, vectors):
+    """
+    Generates a random dataset for the approximation flow.
+
+    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+
+
+    OUTFILE is the path of the generated dataset, in csv format
+    """
+    if not outfile.endswith(".json"):
+        print(f"Warning: {outfile} renamed as {outfile}.json")
+        outfile = f"{outfile}.json"
+    configuration = ConfigParser(configfile)
+    check_for_file(configuration.lut_cache)
+    if configuration.error_conf.dataset is not None:
+        check_for_file(configuration.error_conf.dataset)
+    if configuration.output_dir != ".":
+        mkpath(configuration.output_dir)
+    helper = YosysHelper()
+    helper.load_ghdl()
+    helper.read_sources(configuration.source_hdl, configuration.top_module)
+    helper.prep_design(configuration.als_conf.cut_size)
+    luts_set = helper.get_luts_set()
+    graph = ALSGraph(helper.design)
+    print("Graph generation completed")
+    output_weights = None
+    if configuration.weights is not None and len(configuration.weights) != 0:
+        output_weights = graph.validate_po_weights(configuration.weights)
+        print("Output-weight parsing completed successfully")
+    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print("Catalog generation completed.")
+    #print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
+    # Forcing the generation of a new random dataset
+    configuration.error_conf.dataset = None
+    if vectors is not None:
+        configuration.error_conf.n_vectors = vectors
+    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, outfile)
+    print(f"Dataset generation completed. Take a look at {outfile}")
+
 
 @click.command("ia-dataset")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
@@ -409,7 +453,7 @@ def ia_dataset(configfile, profiledvalues, outfile, input, alpha, freq, minv):
     nhist = f"{outdir}/normalized_occurrence_frequency.pdf"
     boxp = f"{outdir}/occurrence_frequency_boxplot.pdf"
     cov = f"{outdir}/coverage_of_values.pdf"   
-    generator = DatasetGenerator(helper, profiledvalues, alpha, freq, minv, input, hist, nhist, boxp, cov, outfile)
+    generator = IADatasetGenerator(helper, profiledvalues, alpha, freq, minv, input, hist, nhist, boxp, cov, outfile)
     generator.generate()
     
 
@@ -531,6 +575,7 @@ def stats(catalog, gates, power_gates, power_truth, power_truth_k):
 cli.add_command(randomsplit)
 cli.add_command(template)
 cli.add_command(ia_dataset)
+cli.add_command(random_dataset)
 cli.add_command(elaborate)
 cli.add_command(es_synth)
 cli.add_command(als)

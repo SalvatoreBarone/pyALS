@@ -19,7 +19,7 @@ from fixedpoint import FixedPoint
 from .Utility import *
 from .YosysHelper import *
 
-class DatasetGenerator:
+class IADatasetGenerator:
     def __init__(self, yosis_helper, profiledvalues, alpha, freq, minv, name, 
         hist = "occurrence_frequency.pdf", 
         nhist = "normalized_occurrence_frequency.pdf", 
