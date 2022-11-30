@@ -15,10 +15,8 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import random, json, sys, numpy as np, matplotlib.pyplot as plt
-from fixedpoint import FixedPoint			
-from .Utility import *
-from .YosysHelper import *
-
+from fixedpoint import FixedPoint
+from pyalslib import flatten
 class IADatasetGenerator:
     def __init__(self, yosis_helper, profiledvalues, alpha, freq, minv, name, 
         hist = "occurrence_frequency.pdf", 

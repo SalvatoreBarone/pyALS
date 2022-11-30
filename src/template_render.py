@@ -22,6 +22,5 @@ def template_render(source_dir, template_file, data_dict, out_file):
 	env = Environment(loader = file_loader)
 	template = env.get_template(template_file)
 	output = template.render(items = data_dict)
-	file = open(out_file, "w")
-	file.write(output)
-	file.close()
+	with open(out_file, "w") as file:
+		file.write(output)

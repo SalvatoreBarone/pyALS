@@ -16,7 +16,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 
 import json, pyamosa
-from .ALSSMT import *
+from pyalslib import ALSConfig
 from .ErrorMetrics import *
 from .HwMetrics import *
 

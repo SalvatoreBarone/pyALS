@@ -19,14 +19,12 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 import sys, os, click, git
 from distutils.dir_util import mkpath
 from tqdm import tqdm
-from src.ALSCatalog import *
 from src.MOP import *
-from src.ALSRewriter import *
 from src.stats import *
 from src.ConfigParser import *
 from src.ALSArithModel import *
 from src.IADatasetGenerator import *
-
+from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, check_for_optional_file, hamming, synthesize_at_dist, synthesize
 
 def git_updater():
     try:

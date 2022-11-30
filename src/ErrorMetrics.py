@@ -15,10 +15,8 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import numpy as np
-from .ALSGraph import *
-from .Utility import *
 from .DynLoader import *
-
+from enum import Enum
 class ErrorConfig:
     
     class Metric(Enum):

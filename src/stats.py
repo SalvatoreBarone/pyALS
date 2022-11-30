@@ -14,7 +14,7 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-from src.ALSCatalogCache import *
+from pyalslib import ALSCatalogCache
 from src.lut_pwr import *
 import matplotlib.pyplot as plt
 
@@ -25,18 +25,17 @@ def gates_histogram(catalog):
 	for s in cache.get_all_exact_luts():
 		synth_spec, S, P, out_p, out, depth = s
 		ngates = len(S[0])
-		if ngates not in gates_per_luts.keys():
-			gates_per_luts[ngates] = 1
-		else:
+		if ngates in gates_per_luts:
 			gates_per_luts[ngates] += 1
+		else:
+			gates_per_luts[ngates] = 1
 	plt.figure(figsize=[8,4])
-	gates_range = list(gates_per_luts.keys())
-	gates_range.sort()
+	gates_range = sorted(gates_per_luts.keys())
 	plt.bar(gates_range, [gates_per_luts[i] for i in gates_range], width=0.5)
 	plt.xticks(gates_range)
 	plt.ylabel("Number of specifications")
 	plt.xlabel("#AIG nodes")
-	plt.savefig(f"gates_hystogram.pdf", bbox_inches='tight', pad_inches=0)
+	plt.savefig("gates_hystogram.pdf", bbox_inches='tight', pad_inches=0)
 
 
 def get_data_from_boxplot(bp):
@@ -70,14 +69,13 @@ def power_gates_boxplot(catalog):
 		if exact_gates not in power_per_gates.keys():
 			power_per_gates[exact_gates] = []
 		power_per_gates[exact_gates].append(exact_power)
-	gates_range = list(power_per_gates.keys())
-	gates_range.sort()
+	gates_range = sorted(power_per_gates.keys())
 	plt.figure(figsize=[8,4])
 	data = [power_per_gates[i] for i in reversed(gates_range)]
 	plt.boxplot(data, labels=list(reversed(gates_range)))
 	plt.ylabel("Switching activity")
 	plt.xlabel("#AIG nodes")
-	plt.savefig(f"switching_per_gates_boxplot.pdf", bbox_inches='tight', pad_inches=0)
+	plt.savefig("switching_per_gates_boxplot.pdf", bbox_inches='tight', pad_inches=0)
 
 
 def power_truth_boxplot(catalog):
@@ -90,14 +88,13 @@ def power_truth_boxplot(catalog):
 		if ones not in power_per_ones.keys():
 			power_per_ones[ones] = []
 		power_per_ones[ones].append(exact_power)
-	ones_range = list(power_per_ones.keys())
-	ones_range.sort()
+	ones_range = sorted(power_per_ones.keys())
 	plt.figure(figsize=[8,4])
 	data = [power_per_ones[i] for i in ones_range]
 	plt.boxplot(data, labels=ones_range)
 	plt.ylabel("Switching activity")
 	plt.xlabel("Truth-density")
-	plt.savefig(f"switching_per_truth_boxplot.pdf", bbox_inches='tight', pad_inches=0)
+	plt.savefig("switching_per_truth_boxplot.pdf", bbox_inches='tight', pad_inches=0)
 
 
 def power_truth_k_boxplot(k):

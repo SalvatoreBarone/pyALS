@@ -14,13 +14,12 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import itertools, json, pyamosa, numpy as np, random
+import itertools, json, pyamosa, numpy as np, random, copy
+from pyalslib import list_partitioning, negate, flatten
 from multiprocessing import cpu_count, Pool
 from .HwMetrics import *
 from .ErrorMetrics import *
-from .ALSGraph import *
-from .Utility import *
-from .ALSRewriter import *
+
 
 
 class MOP(pyamosa.Optimizer.Problem):
