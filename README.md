@@ -143,21 +143,15 @@ Performs the full catalog-based AIG-rewriting workflow, including cut enumeratio
 
 Usage: 
 ```
-pyALS als CONFIGFILE [OPTIONS]
+pyALS als CONFIGFILE
 ```
 where:
 ```
   CONFIGFILE is the path of the configuration file
 ```
-Options:
-```
-  --config TEXT   path of the configuration file
-  --improve TEXT  Run again the workflow using previous Pareto set as initial archive
-  --resume        Resume the execution. It searches for available checkpoints in the output directory.
-```
 Example:
 ```
-./pyALS als --source /path_to_source --top top_level_entity --catalog /path_to_catalog_cache --output /path_to_output_directory --config /path_to_config.json --improve /path_to_final_archive.json --resume 
+pyALS als example/mult_2_bit/config_awce.json
 ```
 
 ### The ```generate``` command
@@ -170,6 +164,10 @@ pyALS generate CONFIGFILE
 where:
 ```
   CONFIGFILE is the path of the configuration file
+```
+Example:
+```
+pyALS generate example/mult_2_bit/config_awce.json
 ```
 
 ### The ```pymodels``` command

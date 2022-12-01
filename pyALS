@@ -106,8 +106,7 @@ def es_synth(configfile):
 @click.command("als")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.option("--store", type=str, help = "Store the random vectors adopted for error estimation on file, for further use.", default = None)
-@click.option("--improve", type=str, help="Path of the file containing results from previous runs to be improved (JSON file)", default=None)
-def als(configfile, store, improve):
+def als(configfile, store):
     """
     Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
     cuts, design space exploration and rewriting.
@@ -116,7 +115,7 @@ def als(configfile, store, improve):
     """
     configuration = ConfigParser(configfile)
     check_for_file(configuration.lut_cache)
-    check_for_optional_file(improve)
+    
     if configuration.error_conf.dataset is not None:
         check_for_file(configuration.error_conf.dataset)
     if configuration.output_dir != ".":
@@ -141,12 +140,17 @@ def als(configfile, store, improve):
     print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
     lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
     print("Catalog generation completed.")
+    
     print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
     problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     optimizer.hill_climb_checkpoint_file = f"{configuration.output_dir}/{optimizer.hill_climb_checkpoint_file}"
     optimizer.minimize_checkpoint_file = f"{configuration.output_dir}/{optimizer.minimize_checkpoint_file}"
     optimizer.cache_dir = f"{configuration.output_dir}/{optimizer.cache_dir}"
+    improve = None
+    if os.path.exists(f"{configuration.output_dir}/final_archive.json"):
+        print("Using results from previous runs as a starting point.")
+        improve = f"{configuration.output_dir}/final_archive.json"
     optimizer.run(problem, improve)
     hours = int(optimizer.duration / 3600)
     minutes = int((optimizer.duration - hours * 3600) / 60)
