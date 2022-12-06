@@ -22,7 +22,7 @@ from tqdm import tqdm
 from src.MOP import *
 from src.stats import *
 from src.ConfigParser import *
-from src.ALSArithModel import *
+from src.PyModelArithInt import *
 from src.IADatasetGenerator import *
 from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, check_for_optional_file, hamming, synthesize_at_dist, synthesize
 
@@ -209,9 +209,8 @@ def generate(configfile):
 @click.command("pymodels")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.argument('outfile', type=click.Path(dir_okay=True))
-@click.option("-f", "--usefloat", is_flag = True, help = "Enables using the floating-point representation for look-up tables")
-@click.option("-l", "--library", is_flag = True, help = "Generate a single wrapper for each of the variants.")
-def get_model(configfile, outfile, usefloat, library):
+@click.option("-d", "--dictbased", is_flag = True, help = "Generate a dictionary-based implementation for each of the variants.")
+def get_model(configfile, outfile, dictbased):
     """
     Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations.
     You can select which models to be generated using the available options.
@@ -248,16 +247,11 @@ def get_model(configfile, outfile, usefloat, library):
     pareto_set = optimizer.pareto_set()
     print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
     print("Performing model generation...")
-    generator = ALSArithModel(helper, problem, configuration.weights)
-    if library:
-        if not outfile.endswith(".py"):
-            outfile = f"{os.path.splitext(outfile)[0]}.py"
-        generator.generate_library(configuration.top_module, pareto_set, outfile, usefloat)
-    else:
-        outfile = os.path.splitext(outfile)[0]
-        mkpath(outfile)
-        rm_old_implementation(outfile, ".py")
-        generator.generate_single_circuits(configuration.top_module, pareto_set, outfile, usefloat)
+    generator = PyModelArithInt(helper, problem, configuration.weights)
+    outfile = os.path.splitext(outfile)[0]
+    mkpath(outfile)
+    rm_old_implementation(outfile, ".py")
+    generator.generate(configuration.top_module, pareto_set, outfile, dictbased)
     print(f"All done! Take a look at {outfile}!")
 
 @click.command("metrics")
