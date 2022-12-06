@@ -15,20 +15,21 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import os
+from tqdm import tqdm
 from .ErrorMetrics import *
 from .template_render import template_render
 
 
-class ALSArithModel:
+class PyModelArithInt:
     __resource_dir = "../resources/"
-    __library_model_py = "library_model.py.template"
-    __single_circuit_model_py = "single_circuit_model.py.template"
+    __single_circuit_model_dict_py = "single_circuit_model_dict.py.template"
+    __single_circuit_model_mat_py = "single_circuit_model_mat.py.template"
 
     def __init__(self, helper, problem, signal_weights, design_name = "original"):
         dir_path = os.path.dirname(os.path.abspath(__file__))
         self.resource_dir =  f"{dir_path}/{self.__resource_dir}"
-        self.lut_model_py = f"{self.resource_dir}{self.__library_model_py}"
-        self.single_circuit_model = f"{self.resource_dir}{self.__single_circuit_model_py}"
+        #self.lut_model_py = f"{self.resource_dir}{self.__library_model_dict_py}"
+        #self.single_circuit_model = f"{self.resource_dir}{self.__single_circuit_model_dict_py}"
         self.helper = helper
         self.problem = problem
         self.design_name = design_name
@@ -40,48 +41,40 @@ class ALSArithModel:
         self.pis_weights = [{f"{pi.str()}[{i}]": signal_weights[f"{pi.str()}[{i}]"] for i in range(w.width)} for pi, w in self.wires["PI"].items()]
         for po, w in self.wires["PO"].items():
             self.po_weights = { f"{po.str()}[{i}]": signal_weights[f"{po.str()}[{i}]"] for i in range(w.width)}
-    
-    def generate_library(self, top_module, pareto_set, destination, use_float):
-        items = {"top_module" : top_module,	"lut" : {} } | { f"operand{i+1}" : k.str()[1:] for i, k in zip(range(2), self.wires["PI"].keys())}
-        for n, c in enumerate(pareto_set):
-            print(f"Generating model {n}/{len(pareto_set)}")
-            configuration = self.problem.matter_configuration(c)
-            computed_circuit_output = self.problem.get_outputs(configuration)
-            model = self.get_lut_for_variant(computed_circuit_output, use_float)
-            for k, v in model.items():
-                if k not in items["lut"].keys():
-                    items["lut"][k] = []
-                items["lut"][k].append(v)
-        template_render(self.resource_dir, self.__library_model_py, items, destination)
   
-    def generate_single_circuits(self, top_module, pareto_set, destination, use_float):
+    def generate(self, top_module, pareto_set, destination, as_dict):
         items = {"top_module" : top_module,	"lut" : {} } | { f"operand{i+1}" : k.str()[1:] for i, k in zip(range(2), self.wires["PI"].keys())}
-        for n, c in enumerate(pareto_set):
-            print(f"Generating model {n}/{len(pareto_set)}")
+        for n, c in enumerate(tqdm(pareto_set)):
             configuration = self.problem.matter_configuration(c)
-            computed_circuit_output = self.problem.get_outputs(configuration)
-            model = self.get_lut_for_variant(computed_circuit_output, use_float)
-            items["lut"] = model
-            template_render(self.resource_dir, self.__single_circuit_model_py, items, f"{destination}/variant_{n:05d}.py")
+            computed_circuit_output, _ = self.problem.get_outputs(configuration)
+            model, signed, offset_op1, offset_op2 = self.get_lut_for_variant_as_dict(computed_circuit_output) if as_dict else self.get_lut_for_variant_as_mat(computed_circuit_output)
+            items["lut"] = model if as_dict else model.tolist()
+            items["signed"] = signed
+            items["offset1"] = offset_op1
+            items["offset2"] = offset_op2
+            template_render(self.resource_dir, self.__single_circuit_model_dict_py if as_dict else self.__single_circuit_model_mat_py, items, f"{destination}/variant_{n:05d}.py")
   
         
-    def get_lut_for_variant(self, computed_circuit_outputs, use_float):
-        if use_float:
-            return {
-                (
-                    bool_to_value({k : i for k, i in o["i"].items() if k in self.pis_weights[0] }, self.pis_weights[0]), 
-                    bool_to_value({k : i for k, i in o["i"].items() if k in self.pis_weights[1] }, self.pis_weights[1])
-                ) 
-                : 
-                bool_to_value(o["a"], self.po_weights) for o in computed_circuit_outputs 
-            }
-        else:
-            return {
+    def get_lut_for_variant_as_dict(self, computed_circuit_outputs):
+        signed = np.min(list(self.pis_weights[0].values())) < 0 or np.min(list(self.pis_weights[1].values())) < 0 or np.min(list(self.po_weights.values())) < 0
+        return {
                 (
                     int(bool_to_value({k : i for k, i in o["i"].items() if k in self.pis_weights[0] }, self.pis_weights[0])), 
                     int(bool_to_value({k : i for k, i in o["i"].items() if k in self.pis_weights[1] }, self.pis_weights[1]))
                 )
                 : 
                 int(bool_to_value(o["a"], self.po_weights)) for o in computed_circuit_outputs 
-            }
+        }, signed, 0, 0
         
+
+    def get_lut_for_variant_as_mat(self, computed_circuit_outputs):
+        signed = np.min(list(self.pis_weights[0].values())) < 0 or np.min(list(self.pis_weights[1].values())) < 0 or np.min(list(self.po_weights.values())) < 0
+        result = np.zeros((2**len(self.pis_weights[0]), 2**len(self.pis_weights[1])), dtype = int)
+        offset_op1 = 2**(len(self.pis_weights[0])-1)-1 if signed else 0
+        offset_op2 = 2**(len(self.pis_weights[1])-1)-1 if signed else 0
+        for o in computed_circuit_outputs:
+            a = int(bool_to_value({ k : i for k, i in o["i"].items() if k in self.pis_weights[0] }, self.pis_weights[0]))
+            b = int(bool_to_value({ k : i for k, i in o["i"].items() if k in self.pis_weights[1] }, self.pis_weights[1]))
+            r = int(bool_to_value(o["a"], self.po_weights))
+            result[a + offset_op1 if signed else a][b + offset_op2 if signed else b] = r
+        return result, signed, offset_op1, offset_op2
