@@ -5,4 +5,7 @@ Please, check it out at https://github.com/SalvatoreBarone/pyALS
 
 def {{items["top_module"]}}({{items["operand1"]}}, {{items["operand2"]}}):
 	model = {{items["lut"]}}
-	return model[{{items["operand1"]}}, {{items["operand2"]}}]
+	try:
+		return model[{{items["operand1"]}}, {{items["operand2"]}}]
+	except KeyError:
+		return {{items["operand1"]}} * {{items["operand2"]}}

@@ -22,7 +22,7 @@ from tqdm import tqdm
 from src.MOP import *
 from src.stats import *
 from src.ConfigParser import *
-from src.ALSArithModel import *
+from src.PyModelArithInt import *
 from src.IADatasetGenerator import *
 from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, check_for_optional_file, hamming, synthesize_at_dist, synthesize
 
@@ -70,7 +70,7 @@ def elaborate(configfile, outfile):
     OUTFILE is the name of the file where the circuit graph will be saved
     """
     configuration = ConfigParser(configfile)
-    check_for_file(configuration.lut_cache)
+    check_for_file(configuration.als_conf.lut_cache)
     helper = YosysHelper()
     helper.load_ghdl()
     helper.read_sources(configuration.source_hdl, configuration.top_module)
@@ -92,14 +92,14 @@ def es_synth(configfile):
     CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
     """
     configuration = ConfigParser(configfile)
-    check_for_file(configuration.lut_cache)
+    check_for_file(configuration.als_conf.lut_cache)
     helper = YosysHelper()
     helper.load_ghdl()
     helper.read_sources(configuration.source_hdl, configuration.top_module)
     helper.prep_design(configuration.als_conf.cut_size)
     luts_set = helper.get_luts_set()
     print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
     print("Done!")
 
 
@@ -114,7 +114,7 @@ def als(configfile, store):
     CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
     """
     configuration = ConfigParser(configfile)
-    check_for_file(configuration.lut_cache)
+    check_for_file(configuration.als_conf.lut_cache)
     
     if configuration.error_conf.dataset is not None:
         check_for_file(configuration.error_conf.dataset)
@@ -138,7 +138,7 @@ def als(configfile, store):
         print("Output-weight parsing completed successfully")
     helper.save_design("original")
     print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
     print("Catalog generation completed.")
     
     print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
@@ -178,7 +178,7 @@ def generate(configfile):
     CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
     """
     configuration = ConfigParser(configfile)
-    check_for_file(configuration.lut_cache)
+    check_for_file(configuration.als_conf.lut_cache)
     if configuration.output_dir != ".":
         mkpath(configuration.output_dir)
     check_for_file(f"{configuration.output_dir}/final_archive.json")
@@ -191,7 +191,7 @@ def generate(configfile):
     print("Graph generation completed")
     helper.save_design("original")
     print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
     print("Catalog generation completed.")
     print("Reading the Pareto front.")
     problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
@@ -209,9 +209,8 @@ def generate(configfile):
 @click.command("pymodels")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.argument('outfile', type=click.Path(dir_okay=True))
-@click.option("-f", "--usefloat", is_flag = True, help = "Enables using the floating-point representation for look-up tables")
-@click.option("-l", "--library", is_flag = True, help = "Generate a single wrapper for each of the variants.")
-def get_model(configfile, outfile, usefloat, library):
+@click.option("-d", "--dictbased", is_flag = True, help = "Generate a dictionary-based implementation for each of the variants.")
+def get_model(configfile, outfile, dictbased):
     """
     Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations.
     You can select which models to be generated using the available options.
@@ -221,7 +220,7 @@ def get_model(configfile, outfile, usefloat, library):
     OUTFILE is the path of the output python implementation (either single file or directory)
     """
     configuration = ConfigParser(configfile)
-    check_for_file(configuration.lut_cache)
+    check_for_file(configuration.als_conf.lut_cache)
     check_for_file(f"{configuration.output_dir}/final_archive.json")
     helper = YosysHelper()
     helper.load_ghdl()
@@ -236,7 +235,7 @@ def get_model(configfile, outfile, usefloat, library):
     graph.validate_po_weights(configuration.weights)
     helper.save_design("original")
     print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time....")
-    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
     print("Catalog generation completed.")
     # Forcing the MOP to generate exhaustive test patterns
     configuration.error_conf.dataset = None
@@ -248,16 +247,11 @@ def get_model(configfile, outfile, usefloat, library):
     pareto_set = optimizer.pareto_set()
     print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
     print("Performing model generation...")
-    generator = ALSArithModel(helper, problem, configuration.weights)
-    if library:
-        if not outfile.endswith(".py"):
-            outfile = f"{os.path.splitext(outfile)[0]}.py"
-        generator.generate_library(configuration.top_module, pareto_set, outfile, usefloat)
-    else:
-        outfile = os.path.splitext(outfile)[0]
-        mkpath(outfile)
-        rm_old_implementation(outfile, ".py")
-        generator.generate_single_circuits(configuration.top_module, pareto_set, outfile, usefloat)
+    generator = PyModelArithInt(helper, problem, configuration.weights)
+    outfile = os.path.splitext(outfile)[0]
+    mkpath(outfile)
+    rm_old_implementation(outfile, ".py")
+    generator.generate(configuration.top_module, pareto_set, outfile, dictbased)
     print(f"All done! Take a look at {outfile}!")
 
 @click.command("metrics")
@@ -272,7 +266,7 @@ def fitnesses(configfile, outfile):
     OUTFILE is the csv output file containing all the fitness values for each of the entries of the Pareto front
     """
     configuration = ConfigParser(configfile)
-    check_for_file(configuration.lut_cache)
+    check_for_file(configuration.als_conf.lut_cache)
     if configuration.output_dir != ".":
         mkpath(configuration.output_dir)
     check_for_file(f"{configuration.output_dir}/final_archive.json")
@@ -289,7 +283,7 @@ def fitnesses(configfile, outfile):
         print("Output-weight parsing completed successfully")
     helper.save_design("original")
     print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
     print("Catalog generation completed.")
     
     # Ignoring configurations for error and hardware metrics
@@ -392,7 +386,7 @@ def random_dataset(configfile, outfile, vectors):
         print(f"Warning: {outfile} renamed as {outfile}.json")
         outfile = f"{outfile}.json"
     configuration = ConfigParser(configfile)
-    check_for_file(configuration.lut_cache)
+    check_for_file(configuration.als_conf.lut_cache)
     if configuration.output_dir != ".":
         mkpath(configuration.output_dir)
     helper = YosysHelper()
@@ -407,7 +401,7 @@ def random_dataset(configfile, outfile, vectors):
         output_weights = graph.validate_po_weights(configuration.weights)
         print("Output-weight parsing completed successfully")
     print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
     print("Catalog generation completed.")
     #print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
     # Forcing the generation of a new random dataset
