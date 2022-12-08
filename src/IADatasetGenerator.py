@@ -17,12 +17,14 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 import random, json, sys, numpy as np, matplotlib.pyplot as plt
 from fixedpoint import FixedPoint
 from pyalslib import flatten
+from .Logger import Logger
 class IADatasetGenerator:
     def __init__(self, yosis_helper, profiledvalues, alpha, freq, minv, name, 
         hist = "occurrence_frequency.pdf", 
         nhist = "normalized_occurrence_frequency.pdf", 
         boxp = "occurrence_frequency_boxplot.pdf",
         cov = "coverage_of_values.pdf",
+        report = "report.txt",
         out = "generated_dataset.csv"):
         """ 
         Creates a new generator
@@ -37,6 +39,7 @@ class IADatasetGenerator:
         param boxp		Path for the generated coverage plot for occurrence frequency ov provided profiled data
         param cov		Path for the coverage plot
         param csv		Path for the generated dataset
+        param report    Report file
         """
         self.helper = yosis_helper
         self.profiledvalues = profiledvalues
@@ -49,6 +52,8 @@ class IADatasetGenerator:
         self.boxp = boxp
         self.cov = cov
         self.out = out
+        self.report = report
+        
 
     def get_data(self):
         data = [] 
@@ -63,6 +68,7 @@ class IADatasetGenerator:
         return data
 
     def generate(self):
+        sys.stdout = Logger(self.report)
         data = self.get_data()
         # Computing the hystogram of utilization of each int8-value a weight
         hystogram = {}
@@ -95,22 +101,19 @@ class IADatasetGenerator:
         # computing nbits for the profiled input
         profiled_nbits = PIs["Profiled"][0][1]
         non_profiled_nbits = sum(i[1] for i in PIs["Non-Profiled"])
-
+        print(f"Profiled bits: {profiled_nbits}, non profiled bits: {non_profiled_nbits}")
         h_range = sorted(hystogram.keys())
         total_weights = sum(hystogram.values())
         normalized_frequency = [hystogram[i] / total_weights for i in h_range]
-
+        signed = np.min(list(h_range)) < 0
         # conputing the suggested alpha
         suggested_alpha = (2 ** non_profiled_nbits) / np.max(normalized_frequency)
-
         # printing some stats
         print(f"Freq. (min, mean, max): {np.min(normalized_frequency)}, {np.mean(normalized_frequency)}, {np.max(normalized_frequency)}\
                 \nFreq. (Q1, Q2, Q3): {np.quantile(normalized_frequency, .25)}, {np.quantile(normalized_frequency, .5)}, {np.quantile(normalized_frequency, .75)}\
                 \n\nSuggested alpha (max, Q2, Q3): {suggested_alpha} {(2 ** non_profiled_nbits) / np.quantile(normalized_frequency, .50)} {(2 ** non_profiled_nbits) / np.quantile(normalized_frequency, .75)}.")
-
         if self.freq is not None:
             self.alpha = (2 ** non_profiled_nbits) / self.freq
-
         print(f"Generating dataset with alpha = {self.alpha}")
         nvec = 0
         dataset = []
@@ -128,18 +131,15 @@ class IADatasetGenerator:
             nvec += n_vectors
 
             # generating the complete input space B^m
-            input_set = range(int(-2 ** (non_profiled_nbits - 1)), int(+2 ** (non_profiled_nbits - 1) - 1))
+            input_set = range(int(-2 ** (non_profiled_nbits - 1)), int(+2 ** (non_profiled_nbits - 1) - 1)) if signed else range(int(2 ** non_profiled_nbits-1))
 
             # generating X_v from B^m
             if n_vectors == int(2 ** non_profiled_nbits):
                 test_vectors = list(input_set)
             else:
                 test_vectors = random.sample(input_set, n_vectors)
-
-            dataset.extend((FixedPoint(a, signed=True, m=profiled_nbits, n=0), FixedPoint(b, signed=True, m=non_profiled_nbits, n=0)) for b in test_vectors)
-
+            dataset.extend((FixedPoint(a, signed=signed, m=profiled_nbits, n=0), FixedPoint(b, signed=signed, m=non_profiled_nbits, n=0)) for b in test_vectors)
         print("Done!")
-
         rho = list(coverage.values())
         print(f"\nDataset coverage is {100 * nvec / (2 ** (2 * non_profiled_nbits))}%.\
                 \nVector coverage (min, mean, max): {np.min(rho)}, {np.mean(rho)}, {np.max(rho)}.\

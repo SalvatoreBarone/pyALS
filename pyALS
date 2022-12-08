@@ -437,7 +437,6 @@ def ia_dataset(configfile, profiledvalues, outfile, input, alpha, freq, minv):
     helper.read_sources(configuration.source_hdl, configuration.top_module)
     helper.prep_design(configuration.als_conf.cut_size)
     helper.reverse_splitnets()
-    
     if not outfile.endswith(".csv"):
         print(f"Warning: {outfile} renamed as {outfile}.csv")
         outfile = f"{outfile}.csv"
@@ -446,8 +445,9 @@ def ia_dataset(configfile, profiledvalues, outfile, input, alpha, freq, minv):
     hist = f"{outdir}/occurrence_frequency.pdf"
     nhist = f"{outdir}/normalized_occurrence_frequency.pdf"
     boxp = f"{outdir}/occurrence_frequency_boxplot.pdf"
-    cov = f"{outdir}/coverage_of_values.pdf"   
-    generator = IADatasetGenerator(helper, profiledvalues, alpha, freq, minv, input, hist, nhist, boxp, cov, outfile)
+    cov = f"{outdir}/coverage_of_values.pdf"
+    report = f"{outdir}/report.txt"
+    generator = IADatasetGenerator(helper, profiledvalues, alpha, freq, minv, input, hist, nhist, boxp, cov, report, outfile)
     generator.generate()
     
 
