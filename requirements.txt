@@ -1,3 +1,5 @@
+pyamosa
+pyalslib
 click
 igraph
 z3-solver
