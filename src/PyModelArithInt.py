@@ -71,8 +71,8 @@ class PyModelArithInt:
     def get_lut_for_variant_as_mat(self, computed_circuit_outputs):
         signed = np.min(list(self.pis_weights[0].values())) < 0 or np.min(list(self.pis_weights[1].values())) < 0 or np.min(list(self.po_weights.values())) < 0
         result = np.zeros((2**len(self.pis_weights[0]), 2**len(self.pis_weights[1])), dtype = int)
-        offset_op1 = 2**(len(self.pis_weights[0])-1)-1 if signed else 0
-        offset_op2 = 2**(len(self.pis_weights[1])-1)-1 if signed else 0
+        offset_op1 = 2**(len(self.pis_weights[0])-1) if signed else 0
+        offset_op2 = 2**(len(self.pis_weights[1])-1) if signed else 0
         for o in computed_circuit_outputs:
             a = int(bool_to_value({ k : i for k, i in o["i"].items() if k in self.pis_weights[0] }, self.pis_weights[0]))
             b = int(bool_to_value({ k : i for k, i in o["i"].items() if k in self.pis_weights[1] }, self.pis_weights[1]))
