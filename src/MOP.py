@@ -209,7 +209,7 @@ class MOP(pyamosa.Optimizer.Problem):
         return get_switching(self.matter_configuration([0] * self.n_vars), lut_io_info, self.graph)
 
     def get_ep(self, outputs, weights):
-        rs = sum(o["e"] != o["a"] for o in outputs) / self.error_config.n_vectors
+        rs = sum(o["e"] != o["a"] for o in outputs) / len(outputs)
         if self.error_config.n_vectors != 0:
             return float(np.min([1.0, rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))]))
         else:
