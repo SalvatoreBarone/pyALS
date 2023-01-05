@@ -43,7 +43,7 @@ def git_updater():
     except git.exc.GitCommandError as e:
         print(e)
         print("\n*** Ensure you have access to the internet! ***\n")
-        exit()
+        return False
 
 
 def rm_old_implementation(output_directory, files =  ".v"):
