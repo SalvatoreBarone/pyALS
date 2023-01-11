@@ -152,15 +152,31 @@ class MOP(pyamosa.Optimizer.Problem):
         return lut_io_info
 
     def matter_configuration(self, x):
-        # first, prevent x to be out of range
-        x = list(np.minimum(np.maximum(np.array([0] * self.n_vars), np.array(x)), np.array(self.upper_bound)))        # then, get the corresponding matter configuration
         matter = {}
         for c, l in zip(x, self.graph.get_cells()):
             for e in self.catalog:
                 if e[0]["spec"] == l["spec"]:
-                    matter[l["name"]] = {"dist": c, "spec": e[0]["spec"], "axspec": e[c]["spec"], "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]}
+                    matter[l["name"]] = {
+                        "dist": c, 
+                        "spec": e[0]["spec"],
+                        "axspec": e[c]["spec"],
+                        "gates": e[c]["gates"],
+                        "S": e[c]["S"],
+                        "P": e[c]["P"],
+                        "out_p": e[c]["out_p"],
+                        "out": e[c]["out"],
+                        "depth": e[c]["depth"]}
                 if negate(e[0]["spec"]) == l["spec"]:
-                    matter[l["name"]] = {"dist": c, "spec": negate(e[0]["spec"]), "axspec": negate(e[c]["spec"]), "gates": e[c]["gates"], "S": e[c]["S"], "P": e[c]["P"], "out_p": 1 - e[c]["out_p"], "out": e[c]["out"], "depth": e[c]["depth"]}
+                    matter[l["name"]] = {
+                        "dist": c,
+                        "spec": negate(e[0]["spec"]),
+                        "axspec": negate(e[c]["spec"]),
+                        "gates": e[c]["gates"],
+                        "S": e[c]["S"],
+                        "P": e[c]["P"],
+                        "out_p": 1 - e[c]["out_p"],
+                        "out": e[c]["out"],
+                        "depth": e[c]["depth"]}
         return matter
 
     def plot_labels(self):
