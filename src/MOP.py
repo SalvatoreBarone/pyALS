@@ -153,41 +153,30 @@ class MOP(pyamosa.Optimizer.Problem):
 
     def matter_configuration(self, x):
         matter = {}
-        for i, (c, l) in enumerate(zip(x, self.graph.get_cells())):
+        for c, l in zip(x, self.graph.get_cells()):
             for e in self.catalog:
-                try:
-                    if e[0]["spec"] == l["spec"]:
-                        matter[l["name"]] = {
-                            "dist": c, 
-                            "spec": e[0]["spec"],
-                            "axspec": e[c]["spec"],
-                            "gates": e[c]["gates"],
-                            "S": e[c]["S"],
-                            "P": e[c]["P"],
-                            "out_p": e[c]["out_p"],
-                            "out": e[c]["out"],
-                            "depth": e[c]["depth"]}
-                    if negate(e[0]["spec"]) == l["spec"]:
-                        matter[l["name"]] = {
-                            "dist": c,
-                            "spec": negate(e[0]["spec"]),
-                            "axspec": negate(e[c]["spec"]),
-                            "gates": e[c]["gates"],
-                            "S": e[c]["S"],
-                            "P": e[c]["P"],
-                            "out_p": 1 - e[c]["out_p"],
-                            "out": e[c]["out"],
-                            "depth": e[c]["depth"]}
-                except IndexError as err:
-                    print(err)
-                    print(f"Configuration: {x}")
-                    print(f"Upper bound: {self.upper_bound}")
-                    print(f"Configuration[{i}]: {c}")
-                    print(f"Upper bound[{i}]: {self.upper_bound[i]}")
-                    print(f"Cell: {l}")
-                    print(f"Catalog Entries #: {len(e)}")
-                    print(f"Catalog Entries: {e}")
-                    exit()
+                if e[0]["spec"] == l["spec"]:
+                    matter[l["name"]] = {
+                        "dist": c, 
+                        "spec": e[0]["spec"],
+                        "axspec": e[c]["spec"],
+                        "gates": e[c]["gates"],
+                        "S": e[c]["S"],
+                        "P": e[c]["P"],
+                        "out_p": e[c]["out_p"],
+                        "out": e[c]["out"],
+                        "depth": e[c]["depth"]}
+                if negate(e[0]["spec"]) == l["spec"]:
+                    matter[l["name"]] = {
+                        "dist": c,
+                        "spec": negate(e[0]["spec"]),
+                        "axspec": negate(e[c]["spec"]),
+                        "gates": e[c]["gates"],
+                        "S": e[c]["S"],
+                        "P": e[c]["P"],
+                        "out_p": 1 - e[c]["out_p"],
+                        "out": e[c]["out"],
+                        "depth": e[c]["depth"]}
         return matter
 
     def plot_labels(self):
