@@ -209,10 +209,11 @@ def generate(configfile):
 @click.command("pymodels")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.argument('outfile', type=click.Path(dir_okay=True))
+@click.option("-e", "--exact", is_flag = True, help = "Generates the exact implementation only")
 @click.option("-d", "--dictbased", is_flag = True, help = "Generate a dictionary-based implementation for each of the variants.")
-def get_model(configfile, outfile, dictbased):
+def get_model(configfile, outfile, exact, dictbased):
     """
-    Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations.
+    Generates software models of twp-inputs-one-output arithmetic circuits resulting from the 'als' command, for software simulations.
     You can select which models to be generated using the available options.
 
     CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
@@ -221,7 +222,9 @@ def get_model(configfile, outfile, dictbased):
     """
     configuration = ConfigParser(configfile)
     check_for_file(configuration.als_conf.lut_cache)
-    check_for_file(f"{configuration.output_dir}/final_archive.json")
+    if not exact:
+        check_for_file(f"{configuration.output_dir}/final_archive.json")
+
     helper = YosysHelper()
     helper.load_ghdl()
     helper.read_sources(configuration.source_hdl, configuration.top_module)
@@ -242,10 +245,14 @@ def get_model(configfile, outfile, dictbased):
     configuration.error_conf.n_vectors = 0
     problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
-    print("Reading the Pareto front.")
-    optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
-    pareto_set = optimizer.pareto_set()
-    print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
+    if not exact:
+        print("Reading the Pareto front.")
+        optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
+        pareto_set = optimizer.pareto_set()
+        print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
+    else:
+        print("Generating the fake Pareto front.")
+        pareto_set = [[0] * problem.n_vars]
     print("Performing model generation...")
     generator = PyModelArithInt(helper, problem, configuration.weights)
     outfile = os.path.splitext(outfile)[0]
