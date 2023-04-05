@@ -45,19 +45,22 @@ class ConfigParser:
         
         self.hw_conf = HwConfig(ConfigParser.search_subfield_in_config(configuration, "hardware", "metrics", True))
 
-        self.amosa_conf = pyamosa.Optimizer.Config(
+        self.amosa_conf = pyamosa.Config(
                 archive_hard_limit = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "archive_hard_limit", True)),
                 archive_soft_limit = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "archive_soft_limit", True)),
                 archive_gamma = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "archive_gamma", True)),
                 clustering_max_iterations = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "clustering_iterations", True)),
                 hill_climbing_iterations = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "hill_climbing_iterations", True)),
                 initial_temperature = float(ConfigParser.search_subfield_in_config(configuration, "amosa", "initial_temperature", True)),
-                final_temperature = float(ConfigParser.search_subfield_in_config(configuration, "amosa", "final_temperature", True)),
                 cooling_factor = float(ConfigParser.search_subfield_in_config(configuration, "amosa", "cooling_factor", True)),
                 annealing_iterations = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "annealing_iterations", True)),
                 annealing_strength = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "annealing_strength", True)),
-                early_termination_window = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "early_termination", True)),
                 multiprocessing_enabled = bool(ConfigParser.search_subfield_in_config(configuration, "amosa", "multiprocess_enabled", True)))
+        
+        optimizer_min_temperature = ConfigParser.search_subfield_in_config(configuration, "amosa", "final_temperature", False, 1e-7)
+        optimizer_stop_phy_window = ConfigParser.search_subfield_in_config(configuration, "amosa", "early_termination", False, 20)
+        optimizer_max_duration =    ConfigParser.search_subfield_in_config(configuration, "amosa", "max_duration", False, None)
+        self.termination_criterion = pyamosa.CombinedStopCriterion(optimizer_max_duration, optimizer_min_temperature, optimizer_stop_phy_window)
 
     @staticmethod
     def search_field_in_config(configuration, field, mandatory = True, default_value = None):

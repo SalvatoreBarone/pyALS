@@ -131,7 +131,7 @@ def als(configfile, store):
     if os.path.exists(f"{configuration.output_dir}/final_archive.json"):
         print("Using results from previous runs as a starting point.")
         improve = f"{configuration.output_dir}/final_archive.json"
-    optimizer.run(problem, improve)
+    optimizer.run(problem, termination_criterion = configuration.termination_criterion, improve = improve)
     hours = int(optimizer.duration / 3600)
     minutes = int((optimizer.duration - hours * 3600) / 60)
     print(f"Took {hours} hours, {minutes} minutes")
@@ -584,4 +584,4 @@ cli.add_command(stats)
 cli.add_command(update_the_tool)
 
 if __name__ == '__main__':
-        cli()
+    cli()
