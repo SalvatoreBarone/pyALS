@@ -24,27 +24,7 @@ from src.stats import *
 from src.ConfigParser import *
 from src.PyModelArithInt import *
 from src.IADatasetGenerator import *
-from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, check_for_optional_file, hamming, synthesize_at_dist, synthesize
-
-def git_updater():
-    try:
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        repo = git.Repo(dir_path)
-        repo.remotes.origin.fetch()
-        local_head = repo.heads[0].commit
-        remote_head = repo.remotes.origin.refs[0].commit
-        if remote_head != local_head:
-            print("Updating the tool...")
-            repo.remotes.origin.pull()
-            for submodule in repo.submodules:
-                submodule.update(init = True, recursive = True)
-            return True
-        return False
-    except git.exc.GitCommandError as e:
-        print(e)
-        print("\n*** Ensure you have access to the internet! ***\n")
-        return False
-
+from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, hamming, synthesize_at_dist, synthesize
 
 def rm_old_implementation(output_directory, files =  ".v"):
     for file in os.listdir(output_directory):
@@ -572,6 +552,20 @@ def stats(catalog, gates, power_gates, power_truth, power_truth_k):
     if power_truth_k is not None:
         power_truth_k_boxplot(power_truth_k)
 
+@click.command("update")
+def update_the_tool():
+    "Updates the tool"
+    try:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        repo = git.Repo(dir_path)
+        repo.remotes.origin.fetch()
+        print("Updating the tool...")
+        repo.remotes.origin.pull()
+        for submodule in repo.submodules:
+            submodule.update(init = True, recursive = True)
+    except git.exc.GitCommandError as e:
+        print(e)
+
 
 cli.add_command(randomsplit)
 cli.add_command(template)
@@ -587,10 +581,7 @@ cli.add_command(clean)
 cli.add_command(expand)
 cli.add_command(query)
 cli.add_command(stats)
-
+cli.add_command(update_the_tool)
 
 if __name__ == '__main__':
-    if git_updater():
-        os.execv(sys.argv[0], sys.argv)
-    else:
         cli()
