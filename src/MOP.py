@@ -31,6 +31,7 @@ class MOP(pyamosa.Problem):
         ErrorConfig.Metric.MRE   : "get_mre",
         ErrorConfig.Metric.MSE   : "get_mse",
         ErrorConfig.Metric.MED   : "get_med",
+        ErrorConfig.Metric.ME    : "get_me",
         ErrorConfig.Metric.MRED  : "get_mred",
         ErrorConfig.Metric.RMSED : "get_rmsed",
         ErrorConfig.Metric.VARED : "get_vared"
@@ -199,6 +200,7 @@ class MOP(pyamosa.Problem):
             ErrorConfig.Metric.MRE: "MRE",
             ErrorConfig.Metric.MSE: "MSE",
             ErrorConfig.Metric.MED: "MED",
+            ErrorConfig.Metric.ME: "ME",
             ErrorConfig.Metric.MRED: "MRED",
             ErrorConfig.Metric.RMSED: "RMSED",
             ErrorConfig.Metric.VARED: "VarED"
@@ -222,7 +224,7 @@ class MOP(pyamosa.Problem):
         swc = [o[1] for o in outputs]
         lut_io_info = {}
         for k in swc[0].keys():
-            C = [s[k]["freq"] for s in swc]
+            C = [s[k]["freq"] for s in swc if k in s.keys()]
             lut_io_info[k] = { "spec": swc[0][k]["spec"], "freq" : [sum(x) for x in zip(*C)]}
         return list(flatten(out)), lut_io_info
 
@@ -274,6 +276,9 @@ class MOP(pyamosa.Problem):
 
     def get_med(self, outputs, weights):
         return MOP.get_mxxd(MOP.get_error_hystogram(evaluate_abs_ed(outputs, weights)))
+    
+    def get_me(self, outputs, weights):
+        return MOP.get_mxxd(MOP.get_error_hystogram(evaluate_signed_ed(outputs, weights)))
 
     def get_mred(self, outputs, weights):
         return MOP.get_mxxd(MOP.get_error_hystogram(evaluate_relative_ed(outputs, weights)))

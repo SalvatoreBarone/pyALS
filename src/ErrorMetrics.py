@@ -30,6 +30,7 @@ class ErrorConfig:
         MRED = 8            # Relative mean error distance
         RMSED = 9           # Root Mean Squared Error Distance
         VARED = 10          # Variance of the Error Distance
+        ME = 11             # Mean error
         
     
 
@@ -57,6 +58,7 @@ class ErrorConfig:
             "mre": ErrorConfig.Metric.MRE,
             "mse": ErrorConfig.Metric.MSE,
             "med": ErrorConfig.Metric.MED,
+            "me": ErrorConfig.Metric.ME,
             "mred": ErrorConfig.Metric.MRED,
             "rmsed" : ErrorConfig.Metric.RMSED,
             "vared" : ErrorConfig.Metric.VARED
