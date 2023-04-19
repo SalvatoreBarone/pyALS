@@ -48,7 +48,7 @@ class PyModelArithInt:
             configuration = self.problem.matter_configuration(c)
             computed_circuit_output, _ = self.problem.get_outputs(configuration)
             model, signed, offset_op1, offset_op2 = self.get_lut_for_variant_as_mat(computed_circuit_output)
-            items["top_module"] = f"top_module"
+            items["top_module"] = f"{top_module}"
             items["lut"] = model.tolist()
             items["signed"] = signed
             items["offset1"] = offset_op1
