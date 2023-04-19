@@ -189,7 +189,8 @@ def generate(configfile):
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.argument('outfile', type=click.Path(dir_okay=True))
 @click.option("-e", "--exact", is_flag = True, help = "Generates the exact implementation only")
-def get_model(configfile, outfile, exact):
+@click.option("-a", "--alwann", is_flag = True, help = "Enable the weight-tuning approach. See below.")
+def get_model(configfile, outfile, exact, alwann):
     """
     Generates software models of twp-inputs-one-output arithmetic circuits resulting from the 'als' command, for GPU software simulations.
     You can select which models to be generated using the available options.
@@ -197,6 +198,14 @@ def get_model(configfile, outfile, exact):
     CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
     
     OUTFILE is the path of the output python implementation (either single file or directory)
+    
+    If the "-a" option is enabled, the weight-tuning approach from [1] is used to tune the behavior of the multiplier.
+    
+    [1] Mrazek, Vojtech, Zdenek Vasicek, Lukas Sekanina, Muhammad Abdullah Hanif, e Muhammad Shafique. 
+        "ALWANN: Automatic Layer-Wise Approximation of Deep Neural Network Accelerators without Retraining"
+        2019 IEEE/ACM International Conference on Computer-Aided Design (ICCAD), novembre 2019, 1–8. 
+        https://doi.org/10.1109/ICCAD45719.2019.8942068.
+    
     """
     configuration = ConfigParser(configfile)
     check_for_file(configuration.als_conf.lut_cache)
@@ -232,75 +241,13 @@ def get_model(configfile, outfile, exact):
         print("Generating the fake Pareto front.")
         pareto_set = [[0] * problem.n_vars]
     print("Performing model generation...")
-    generator = PyModelArithInt(helper, problem, configuration.weights)
+    generator = ALWANNPyModelArithInt(helper, problem, configuration.weights) if alwann else PyModelArithInt(helper, problem, configuration.weights)
     outfile = os.path.splitext(outfile)[0]
     mkpath(outfile)
     rm_old_implementation(outfile, ".py")
     generator.generate(configuration.top_module, pareto_set, outfile)
     print(f"All done! Take a look at {outfile}!")
     
-    
-@click.command("alwann")
-@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.argument('outfile', type=click.Path(dir_okay=True))
-@click.option("-e", "--exact", is_flag = True, help = "Generates the exact implementation only")
-def get_alwann_model(configfile, outfile, exact):
-    """
-    Generates software models of two-inputs-one-output arithmetic circuits, for GPU software simulation.
-    The generated models differ from those generated through the pymodels command since the weight-tuning 
-    approach from "Mrazek, Vojtech, Zdenek Vasicek, Lukas Sekanina, Muhammad Abdullah Hanif, e Muhammad Shafique. 
-    «ALWANN: Automatic Layer-Wise Approximation of Deep Neural Network Accelerators without Retraining». 
-    2019 IEEE/ACM International Conference on Computer-Aided Design (ICCAD), novembre 2019, 1–8. 
-    https://doi.org/10.1109/ICCAD45719.2019.8942068." is used to tune the behavior of the multiplier.
-
-    
-    You can select which models to be generated using the available options.
-
-    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-    
-    OUTFILE is the path of the output python implementation (either single file or directory)
-    """
-    configuration = ConfigParser(configfile)
-    check_for_file(configuration.als_conf.lut_cache)
-    if not exact:
-        check_for_file(f"{configuration.output_dir}/final_archive.json")
-
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(configuration.source_hdl, configuration.top_module)
-    helper.prep_design(configuration.als_conf.cut_size)
-    luts_set = helper.get_luts_set()
-    graph = ALSGraph(helper.design)
-    print("Graph generation completed")
-    print("Validading weights for primary input signals")
-    graph.validate_pi_weights(configuration.weights)
-    print("Validading weights for primary output signals")
-    graph.validate_po_weights(configuration.weights)
-    helper.save_design("original")
-    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time....")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-    print("Catalog generation completed.")
-    # Forcing the MOP to generate exhaustive test patterns
-    configuration.error_conf.dataset = None
-    configuration.error_conf.n_vectors = 0
-    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
-    optimizer = pyamosa.Optimizer(configuration.amosa_conf)
-    if not exact:
-        print("Reading the Pareto front.")
-        optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
-        pareto_set = optimizer.pareto_set()
-        print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
-    else:
-        print("Generating the fake Pareto front.")
-        pareto_set = [[0] * problem.n_vars]
-    print("Performing model generation...")
-    generator = ALWANNPyModelArithInt(helper, problem, configuration.weights)
-    outfile = os.path.splitext(outfile)[0]
-    mkpath(outfile)
-    rm_old_implementation(outfile, ".py")
-    generator.generate(configuration.top_module, pareto_set, outfile)
-    print(f"All done! Take a look at {outfile}!")
-
 @click.command("metrics")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.argument('outfile', type=click.Path(dir_okay=True))
@@ -415,6 +362,7 @@ def randomsplit(source, top, splits, outputdir):
                 print(",".join(["1" if assignments[r][p] else "0" for p in PI]))
         sys.stdout = original_stdout
     print("Dataset generation completed")
+
 
 @click.command("random-dataset")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
@@ -636,7 +584,6 @@ cli.add_command(es_synth)
 cli.add_command(als)
 cli.add_command(generate)
 cli.add_command(get_model)
-cli.add_command(get_alwann_model)
 cli.add_command(fitnesses)
 cli.add_command(clean)
 cli.add_command(expand)
