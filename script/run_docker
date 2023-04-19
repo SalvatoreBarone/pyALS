@@ -1,0 +1,2 @@
+#!/bin/bash
+docker run --rm -v $PWD:/root/pyals-dbg -w /root --privileged -it salvatorebarone/pyals-docker-image /bin/zsh

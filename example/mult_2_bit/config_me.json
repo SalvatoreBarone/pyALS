@@ -1,0 +1,46 @@
+{
+    "circuit" : {
+        "sources" : "example/mult_2_bit/mult_2_bit.sv",
+        "top_module" : "mult_2_bit",
+        "io_weights" : {
+            "\\a[0]" : 1,
+            "\\a[1]" : 2,
+            "\\b[0]" : 1,
+            "\\b[1]" : 2,
+            "\\o[0]" : 1,
+            "\\o[1]" : 2,
+            "\\o[2]" : 4,
+            "\\o[3]" : 8
+        }
+    },
+    "output_path" : "mult_2_bit_awce",
+    "als" : {
+        "cache"    : "lut_catalog.db",
+        "cut_size" : 4,
+        "solver"   : "btor",
+        "timeout"  : 60000
+    },
+    "error" : {
+        "metrics"      : ["me"],
+        "thresholds"   : [1e+10],
+        "vectors"      : 0,
+        "_dataset"      : "example/mult_2_bit/dataset.csv"
+    },
+    "hardware" : {
+        "metrics" : ["gates"]
+    },
+    "amosa" : {
+        "archive_hard_limit"       : 10,
+        "archive_soft_limit"       : 20,
+        "archive_gamma"            : 2,
+        "clustering_iterations"    : 300,
+        "hill_climbing_iterations" : 300,
+        "initial_temperature"      : 5,
+        "final_temperature"        : 1e-7,
+        "cooling_factor"           : 0.9,
+        "annealing_iterations"     : 500,
+        "annealing_strength"       : 1,
+        "_early_termination"        : 10,
+        "multiprocess_enabled"     : false
+    }
+}

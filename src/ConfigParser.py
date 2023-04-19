@@ -55,10 +55,13 @@ class ConfigParser:
                 cooling_factor = float(ConfigParser.search_subfield_in_config(configuration, "amosa", "cooling_factor", True)),
                 annealing_iterations = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "annealing_iterations", True)),
                 annealing_strength = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "annealing_strength", True)),
-                multiprocessing_enabled = bool(ConfigParser.search_subfield_in_config(configuration, "amosa", "multiprocess_enabled", True)))
+                multiprocessing_enabled = bool(ConfigParser.search_subfield_in_config(configuration, "amosa", "multiprocess_enabled", True)),
+                hill_climb_checkpoint_file = f"{self.output_dir}/hill_climb_checkpoint.json",
+                minimize_checkpoint_file = f"{self.output_dir}/annealing_checkpoint.json",
+                cache_dir = f"{self.output_dir}/.cache")
         
         optimizer_min_temperature = ConfigParser.search_subfield_in_config(configuration, "amosa", "final_temperature", False, 1e-7)
-        optimizer_stop_phy_window = ConfigParser.search_subfield_in_config(configuration, "amosa", "early_termination", False, 20)
+        optimizer_stop_phy_window = ConfigParser.search_subfield_in_config(configuration, "amosa", "early_termination", False, None)
         optimizer_max_duration =    ConfigParser.search_subfield_in_config(configuration, "amosa", "max_duration", False, None)
         self.termination_criterion = pyamosa.CombinedStopCriterion(optimizer_max_duration, optimizer_min_temperature, optimizer_stop_phy_window)
 
