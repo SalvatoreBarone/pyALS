@@ -42,4 +42,6 @@ class ALWANNPyModelArithInt(PyModelArithInt):
            errors = [ np.sum( [np.abs(result[w_prime + offset_op1 if signed else w_prime][i + offset_op2 if signed else i]  - w * i) for i in inputs]) for w_prime in weights ]
            w_prime = np.argmin(errors)
            mapped_result[w + offset_op1 if signed else w] = result[w_prime - offset_op1 if signed else w_prime]
-        return mapped_result, signed, offset_op1, offset_op2
+        #return mapped_result, signed, offset_op1, offset_op2
+        #! inspectnn performs M(input, weight) indexing of the look-up table implementing a multiplier, thus, mapped result is tranposed
+        return mapped_result.transpose(), signed, offset_op1, offset_op2
