@@ -24,5 +24,7 @@ if [ -z "${catalog}" ] || [ -z "${shared}" ] ; then
     usage
 fi
 
+catalog=$(realpath $catalog)
+shared=$(realpath $shared)
 
 docker run --rm -v $PWD:/root/pyals-dbg -v ${catalog}:/root/lut_catalog.db -v ${shared}:/root/shared -w /root --privileged -it salvatorebarone/pyals-docker-image /bin/zsh
