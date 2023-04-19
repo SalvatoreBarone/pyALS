@@ -35,8 +35,8 @@ class ALWANNPyModelArithInt(PyModelArithInt):
             r = int(bool_to_value(o["a"], self.po_weights))
             result[a + offset_op1 if signed else a][b + offset_op2 if signed else b] = r
                 
-        weights = range (-2**len(self.pis_weights[0]-1) if signed else 0, 2**len(self.pis_weights[0]-1)-1 if signed else 2**len(self.pis_weights[0]) )
-        inputs  = range (-2**len(self.pis_weights[1]-1) if signed else 0, 2**len(self.pis_weights[1]-1)-1 if signed else 2**len(self.pis_weights[1]) )
+        weights = range (-2**(len(self.pis_weights[0])-1) if signed else 0, 2**(len(self.pis_weights[0])-1)-1 if signed else 2**len(self.pis_weights[0]) )
+        inputs  = range (-2**(len(self.pis_weights[1])-1) if signed else 0, 2**(len(self.pis_weights[1])-1)-1 if signed else 2**len(self.pis_weights[1]) )
         for w in weights:
            errors = [ np.sum( np.abs(result[w_prime + offset_op1 if signed else w_prime][i + offset_op2 if signed else i]  - w * i) for i in inputs) for w_prime in weights ]
            w_prime = np.argmin(errors)
