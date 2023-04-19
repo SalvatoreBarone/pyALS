@@ -1,2 +1,28 @@
 #!/bin/bash
-docker run --rm -v $PWD:/root/pyals-dbg -w /root --privileged -it salvatorebarone/pyals-docker-image /bin/zsh
+
+usage() {
+  echo "Usage: $0 -c catalog -s path_to_shared_folder";
+  exit 1;
+}
+
+while getopts "c:s:" o; do
+    case "${o}" in
+        c)
+            catalog=${OPTARG}
+            ;;
+        s)
+            shared=${OPTARG}
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ -z "${catalog}" ] || [ -z "${shared}" ] ; then
+    usage
+fi
+
+
+docker run --rm -v $PWD:/root/pyals-dbg -v ${catalog}:/root/lut_catalog.db -v ${shared}:/root/shared -w /root --privileged -it salvatorebarone/pyals-docker-image /bin/zsh
