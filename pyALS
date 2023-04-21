@@ -242,7 +242,8 @@ def get_model(configfile, outfile, exact, alwann):
         pareto_set = [[0] * problem.n_vars]
     print("Performing model generation...")
     generator = ALWANNPyModelArithInt(helper, problem, configuration.weights) if alwann else PyModelArithInt(helper, problem, configuration.weights)
-    outfile = os.path.splitext(outfile)[0]
+    #outfile = os.path.splitext(outfile)[0]
+
     mkpath(outfile)
     rm_old_implementation(outfile, ".py")
     generator.generate(configuration.top_module, pareto_set, outfile)
