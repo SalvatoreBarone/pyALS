@@ -240,7 +240,6 @@ def get_model(configfile, outfile, exact, alwann):
     else:
         print("Generating the fake Pareto front.")
         pareto_set = [[0] * problem.n_vars]
-    print("Performing model generation...")
     generator = ALWANNPyModelArithInt(helper, problem, configuration.weights) if alwann else PyModelArithInt(helper, problem, configuration.weights)
     #outfile = os.path.splitext(outfile)[0]
 

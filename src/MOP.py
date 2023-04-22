@@ -19,8 +19,7 @@ from pyalslib import list_partitioning, negate, flatten
 from multiprocessing import cpu_count, Pool
 from .HwMetrics import *
 from .ErrorMetrics import *
-
-
+from tqdm import tqdm
 
 class MOP(pyamosa.Problem):
     error_ffs = {
@@ -136,16 +135,14 @@ class MOP(pyamosa.Problem):
         PI = self.graph.get_pi()
         lut_io_info = {}
         if self.error_config.n_vectors != 0:
-            print(f"Generating {self.error_config.n_vectors} input-vectors for error assessment...")
-            for _ in range(self.error_config.n_vectors):
+            for _ in tqdm(range(self.error_config.n_vectors), desc = f"Generating {self.error_config.n_vectors} input-vectors for error assessment..."):
                 inputs = {i["name"]: bool(random.getrandbits(1)) for i in PI}
                 output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
                 self.samples.append({"input": inputs, "output": output})
         else:
             self.error_config.n_vectors = 2 ** len(PI)
-            print(f"Generating {self.error_config.n_vectors} input-vectors for error assessment...")
             permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
-            for perm in permutations:
+            for perm in tqdm(permutations, desc = f"Generating {self.error_config.n_vectors} input-vectors for error assessment..."):
                 inputs = {i["name"]: p for i, p in zip(PI, perm)}
                 output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
                 self.samples.append({"input": inputs, "output": output})
