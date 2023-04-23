@@ -25,7 +25,8 @@ from src.ConfigParser import *
 from src.PyModelArithInt import *
 from src.ALWANNPyModelArithInt import *
 from src.IADatasetGenerator import *
-from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, hamming, synthesize_at_dist, synthesize
+from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, hamming, synthesize_at_dist, 
+from git import RemoteProgress
 
 def rm_old_implementation(output_directory, files =  ".v"):
     for file in os.listdir(output_directory):
@@ -591,5 +592,41 @@ cli.add_command(query)
 cli.add_command(stats)
 cli.add_command(update_the_tool)
 
+
+def git_updater():
+    try:
+        print("Checking for updates...")
+        restart_needed = False
+        repo = git.Repo(os.path.dirname(os.path.realpath(__file__)))
+        for fetch_info in repo.remotes.origin.fetch(progress=RemoteProgress()):
+            print(f"Updated {fetch_info.ref} to {fetch_info.commit}")
+
+        local_head = repo.heads[0].commit
+        remote_head = repo.remotes.origin.refs[0].commit
+        print(f"Local commit: {local_head}")
+        print(f"Last remote commit: {remote_head}")
+
+        for fetch_info in repo.remotes.origin.pull(repo.heads[0], progress=RemoteProgress()):
+            print(f"Updated {fetch_info.ref} to {fetch_info.commit}")
+            if fetch_info.commit != local_head:
+                restart_needed = True
+                print("Local head moved to {}. The program will be restarted.")
+
+        print("Checking for updates in submodules...")
+        for submodule in repo.submodules:
+            for fetch_info in submodule.update(init = True, recursive = True):
+                print(f"Updated {fetch_info.ref} to {fetch_info.commit}")
+                if fetch_info.commit != local_head:
+                    restart_needed = True
+                    print("Local head moved to {}. The program will be restarted.")
+
+        return restart_needed
+    except git.exc.GitCommandError as e:
+        print(e)
+        return False
+
 if __name__ == '__main__':
-    cli()
+    if git_updater():
+        os.execv(sys.argv[0], sys.argv)
+    else:
+        cli()
