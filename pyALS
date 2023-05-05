@@ -25,7 +25,7 @@ from src.ConfigParser import *
 from src.PyModelArithInt import *
 from src.ALWANNPyModelArithInt import *
 from src.IADatasetGenerator import *
-from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, hamming, synthesize_at_dist, 
+from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, hamming, synthesize_at_dist
 from git import RemoteProgress
 
 def rm_old_implementation(output_directory, files =  ".v"):
@@ -131,7 +131,11 @@ def als(configfile, store):
     if os.path.exists(f"{configuration.output_dir}/final_archive.json"):
         print("Using results from previous runs as a starting point.")
         improve = f"{configuration.output_dir}/final_archive.json"
+    init_t = time.time()
     optimizer.run(problem, termination_criterion = configuration.termination_criterion, improve = improve)
+    dt = time.time() - init_t
+    print(f"AMOSA heuristic completed in {dt} seconds")
+    
     hours = int(optimizer.duration / 3600)
     minutes = int((optimizer.duration - hours * 3600) / 60)
     print(f"Took {hours} hours, {minutes} minutes")
@@ -146,6 +150,7 @@ def als(configfile, store):
     print("Performing AIG-rewriting.")
     rewriter = ALSRewriter(helper, problem)
     rewriter.generate_hdl(pareto_set, configuration.output_dir)
+    print("Modifiche")
     print(f"All done! Take a look at {configuration.output_dir}!")
 
 
