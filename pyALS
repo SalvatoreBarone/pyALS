@@ -19,6 +19,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 import sys, os, click, git
 from distutils.dir_util import mkpath
 from tqdm import tqdm
+from multiprocessing import cpu_count
 from src.MOP import *
 from src.stats import *
 from src.ConfigParser import *
@@ -66,13 +67,16 @@ def elaborate(configfile, outfile):
 
 @click.command("es")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-def es_synth(configfile):
+@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
+def es_synth(configfile, ncpus):
     """
     Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and
     exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
 
     CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
     """
+    if ncpus is None:
+        ncpus = cpu_count()
     configuration = ConfigParser(configfile)
     check_for_file(configuration.als_conf.lut_cache)
     helper = YosysHelper()
@@ -80,7 +84,7 @@ def es_synth(configfile):
     helper.read_sources(configuration.source_hdl, configuration.top_module)
     helper.prep_design(configuration.als_conf.cut_size)
     luts_set = helper.get_luts_set()
-    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
+    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time.")
     ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
     print("Done!")
 
@@ -88,7 +92,8 @@ def es_synth(configfile):
 @click.command("als")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.option("--store", type=str, help = "Store the random vectors adopted for error estimation on file, for further use.", default = None)
-def als(configfile, store):
+@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
+def als(configfile, store, ncpus):
     """
     Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
     cuts, design space exploration and rewriting.
@@ -107,6 +112,9 @@ def als(configfile, store):
         while os.path.exists(os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")):
             count += 1
         store = os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")
+    if ncpus is None:
+        ncpus = cpu_count()
+    
     helper = YosysHelper()
     helper.load_ghdl()
     helper.read_sources(configuration.source_hdl, configuration.top_module)
@@ -119,12 +127,11 @@ def als(configfile, store):
         output_weights = graph.validate_po_weights(configuration.weights)
         print("Output-weight parsing completed successfully")
     helper.save_design("original")
-    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, cpu_count())
+    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time.")
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
     print("Catalog generation completed.")
-    
-    print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store)
+    print(f"Performing AMOSA heuristic using {ncpus} threads. Please wait patiently. This may take time.")
+    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
 
     improve = None
@@ -156,6 +163,7 @@ def als(configfile, store):
 
 @click.command('generate')
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
 def generate(configfile):
     """
     Performs the rewriting step of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command
@@ -166,6 +174,8 @@ def generate(configfile):
     check_for_file(configuration.als_conf.lut_cache)
     if configuration.output_dir != ".":
         mkpath(configuration.output_dir)
+    if ncpus is None:
+        ncpus = cpu_count()
     check_for_file(f"{configuration.output_dir}/final_archive.json")
     helper = YosysHelper()
     helper.load_ghdl()
@@ -175,11 +185,11 @@ def generate(configfile):
     graph = ALSGraph(helper.design)
     print("Graph generation completed")
     helper.save_design("original")
-    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time.")
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
     print("Catalog generation completed.")
     print("Reading the Pareto front.")
-    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
+    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
     optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", problem.plot_labels())
@@ -196,7 +206,8 @@ def generate(configfile):
 @click.argument('outfile', type=click.Path(dir_okay=True))
 @click.option("-e", "--exact", is_flag = True, help = "Generates the exact implementation only")
 @click.option("-a", "--alwann", is_flag = True, help = "Enable the weight-tuning approach. See below.")
-def get_model(configfile, outfile, exact, alwann):
+@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
+def get_model(configfile, outfile, exact, alwann, ncpus):
     """
     Generates software models of twp-inputs-one-output arithmetic circuits resulting from the 'als' command, for GPU software simulations.
     You can select which models to be generated using the available options.
@@ -217,6 +228,8 @@ def get_model(configfile, outfile, exact, alwann):
     check_for_file(configuration.als_conf.lut_cache)
     if not exact:
         check_for_file(f"{configuration.output_dir}/final_archive.json")
+    if ncpus is None:
+        ncpus = cpu_count()
 
     helper = YosysHelper()
     helper.load_ghdl()
@@ -230,13 +243,13 @@ def get_model(configfile, outfile, exact, alwann):
     print("Validading weights for primary output signals")
     graph.validate_po_weights(configuration.weights)
     helper.save_design("original")
-    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time....")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time....")
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
     print("Catalog generation completed.")
     # Forcing the MOP to generate exhaustive test patterns
     configuration.error_conf.dataset = None
     configuration.error_conf.n_vectors = 0
-    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None)
+    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     if not exact:
         print("Reading the Pareto front.")
@@ -257,7 +270,8 @@ def get_model(configfile, outfile, exact, alwann):
 @click.command("metrics")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.argument('outfile', type=click.Path(dir_okay=True))
-def fitnesses(configfile, outfile):
+@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
+def fitnesses(configfile, outfile, ncpus):
     """
     Computes the all the builtin metrics (both error and hardware) for points coming from a given Pareto front.
 
@@ -269,6 +283,8 @@ def fitnesses(configfile, outfile):
     check_for_file(configuration.als_conf.lut_cache)
     if configuration.output_dir != ".":
         mkpath(configuration.output_dir)
+    if ncpus is None:
+        ncpus = cpu_count()
     check_for_file(f"{configuration.output_dir}/final_archive.json")
     helper = YosysHelper()
     helper.load_ghdl()
@@ -282,8 +298,8 @@ def fitnesses(configfile, outfile):
         output_weights = graph.validate_po_weights(configuration.weights)
         print("Output-weight parsing completed successfully")
     helper.save_design("original")
-    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time.")
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
     print("Catalog generation completed.")
     
     # Ignoring configurations for error and hardware metrics
@@ -296,7 +312,7 @@ def fitnesses(configfile, outfile):
     hw_conf = HwConfig(list(HwConfig.get_hw_metrics().keys()))
     
     print("Reading the Pareto front.")
-    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, None)
+    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, None, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
     print("Computing the full characterization of the Pareto front. Please wait...")

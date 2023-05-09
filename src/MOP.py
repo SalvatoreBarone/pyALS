@@ -41,7 +41,7 @@ class MOP(pyamosa.Problem):
         HwConfig.Metric.SWITCHING:  get_switching
     }
 
-    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, dataset_outfile):
+    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, dataset_outfile, ncpus):
         self.top_module = top_module
         self.graph = graph
         self.output_weights = output_weights
@@ -56,6 +56,7 @@ class MOP(pyamosa.Problem):
             self.store_dataset(dataset_outfile)
         else:
             lut_io_info = self.load_dataset()
+        self.ncpus = ncpus
         self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
         self.baseline_and_gates = self.get_baseline_gates(None)
@@ -217,7 +218,7 @@ class MOP(pyamosa.Problem):
         for a in self._args:
             a[2] = configuration
         with Pool(self.ncpus) as pool:
-            outputs = pool.starmap(evaluate_output, self._args)
+           outputs = pool.starmap(evaluate_output, self._args)
         out = [o[0] for o in outputs]
         swc = [o[1] for o in outputs]
         lut_io_info = {}
