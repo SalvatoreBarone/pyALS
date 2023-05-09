@@ -42,7 +42,6 @@ class MOP(pyamosa.Problem):
     }
 
     def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, dataset_outfile):
-        print("##############################################################")
         self.top_module = top_module
         self.graph = graph
         self.output_weights = output_weights
@@ -215,29 +214,10 @@ class MOP(pyamosa.Problem):
         return [len(e) - 1 for c in [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()] for e in self.catalog if e[0]["spec"] == c["spec"] or negate(e[0]["spec"]) == c["spec"] ]
 
     def get_outputs(self, configuration):
-
-        if cpu_count() > 2:
-            n_cpu = cpu_count() - 2
-        else:
-            n_cpu = cpu_count()
         for a in self._args:
             a[2] = configuration
-        time_v1 = 0
-        time_v2 = 0
-        
-        with Pool(n_cpu) as pool:
-            #dt = time.time()
-            #outputs = pool.starmap(evaluate_output, self._args)
-            #time_v1 += time.time() - dt
-            #dt = time.time()
-            outputs = pool.starmap(evaluate_output_v2, self._args)
-            #time_v2 += time.time() - dt
-
-        #print(f"Time v1: {time_v1}")
-        #print(f"Time v2: {time_v2}")
-        #print(f"Speedup: {time_v1 / time_v2}")
-        #print(outputs==outputs_v2)
-
+        with Pool(self.ncpus) as pool:
+            outputs = pool.starmap(evaluate_output, self._args)
         out = [o[0] for o in outputs]
         swc = [o[1] for o in outputs]
         lut_io_info = {}

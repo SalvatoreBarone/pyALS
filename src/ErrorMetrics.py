@@ -84,7 +84,6 @@ def evaluate_output(graph, samples, configuration):
     outputs = []
     for s in samples:
         ax_output, lut_io_info = graph.evaluate(s["input"], lut_io_info, configuration)
-
         outputs.append({"i" : s["input"], "e" : s["output"], "a" : ax_output })
     return outputs, lut_io_info
 
@@ -93,7 +92,6 @@ def evaluate_output_v2(graph, samples, configuration):
     outputs = []
     for s in samples:
         ax_output, lut_io_info = graph.evaluate_v2(s["input"], lut_io_info, configuration)
-        
         outputs.append({"i" : s["input"], "e" : s["output"], "a" : ax_output })
     return outputs, lut_io_info
 

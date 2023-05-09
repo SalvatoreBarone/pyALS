@@ -120,7 +120,7 @@ def als(configfile, store):
         print("Output-weight parsing completed successfully")
     helper.save_design("original")
     print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
+    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, cpu_count())
     print("Catalog generation completed.")
     
     print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")

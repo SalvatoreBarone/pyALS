@@ -27,4 +27,4 @@ fi
 catalog=$(realpath $catalog)
 shared=$(realpath $shared)
 
-docker run --rm -v $PWD:/root/pyals-dbg -v ${catalog}:/root/lut_catalog.db -v ${shared}:/root/shared -w /root --privileged -it salvatorebarone/pyals-docker-image /bin/zsh
+docker run --rm -v $PWD:/user/pyals-dbg  -v /home/ssaa/Git/pyALSlib:/user/pyalslib-dbg -v ${catalog}:/user/lut_catalog.db -v ${shared}:/user/shared -w /user -e COLUMNS="`tput cols`" -e LINES="`tput lines`" -it salvatorebarone/pyals-docker-image /bin/zsh
