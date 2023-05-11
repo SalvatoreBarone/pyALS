@@ -130,15 +130,17 @@ def als(configfile, store, ncpus):
     print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time.")
     lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
     print("Catalog generation completed.")
+    
     print(f"Performing AMOSA heuristic using {ncpus} threads. Please wait patiently. This may take time.")
     problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
-
     improve = None
     if os.path.exists(f"{configuration.output_dir}/final_archive.json"):
         print("Using results from previous runs as a starting point.")
         improve = f"{configuration.output_dir}/final_archive.json"
     init_t = time.time()
+    print("AMOSA termination criterion:")
+    configuration.termination_criterion.info()
     optimizer.run(problem, termination_criterion = configuration.termination_criterion, improve = improve)
     dt = time.time() - init_t
     print(f"AMOSA heuristic completed in {dt} seconds")
