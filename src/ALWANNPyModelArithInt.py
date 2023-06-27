@@ -29,7 +29,7 @@ class ALWANNPyModelArithInt(PyModelArithInt):
         weights = range (-2**(len(self.pis_weights[0])-1) if signed else 0, 2**(len(self.pis_weights[0])-1) if signed else 2**len(self.pis_weights[0]) )
         inputs  = range (-2**(len(self.pis_weights[1])-1) if signed else 0, 2**(len(self.pis_weights[1])-1) if signed else 2**len(self.pis_weights[1]) )
         
-        for w in tqdm(weights, desc = "Performing weight tuning...", leave = False):
+        for w in tqdm(weights, desc = "Performing weight tuning...", leave = False, bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")):
             errors = [ np.sum([np.abs(behavioral_model[w_prime + offset_op1 if signed else w_prime][i + offset_op2 if signed else i]  - w * i) for i in inputs ]) for w_prime in weights ]
             w_prime = np.argmin(errors) - offset_op1 if signed else 0
             alwann_behavior[w + offset_op1 if signed else w] = np.copy(behavioral_model[w_prime + offset_op1 if signed else w_prime])
