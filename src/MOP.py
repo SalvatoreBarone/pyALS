@@ -137,14 +137,14 @@ class MOP(pyamosa.Problem):
         PI = self.graph.get_pi()
         lut_io_info = {}
         if self.error_config.n_vectors != 0:
-            for _ in tqdm(range(self.error_config.n_vectors), desc = f"Generating {self.error_config.n_vectors} input-vectors for error assessment..."):
+            for _ in tqdm(range(self.error_config.n_vectors), desc = f"Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
                 inputs = {i["name"]: bool(random.getrandbits(1)) for i in PI}
                 output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
                 self.samples.append({"input": inputs, "output": output})
         else:
             self.error_config.n_vectors = 2 ** len(PI)
             permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
-            for perm in tqdm(permutations, desc = f"Generating {self.error_config.n_vectors} input-vectors for error assessment..."):
+            for perm in tqdm(permutations, desc = f"Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")):
                 inputs = {i["name"]: p for i, p in zip(PI, perm)}
                 output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
                 self.samples.append({"input": inputs, "output": output})
