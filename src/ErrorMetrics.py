@@ -112,7 +112,12 @@ def evaluate_squared_ed(outputs, weights):
 def evaluate_relative_ed(outputs, weights):
     if weights is None:
         return [0]
-    return [ np.abs (bool_to_value(o["a"], weights) - bool_to_value(o["a"], weights)) / (1+ np.abs(bool_to_value(o["a"], weights))) for o in outputs]
+    err = []
+    for o in outputs:
+        f =  float(bool_to_value(o["e"], weights))
+        axf = float(bool_to_value(o["a"], weights))
+        err.append(np.abs(f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f))
+    return err
 
 
 
