@@ -32,16 +32,6 @@ class ErrorConfig:
         VARED = 10          # Variance of the Error Distance
         ME = 11             # Mean error
         
-    class IAMetric(Enum):
-        MAE = 1             # Input-aware Mean absolute error
-        MRE = 2             # Input-aware Mean relative error
-        MSE = 3             # Input-aware Mean squared error
-        MED = 4             # Input-aware Mean error distance
-        MRED = 5            # Input-aware Relative mean error distance
-        RMSED = 6           # Input-aware Root Mean Squared Error Distance
-        VARED = 7           # Input-aware Variance of the Error Distance
-        ME = 8              # Input-aware Mean error
-
     def __init__(self, metrics, thresholds):
         self.metrics = None
         self.thresholds = thresholds if isinstance(thresholds, (list, tuple)) else [thresholds]
@@ -85,45 +75,8 @@ class ErrorConfig:
         self.function = dynamic_import(metric["module"], metric["function"])
         self.builtin_metric = False
 
-def evaluate_output(graph, samples, configuration):
-    lut_io_info = {}
-    outputs = []
-    for s in samples:
-        ax_output, lut_io_info = graph.evaluate(s["input"], lut_io_info, configuration)
-        outputs.append({"i" : s["input"], "e" : s["output"], "a" : ax_output })
-    return outputs, lut_io_info
-
 def bool_to_value(signal, weights):
     return np.sum([float(weights[o]) * signal[o] for o in weights.keys()])
-
-
-def evaluate_abs_ed(outputs, weights):
-    if weights is None:
-        return [0]
-    return [np.abs( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights) ) for o in outputs]
-
-
-def evaluate_signed_ed(outputs, weights):
-    if weights is None:
-        return [0]
-    return [bool_to_value(o["a"], weights) - bool_to_value(o["e"], weights) for o in outputs]
-
-
-def evaluate_squared_ed(outputs, weights):
-    if weights is None:
-        return [0]
-    return [( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights))**2 for o in outputs]
-
-
-def evaluate_relative_ed(outputs, weights):
-    if weights is None:
-        return [0]
-    err = []
-    for o in outputs:
-        f =  float(bool_to_value(o["e"], weights))
-        axf = float(bool_to_value(o["a"], weights))
-        err.append(np.abs(f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f))
-    return err
 
 
 

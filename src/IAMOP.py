@@ -24,17 +24,9 @@ from .MOP import MOP
 
 class IAMOP(MOP):
     error_ffs = {
-        ErrorConfig.Metric.EPROB : "get_ep",
-        ErrorConfig.Metric.AWCE  : "get_awce",
         ErrorConfig.Metric.MAE   : "get_mae",
-        ErrorConfig.Metric.WRE   : "get_wre",
         ErrorConfig.Metric.MRE   : "get_mre",
-        ErrorConfig.Metric.MSE   : "get_mse",
-        ErrorConfig.Metric.MED   : "get_med",
-        ErrorConfig.Metric.ME    : "get_me",
-        ErrorConfig.Metric.MRED  : "get_mred",
-        ErrorConfig.Metric.RMSED : "get_rmsed",
-        ErrorConfig.Metric.VARED : "get_vared"
+        ErrorConfig.Metric.MSE   : "get_mse"
     }
     hw_ffs = {
         HwConfig.Metric.GATES:      get_gates,
@@ -94,3 +86,39 @@ class IAMOP(MOP):
         for metric in self.hw_config.metrics:
             out["f"].append(self.hw_ffs[metric](configuration, lut_io_info, self.graph))
         return out
+
+    @staticmethod
+    def evaluate_output(graph, samples, configuration):
+        lut_io_info = {}
+        outputs = []
+        for s in samples:
+            ax_output, lut_io_info = graph.evaluate(s["input"], lut_io_info, configuration)
+            outputs.append({"i" : s["input"], "p" : s["prob"], "e" : s["output"], "a" : ax_output })
+        return outputs, lut_io_info
+
+    def get_outputs(self, configuration):
+        for a in self._args:
+            a[2] = configuration
+        with Pool(self.ncpus) as pool:
+           outputs = pool.starmap(IAMOP.evaluate_output, self._args)
+        out = [o[0] for o in outputs]
+        swc = [o[1] for o in outputs]
+        lut_io_info = {}
+        for k in swc[0].keys():
+            C = [s[k]["freq"] for s in swc if k in s.keys()]
+            lut_io_info[k] = { "spec": swc[0][k]["spec"], "freq" : [sum(x) for x in zip(*C)]}
+        return list(flatten(out)), lut_io_info
+
+    def get_mae(self, outputs, weights):
+        return np.sum(np.abs(bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights)) * o["p"] for o in outputs)
+
+    def get_mre(self, outputs, weights):
+        err = []
+        for o in outputs:
+            f =  float(bool_to_value(o["e"], weights))
+            axf = float(bool_to_value(o["a"], weights))
+            err.append( np.abs(f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f) * o["p"])
+        return np.sum(err)
+
+    def get_mse(self, outputs, weights):
+        return np.sum(o["p"] * ( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights))**2 for o in outputs)
