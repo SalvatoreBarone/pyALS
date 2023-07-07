@@ -53,7 +53,6 @@ class ConfigParser:
                 cooling_factor = float(ConfigParser.search_subfield_in_config(configuration, "amosa", "cooling_factor", True)),
                 annealing_iterations = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "annealing_iterations", True)),
                 annealing_strength = int(ConfigParser.search_subfield_in_config(configuration, "amosa", "annealing_strength", True)),
-                multiprocessing_enabled = bool(ConfigParser.search_subfield_in_config(configuration, "amosa", "multiprocess_enabled", True)),
                 hill_climb_checkpoint_file = f"{self.output_dir}/hill_climb_checkpoint.json",
                 minimize_checkpoint_file = f"{self.output_dir}/annealing_checkpoint.json",
                 cache_dir = f"{self.output_dir}/.cache")

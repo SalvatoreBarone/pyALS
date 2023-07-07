@@ -91,7 +91,7 @@ def es_synth(configfile, ncpus):
 
 @click.command("als")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.argument('dataset', type=click.Path(exists=True, dir_okay=False), default = None)
+@click.option('--dataset', type=click.Path(exists=True, dir_okay=False), default = None)
 @click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
 def als(configfile, dataset, ncpus):
     """
@@ -103,8 +103,6 @@ def als(configfile, dataset, ncpus):
     configuration = ConfigParser(configfile)
     check_for_file(configuration.als_conf.lut_cache)
     
-    if configuration.error_conf.dataset is not None:
-        check_for_file(configuration.error_conf.dataset)
     if configuration.output_dir != ".":
         mkpath(configuration.output_dir)
     if ncpus is None:

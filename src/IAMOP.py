@@ -99,8 +99,8 @@ class IAMOP(MOP):
         self.n_vectors = len(samples)
         self.samples = []
         for sample in tqdm(samples, desc = "Evaluating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
-            output, lut_io_info = self.graph.evaluate(sample["input"], lut_io_info)
-            self.samples.append({"i": sample["input"], "p": sample["prob"], "o": output})
+            output, lut_io_info = self.graph.evaluate(sample["i"], lut_io_info)
+            self.samples.append({"i": sample["i"], "p": sample["p"], "o": output})
         return lut_io_info
 
     def get_outputs(self, configuration):
