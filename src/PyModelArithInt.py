@@ -1,5 +1,5 @@
 """
-Copyright 2021-2022 Salvatore Barone <salvatore.barone@unina.it>
+Copyright 2021-2023 Salvatore Barone <salvatore.barone@unina.it>
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -44,7 +44,7 @@ class PyModelArithInt:
   
     def generate(self, top_module, pareto_set, destination):
         items = {"top_module" : top_module,	"lut" : {} } | { f"operand{i+1}" : k.str()[1:] for i, k in zip(range(2), self.wires["PI"].keys())}
-        for n, c in enumerate(tqdm(pareto_set, desc = "Performing model generation...", leave = True, bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"))):
+        for n, c in enumerate(tqdm(pareto_set, desc = "Performing model generation...", leave = True, bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")):
             configuration = self.problem.matter_configuration(c)
             computed_circuit_output, _ = self.problem.get_outputs(configuration)
             model, signed, offset_op1, offset_op2 = self.get_lut_for_variant_as_mat(computed_circuit_output)

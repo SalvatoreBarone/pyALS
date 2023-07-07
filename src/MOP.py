@@ -1,5 +1,5 @@
 """
-Copyright 2021-2022 Salvatore Barone <salvatore.barone@unina.it>
+Copyright 2021-2023 Salvatore Barone <salvatore.barone@unina.it>
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -14,13 +14,13 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import itertools, json, pyamosa, numpy as np, random, copy
+import itertools, pyamosa, numpy as np, copy
 from pyalslib import list_partitioning, negate, flatten
 from multiprocessing import cpu_count, Pool
 from .HwMetrics import *
 from .ErrorMetrics import *
 from tqdm import tqdm
-import time
+
 class MOP(pyamosa.Problem):
     error_ffs = {
         ErrorConfig.Metric.EPROB : "get_ep",
@@ -41,7 +41,7 @@ class MOP(pyamosa.Problem):
         HwConfig.Metric.SWITCHING:  get_switching
     }
 
-    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, dataset_outfile, ncpus):
+    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, ncpus):
         self.top_module = top_module
         self.graph = graph
         self.output_weights = output_weights
@@ -51,11 +51,8 @@ class MOP(pyamosa.Problem):
         self.error_config = error_config
         self.hw_config = hw_config
         self.samples = None
-        if self.error_config.dataset is None:
-            lut_io_info = self.generate_samples()
-            self.store_dataset(dataset_outfile)
-        else:
-            lut_io_info = self.load_dataset()
+        self.n_vectors = 0
+        lut_io_info = self.generate_samples()
         self.ncpus = ncpus
         self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
@@ -72,24 +69,24 @@ class MOP(pyamosa.Problem):
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
         pyamosa.Problem.__init__(self, self.n_vars, [pyamosa.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
 
-    def load_dataset(self):
-        print(f"Reading input data from {self.error_config.dataset} ...")
-        if self.error_config.dataset.endswith(".json"):
-            self.samples = json.load(open(self.error_config.dataset))
-            lut_io_info = {}
-            for s in self.samples:
-                _, lut_io_info = self.graph.evaluate(s["input"], lut_io_info)
-            return lut_io_info
-        print("Done!")
-        return self.read_samples(self.error_config.dataset)
+    # def load_dataset(self):
+    #     print(f"Reading input data from {self.error_config.dataset} ...")
+    #     if self.error_config.dataset.endswith(".json5"):
+    #         self.samples = json5.load(open(self.error_config.dataset))
+    #         lut_io_info = {}
+    #         for s in self.samples:
+    #             _, lut_io_info = self.graph.evaluate(s["input"], lut_io_info)
+    #         return lut_io_info
+    #     print("Done!")
+    #     return self.read_samples(self.error_config.dataset)
 
-    def store_dataset(self, dataset_outfile):
-        if dataset_outfile is not None:
-            if not dataset_outfile.endswith(".json"):
-                dataset_outfile += ".json"
-            print(f"Storing generated random vectors on {dataset_outfile} further use...")
-            with open(dataset_outfile, 'w') as outfile:
-                outfile.write(json.dumps(self.samples))
+    # def store_dataset(self, dataset_outfile):
+    #     if dataset_outfile is not None:
+    #         if not dataset_outfile.endswith(".json5"):
+    #             dataset_outfile += ".json5"
+    #         print(f"Storing generated random vectors on {dataset_outfile} further use...")
+    #         with open(dataset_outfile, 'w') as outfile:
+    #             outfile.write(json5.dumps(self.samples))
 
     def evaluate(self, x, out):
         out["f"] = []
@@ -113,41 +110,35 @@ class MOP(pyamosa.Problem):
             out["f"].append(self.hw_ffs[metric](configuration, lut_io_info, self.graph))
         return out
 
-    def read_samples(self, dataset):
-        self.samples = []
-        PI = self.graph.get_pi()
-        file = open(dataset, "r")
-        header = list(filter(None, file.readline().replace("\n", "").split(",")))
-        assert len(header) == len(PI), f"{dataset}: wrong amount of inputs (header: {len(header)} PI: {len(PI)})"
-        input_dict = {h : [] for h in header}
-        for row in file:
-            input_values = list(filter(None, row.replace("\n", "").split(",")))
-            assert len(input_values) == len(PI), f"{dataset}: wrong amount of inputs"
-            for i, v in zip(input_values, input_dict.values()):
-                v.append(i)
-        lut_io_info = {}
-        for i in range(len(list(input_dict.values())[0])):
-            inputs = {k["name"]: input_dict[k["name"]][i] == '1' for k in PI}
-            output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
-            self.samples.append({"input": inputs, "output": output})
-        return lut_io_info
+    # def read_samples(self, dataset):
+    #     self.samples = []
+    #     PI = self.graph.get_pi()
+    #     file = open(dataset, "r")
+    #     header = list(filter(None, file.readline().replace("\n", "").split(",")))
+    #     assert len(header) == len(PI), f"{dataset}: wrong amount of inputs (header: {len(header)} PI: {len(PI)})"
+    #     input_dict = {h : [] for h in header}
+    #     for row in file:
+    #         input_values = list(filter(None, row.replace("\n", "").split(",")))
+    #         assert len(input_values) == len(PI), f"{dataset}: wrong amount of inputs"
+    #         for i, v in zip(input_values, input_dict.values()):
+    #             v.append(i)
+    #     lut_io_info = {}
+    #     for i in range(len(list(input_dict.values())[0])):
+    #         inputs = {k["name"]: input_dict[k["name"]][i] == '1' for k in PI}
+    #         output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
+    #         self.samples.append({"input": inputs, "output": output})
+    #     return lut_io_info
 
     def generate_samples(self):
         self.samples = []
         PI = self.graph.get_pi()
         lut_io_info = {}
-        if self.error_config.n_vectors != 0:
-            for _ in tqdm(range(self.error_config.n_vectors), desc = f"Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
-                inputs = {i["name"]: bool(random.getrandbits(1)) for i in PI}
-                output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
-                self.samples.append({"input": inputs, "output": output})
-        else:
-            self.error_config.n_vectors = 2 ** len(PI)
-            permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
-            for perm in tqdm(permutations, desc = f"Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")):
-                inputs = {i["name"]: p for i, p in zip(PI, perm)}
-                output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
-                self.samples.append({"input": inputs, "output": output})
+        self.n_vectors = 2 ** len(PI)
+        permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
+        for perm in tqdm(permutations, desc = "Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
+            inputs = {i["name"]: p for i, p in zip(PI, perm)}
+            output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
+            self.samples.append({"input": inputs, "output": output})
         print("Done!")
         return lut_io_info
 
@@ -238,8 +229,8 @@ class MOP(pyamosa.Problem):
 
     def get_ep(self, outputs, weights):
         rs = sum(o["e"] != o["a"] for o in outputs) / len(outputs)
-        if self.error_config.n_vectors != 0:
-            return float(np.min([1.0, rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))]))
+        if self.n_vectors != 0:
+            return float(np.min([1.0, rs + 4.5 / self.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.n_vectors * rs * (1 - rs)))]))
         else:
             return float(rs)
 
