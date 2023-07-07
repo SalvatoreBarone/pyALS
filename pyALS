@@ -21,6 +21,7 @@ from distutils.dir_util import mkpath
 from tqdm import tqdm
 from multiprocessing import cpu_count
 from src.MOP import *
+from src.IAMOP import *
 from src.stats import *
 from src.ConfigParser import *
 from src.PyModelArithInt import *
@@ -90,8 +91,9 @@ def es_synth(configfile, ncpus):
 
 @click.command("als")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
+@click.argument('dataset', type=click.Path(exists=True, dir_okay=False), default = None)
 @click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
-def als(configfile, ncpus):
+def als(configfile, dataset, ncpus):
     """
     Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
     cuts, design space exploration and rewriting.
@@ -125,7 +127,7 @@ def als(configfile, ncpus):
     print("Catalog generation completed.")
     
     print(f"Performing AMOSA heuristic using {ncpus} threads. Please wait patiently. This may take time.")
-    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, ncpus)
+    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, ncpus) if dataset is None else IAMOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, dataset, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     improve = None
     if os.path.exists(f"{configuration.output_dir}/final_archive.json"):
@@ -154,6 +156,9 @@ def als(configfile, ncpus):
     rewriter.generate_hdl(pareto_set, configuration.output_dir)
     print("Modifiche")
     print(f"All done! Take a look at {configuration.output_dir}!")
+
+
+
 
 
 @click.command('generate')

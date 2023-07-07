@@ -205,11 +205,20 @@ class MOP(pyamosa.Problem):
     def get_upper_bound(self):
         return [len(e) - 1 for c in [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()] for e in self.catalog if e[0]["spec"] == c["spec"] or negate(e[0]["spec"]) == c["spec"] ]
 
+    @staticmethod
+    def evaluate_output(graph, samples, configuration):
+        lut_io_info = {}
+        outputs = []
+        for s in samples:
+            ax_output, lut_io_info = graph.evaluate(s["input"], lut_io_info, configuration)
+            outputs.append({"i" : s["input"], "e" : s["output"], "a" : ax_output })
+        return outputs, lut_io_info
+
     def get_outputs(self, configuration):
         for a in self._args:
             a[2] = configuration
         with Pool(self.ncpus) as pool:
-           outputs = pool.starmap(evaluate_output, self._args)
+           outputs = pool.starmap(MOP.evaluate_output, self._args)
         out = [o[0] for o in outputs]
         swc = [o[1] for o in outputs]
         lut_io_info = {}
@@ -233,21 +242,44 @@ class MOP(pyamosa.Problem):
             return float(np.min([1.0, rs + 4.5 / self.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.n_vectors * rs * (1 - rs)))]))
         else:
             return float(rs)
+        
+    @staticmethod
+    def evaluate_abs_ed(outputs, weights):
+        return [np.abs( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights) ) for o in outputs] if weights is not None else [0]
+
+    @staticmethod
+    def evaluate_signed_ed(outputs, weights):
+        return [bool_to_value(o["a"], weights) - bool_to_value(o["e"], weights) for o in outputs] if weights is not None else [0] 
+
+    @staticmethod
+    def evaluate_squared_ed(outputs, weights):
+        return [( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights))**2 for o in outputs] if weights is not None else [0]
+
+    @staticmethod
+    def evaluate_relative_ed(outputs, weights):
+        if weights is None:
+            return [0]
+        err = []
+        for o in outputs:
+            f =  float(bool_to_value(o["e"], weights))
+            axf = float(bool_to_value(o["a"], weights))
+            err.append(np.abs(f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f))
+        return err
 
     def get_awce(self, outputs, weights):
-        return np.max(evaluate_abs_ed(outputs, weights))
+        return np.max(MOP.evaluate_abs_ed(outputs, weights))
 
     def get_mae(self, outputs, weights):
-        return np.mean(evaluate_abs_ed(outputs, weights))
+        return np.mean(MOP.evaluate_abs_ed(outputs, weights))
 
     def get_mre(self, outputs, weights):
-        return np.mean(evaluate_relative_ed(outputs, weights))
+        return np.mean(MOP.evaluate_relative_ed(outputs, weights))
 
     def get_wre(self, outputs, weights):
-        return np.max(evaluate_relative_ed(outputs, weights))
+        return np.max(MOP.evaluate_relative_ed(outputs, weights))
 
     def get_mse(self, outputs, weights):
-        return np.mean(evaluate_squared_ed(outputs, weights))
+        return np.mean(MOP.evaluate_squared_ed(outputs, weights))
 
     @staticmethod
     def get_error_hystogram(error, decimals = 2):
@@ -265,16 +297,16 @@ class MOP(pyamosa.Problem):
         return np.sum([k * v for k, v in hystogram.items()]) / np.sum(list(hystogram.values()))
 
     def get_med(self, outputs, weights):
-        return MOP.get_mxxd(MOP.get_error_hystogram(evaluate_abs_ed(outputs, weights)))
+        return MOP.get_mxxd(MOP.get_error_hystogram(MOP.evaluate_abs_ed(outputs, weights)))
     
     def get_me(self, outputs, weights):
-        return MOP.get_mxxd(MOP.get_error_hystogram(evaluate_signed_ed(outputs, weights)))
+        return MOP.get_mxxd(MOP.get_error_hystogram(MOP.evaluate_signed_ed(outputs, weights)))
 
     def get_mred(self, outputs, weights):
-        return MOP.get_mxxd(MOP.get_error_hystogram(evaluate_relative_ed(outputs, weights)))
+        return MOP.get_mxxd(MOP.get_error_hystogram(MOP.evaluate_relative_ed(outputs, weights)))
 
     def get_rmsed(self, outputs, weights):
-        return np.sqrt(np.mean(evaluate_squared_ed(outputs, weights)))
+        return np.sqrt(np.mean(MOP.evaluate_squared_ed(outputs, weights)))
 
     def get_vared(self, outputs, weights):
-        return np.var(evaluate_signed_ed(outputs, weights))
+        return np.var(MOP.evaluate_signed_ed(outputs, weights))

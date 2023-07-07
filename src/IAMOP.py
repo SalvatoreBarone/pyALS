@@ -24,17 +24,9 @@ from .MOP import MOP
 
 class IAMOP(MOP):
     error_ffs = {
-        ErrorConfig.Metric.EPROB : "get_ep",
-        ErrorConfig.Metric.AWCE  : "get_awce",
         ErrorConfig.Metric.MAE   : "get_mae",
-        ErrorConfig.Metric.WRE   : "get_wre",
         ErrorConfig.Metric.MRE   : "get_mre",
-        ErrorConfig.Metric.MSE   : "get_mse",
-        ErrorConfig.Metric.MED   : "get_med",
-        ErrorConfig.Metric.ME    : "get_me",
-        ErrorConfig.Metric.MRED  : "get_mred",
-        ErrorConfig.Metric.RMSED : "get_rmsed",
-        ErrorConfig.Metric.VARED : "get_vared"
+        ErrorConfig.Metric.MSE   : "get_mse"
     }
     hw_ffs = {
         HwConfig.Metric.GATES:      get_gates,
@@ -42,7 +34,7 @@ class IAMOP(MOP):
         HwConfig.Metric.SWITCHING:  get_switching
     }
     
-    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, ncpus):
+    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, dataset, ncpus):
         self.top_module = top_module
         self.graph = graph
         self.output_weights = output_weights
@@ -54,10 +46,7 @@ class IAMOP(MOP):
         self.ncpus = ncpus
         self.samples = None
         self.n_vectors = 0
-        #TODO read the samples from json/json5 file, besides their probabilities, for input-aware error measurement
-        #The "read_sample" must generate lut_io_info for switching activity estimation
-        
-        
+        lut_io_info = self.load_dataset(dataset)
         self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
         self.baseline_and_gates = self.get_baseline_gates(None)
@@ -77,7 +66,6 @@ class IAMOP(MOP):
         out["f"] = []
         out["g"] = []
         configuration = self.matter_configuration(x)
-        
         outputs, lut_io_info = self.get_outputs(configuration)    
         for m, t in zip(self.error_config.metrics, self.error_config.thresholds):
             out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
@@ -94,3 +82,50 @@ class IAMOP(MOP):
         for metric in self.hw_config.metrics:
             out["f"].append(self.hw_ffs[metric](configuration, lut_io_info, self.graph))
         return out
+
+    @staticmethod
+    def evaluate_output(graph, samples, configuration):
+        lut_io_info = {}
+        outputs = []
+        for s in samples:
+            ax_output, lut_io_info = graph.evaluate(s["i"], lut_io_info, configuration)
+            outputs.append({"i" : s["i"], "p" : s["p"], "e" : s["o"], "a" : ax_output })
+        return outputs, lut_io_info
+
+    def load_dataset(self, dataset):
+        print(f"Reading input data from {dataset} ...")
+        samples = json5.load(open(dataset))
+        lut_io_info = {}
+        self.n_vectors = len(samples)
+        self.samples = []
+        for sample in tqdm(samples, desc = "Evaluating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
+            output, lut_io_info = self.graph.evaluate(sample["input"], lut_io_info)
+            self.samples.append({"i": sample["input"], "p": sample["prob"], "o": output})
+        return lut_io_info
+
+    def get_outputs(self, configuration):
+        for a in self._args:
+            a[2] = configuration
+        with Pool(self.ncpus) as pool:
+           outputs = pool.starmap(IAMOP.evaluate_output, self._args)
+        out = [o[0] for o in outputs]
+        swc = [o[1] for o in outputs]
+        lut_io_info = {}
+        for k in swc[0].keys():
+            C = [s[k]["freq"] for s in swc if k in s.keys()]
+            lut_io_info[k] = { "spec": swc[0][k]["spec"], "freq" : [sum(x) for x in zip(*C)]}
+        return list(flatten(out)), lut_io_info
+
+    def get_mae(self, outputs, weights):
+        return np.sum(np.abs(bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights)) * o["p"] for o in outputs)
+
+    def get_mre(self, outputs, weights):
+        err = []
+        for o in outputs:
+            f =  float(bool_to_value(o["e"], weights))
+            axf = float(bool_to_value(o["a"], weights))
+            err.append( np.abs(f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f) * o["p"])
+        return np.sum(err)
+
+    def get_mse(self, outputs, weights):
+        return np.sum(o["p"] * ( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights))**2 for o in outputs)
