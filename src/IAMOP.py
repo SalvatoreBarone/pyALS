@@ -34,7 +34,7 @@ class IAMOP(MOP):
         HwConfig.Metric.SWITCHING:  get_switching
     }
     
-    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, ncpus):
+    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, dataset, ncpus):
         self.top_module = top_module
         self.graph = graph
         self.output_weights = output_weights
@@ -46,10 +46,7 @@ class IAMOP(MOP):
         self.ncpus = ncpus
         self.samples = None
         self.n_vectors = 0
-        #TODO read the samples from json/json5 file, besides their probabilities, for input-aware error measurement
-        #The "read_sample" must generate lut_io_info for switching activity estimation
-        
-        
+        lut_io_info = self.load_dataset(dataset)
         self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
         self.baseline_and_gates = self.get_baseline_gates(None)
@@ -69,7 +66,6 @@ class IAMOP(MOP):
         out["f"] = []
         out["g"] = []
         configuration = self.matter_configuration(x)
-        
         outputs, lut_io_info = self.get_outputs(configuration)    
         for m, t in zip(self.error_config.metrics, self.error_config.thresholds):
             out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
@@ -92,9 +88,20 @@ class IAMOP(MOP):
         lut_io_info = {}
         outputs = []
         for s in samples:
-            ax_output, lut_io_info = graph.evaluate(s["input"], lut_io_info, configuration)
-            outputs.append({"i" : s["input"], "p" : s["prob"], "e" : s["output"], "a" : ax_output })
+            ax_output, lut_io_info = graph.evaluate(s["i"], lut_io_info, configuration)
+            outputs.append({"i" : s["i"], "p" : s["p"], "e" : s["o"], "a" : ax_output })
         return outputs, lut_io_info
+
+    def load_dataset(self, dataset):
+        print(f"Reading input data from {dataset} ...")
+        samples = json5.load(open(dataset))
+        lut_io_info = {}
+        self.n_vectors = len(samples)
+        self.samples = []
+        for sample in tqdm(samples, desc = "Evaluating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
+            output, lut_io_info = self.graph.evaluate(sample["input"], lut_io_info)
+            self.samples.append({"i": sample["input"], "p": sample["prob"], "o": output})
+        return lut_io_info
 
     def get_outputs(self, configuration):
         for a in self._args:
