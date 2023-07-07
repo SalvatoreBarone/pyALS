@@ -95,10 +95,12 @@ class IAMOP(MOP):
     def load_dataset(self, dataset):
         print(f"Reading input data from {dataset} ...")
         samples = json5.load(open(dataset))
+        PI = set(pi["name"] for pi in self.graph.get_pi())
         lut_io_info = {}
         self.n_vectors = len(samples)
         self.samples = []
         for sample in tqdm(samples, desc = "Evaluating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
+            assert PI == set(sample["i"].keys())
             output, lut_io_info = self.graph.evaluate(sample["i"], lut_io_info)
             self.samples.append({"i": sample["i"], "p": sample["p"], "o": output})
         return lut_io_info
