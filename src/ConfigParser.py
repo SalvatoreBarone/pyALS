@@ -1,5 +1,5 @@
 """
-Copyright 2021-2022 Salvatore Barone <salvatore.barone@unina.it>
+Copyright 2021-2023 Salvatore Barone <salvatore.barone@unina.it>
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -15,7 +15,7 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 
-import json, pyamosa
+import json5, pyamosa
 from pyalslib import ALSConfig
 from .ErrorMetrics import *
 from .HwMetrics import *
@@ -23,7 +23,7 @@ from .HwMetrics import *
 class ConfigParser:
         
     def __init__(self, config_file):
-        configuration = json.load(open(config_file))
+        configuration = json5.load(open(config_file))
 
         self.source_hdl = ConfigParser.search_subfield_in_config(configuration, "circuit", "sources", True)
         self.top_module = ConfigParser.search_subfield_in_config(configuration, "circuit", "top_module", True)
@@ -37,11 +37,9 @@ class ConfigParser:
 
         self.error_conf = ErrorConfig(
                 metrics = ConfigParser.search_subfield_in_config(configuration, "error", "metrics", True),
-                thresholds = ConfigParser.search_subfield_in_config(configuration, "error", "thresholds", True),
-                n_vectors = int(ConfigParser.search_subfield_in_config(configuration, "error", "vectors", True)),
-                dataset = ConfigParser.search_subfield_in_config(configuration, "error", "dataset", False))
+                thresholds = ConfigParser.search_subfield_in_config(configuration, "error", "thresholds", True))
 
-        self.weights = ConfigParser.search_subfield_in_config(configuration, "circuit", "io_weights", self.error_conf.builtin_metric and self.error_conf.metrics in [ErrorConfig.Metric.AWCE, ErrorConfig.Metric.MED])
+        self.weights = ConfigParser.search_subfield_in_config(configuration, "circuit", "io_weights", self.error_conf.builtin_metric and self.error_conf.metrics not in [ErrorConfig.Metric.EPROB])
         
         self.hw_conf = HwConfig(ConfigParser.search_subfield_in_config(configuration, "hardware", "metrics", True))
 

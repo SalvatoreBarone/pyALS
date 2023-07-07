@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Copyright 2021-2022 Salvatore Barone <salvatore.barone@unina.it>
+Copyright 2021-2023 Salvatore Barone <salvatore.barone@unina.it>
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -16,7 +16,7 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 
-import sys, os, click, git
+import sys, os, click, git, time
 from distutils.dir_util import mkpath
 from tqdm import tqdm
 from multiprocessing import cpu_count
@@ -25,7 +25,6 @@ from src.stats import *
 from src.ConfigParser import *
 from src.PyModelArithInt import *
 from src.ALWANNPyModelArithInt import *
-from src.IADatasetGenerator import *
 from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, hamming, synthesize_at_dist
 from git import RemoteProgress
 
@@ -91,9 +90,8 @@ def es_synth(configfile, ncpus):
 
 @click.command("als")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.option("--store", type=str, help = "Store the random vectors adopted for error estimation on file, for further use.", default = None)
 @click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
-def als(configfile, store, ncpus):
+def als(configfile, ncpus):
     """
     Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
     cuts, design space exploration and rewriting.
@@ -107,11 +105,6 @@ def als(configfile, store, ncpus):
         check_for_file(configuration.error_conf.dataset)
     if configuration.output_dir != ".":
         mkpath(configuration.output_dir)
-    if store is None:
-        count = 1
-        while os.path.exists(os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")):
-            count += 1
-        store = os.path.realpath(f"{configuration.output_dir}/random_dataset_{count:05d}.json")
     if ncpus is None:
         ncpus = cpu_count()
     
@@ -132,7 +125,7 @@ def als(configfile, store, ncpus):
     print("Catalog generation completed.")
     
     print(f"Performing AMOSA heuristic using {ncpus} threads. Please wait patiently. This may take time.")
-    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, store, ncpus)
+    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     improve = None
     if os.path.exists(f"{configuration.output_dir}/final_archive.json"):
@@ -312,7 +305,6 @@ def fitnesses(configfile, outfile, ncpus):
         n_vectors = configuration.error_conf.n_vectors,
         dataset = configuration.error_conf.dataset)
     hw_conf = HwConfig(list(HwConfig.get_hw_metrics().keys()))
-    
     print("Reading the Pareto front.")
     problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, None, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
@@ -331,145 +323,6 @@ def fitnesses(configfile, outfile, ncpus):
     sys.stdout = original_stdout
     print(f"All done! Take a look at {outfile}!")
     
-
-@click.command("template")
-@click.option("--source",  type=str, multiple=True, help="specify the input HDL source file")
-@click.option("--top",     type=str, required=True, help="specify the top-module name")
-@click.option("--output",  type=str, required=True, help="Output file.")
-def template(source, top, output):
-    """
-    Generates a CSV file for specifying the input dataset to be used for error assessment
-    """
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(source, top)
-    helper.prep_design(4)
-    graph = ALSGraph(helper.design)
-    print("Graph generation completed")
-    PI = graph.get_pi()
-    original_stdout = sys.stdout
-    row_format = ",".join([i["name"] for i in PI])
-    with open(output, "w") as file:
-        sys.stdout = file
-        print(row_format)
-    sys.stdout = original_stdout
-
-
-@click.command("randomsplit")
-@click.option("--source",  type=str, multiple=True, help="specify the input HDL source file")
-@click.option("--top",     type=str, required=True, help="specify the top-module name")
-@click.option("--splits",  type=int, required=True, help="amount of dataset partitions")
-@click.option("--outputdir",  type=str, required=True, help="output directory")
-def randomsplit(source, top, splits, outputdir):
-    """
-    Split the input-set in N partitions, using random sampling without repetitions.
-    """
-    mkpath(outputdir)
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(source, top)
-    helper.prep_design(4)
-    graph = ALSGraph(helper.design)
-    print("Graph generation completed")
-    PI = graph.get_pi()
-    PI = [i["name"] for i in PI]
-    permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
-    assignments = [dict(zip(PI, perm)) for perm in permutations]
-    random.shuffle(assignments)
-    splitsize = len(assignments) // splits
-    for i in range(splits):
-        original_stdout = sys.stdout
-        with open(f"{outputdir}/split_{i}.csv", "w") as file:
-            sys.stdout = file
-            print(",".join(PI))
-            for r in range(i*splitsize, (i+1)*splitsize):
-                print(",".join(["1" if assignments[r][p] else "0" for p in PI]))
-        sys.stdout = original_stdout
-    print("Dataset generation completed")
-
-
-@click.command("random-dataset")
-@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.argument('outfile', type=click.Path(dir_okay=False))
-@click.option("-v", "--vectors",  type=int, default = None, help="Number of random vectors to be generated.")
-def random_dataset(configfile, outfile, vectors):
-    """
-    Generates a random dataset for the approximation flow.
-
-    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-
-
-    OUTFILE is the path of the generated dataset, in csv format
-    """
-    if not outfile.endswith(".json"):
-        print(f"Warning: {outfile} renamed as {outfile}.json")
-        outfile = f"{outfile}.json"
-    configuration = ConfigParser(configfile)
-    check_for_file(configuration.als_conf.lut_cache)
-    if configuration.output_dir != ".":
-        mkpath(configuration.output_dir)
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(configuration.source_hdl, configuration.top_module)
-    helper.prep_design(configuration.als_conf.cut_size)
-    luts_set = helper.get_luts_set()
-    graph = ALSGraph(helper.design)
-    print("Graph generation completed")
-    output_weights = None
-    if configuration.weights is not None and len(configuration.weights) != 0:
-        output_weights = graph.validate_po_weights(configuration.weights)
-        print("Output-weight parsing completed successfully")
-    print(f"Performing catalog generation using {cpu_count()} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-    print("Catalog generation completed.")
-    #print(f"Performing AMOSA heuristic using {cpu_count()} threads. Please wait patiently. This may take time.")
-    # Forcing the generation of a new random dataset
-    configuration.error_conf.dataset = None
-    if vectors is not None:
-        configuration.error_conf.n_vectors = vectors
-    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, outfile)
-    print(f"Dataset generation completed. Take a look at {outfile}")
-
-
-@click.command("ia-dataset")
-@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.argument('profiledvalues', type=click.Path(exists=True, dir_okay=False))
-@click.argument('outfile', type=click.Path(dir_okay=False))
-@click.option("-i", "--input", type=str, required = True, help="Name of the primary input for which profiled values are provided",)
-@click.option("-a", "--alpha", type=float, help="Proportion factor on the basis of which the random test vectors to be generated, given a profiled value, is determined", default=1)
-@click.option("-f", "--freq", type=float, help="Reference frequency on the basis of which alpha will be derived. When specified, --alpha is ignored.", default=None)
-@click.option("-m", "--minv", type=int, help="Minimum number of random test vectors to be generated, given a profiled value", default=1)
-def ia_dataset(configfile, profiledvalues, outfile, input, alpha, freq, minv):
-    """
-    Generates dataset for input-aware approximation flow, given input profiling in JSON format
-
-    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-
-    PROFILEDVALUES is the path of the file containing the profiled values in JSON
-
-    OUTFILE is the path of the generated dataset, in csv format
-    
-    """
-    configuration = ConfigParser(configfile)
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(configuration.source_hdl, configuration.top_module)
-    helper.prep_design(configuration.als_conf.cut_size)
-    helper.reverse_splitnets()
-    if not outfile.endswith(".csv"):
-        print(f"Warning: {outfile} renamed as {outfile}.csv")
-        outfile = f"{outfile}.csv"
-    outdir = os.path.splitext(outfile)[0]
-    mkpath(outdir)
-    hist = f"{outdir}/occurrence_frequency.pdf"
-    nhist = f"{outdir}/normalized_occurrence_frequency.pdf"
-    boxp = f"{outdir}/occurrence_frequency_boxplot.pdf"
-    cov = f"{outdir}/coverage_of_values.pdf"
-    report = f"{outdir}/report.txt"
-    generator = IADatasetGenerator(helper, profiledvalues, alpha, freq, minv, input, hist, nhist, boxp, cov, report, outfile)
-    generator.generate()
-    
-
 @click.command('clean')
 @click.option('--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
 def clean(catalog):
@@ -598,11 +451,6 @@ def update_the_tool():
     except git.exc.GitCommandError as e:
         print(e)
 
-
-cli.add_command(randomsplit)
-cli.add_command(template)
-cli.add_command(ia_dataset)
-cli.add_command(random_dataset)
 cli.add_command(elaborate)
 cli.add_command(es_synth)
 cli.add_command(als)

@@ -1,5 +1,5 @@
 """
-Copyright 2021-2022 Salvatore Barone <salvatore.barone@unina.it>
+Copyright 2021-2023 Salvatore Barone <salvatore.barone@unina.it>
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -32,13 +32,19 @@ class ErrorConfig:
         VARED = 10          # Variance of the Error Distance
         ME = 11             # Mean error
         
-    
+    class IAMetric(Enum):
+        MAE = 1             # Input-aware Mean absolute error
+        MRE = 2             # Input-aware Mean relative error
+        MSE = 3             # Input-aware Mean squared error
+        MED = 4             # Input-aware Mean error distance
+        MRED = 5            # Input-aware Relative mean error distance
+        RMSED = 6           # Input-aware Root Mean Squared Error Distance
+        VARED = 7           # Input-aware Variance of the Error Distance
+        ME = 8              # Input-aware Mean error
 
-    def __init__(self, metrics, thresholds, n_vectors, dataset = None):
+    def __init__(self, metrics, thresholds):
         self.metrics = None
         self.thresholds = thresholds if isinstance(thresholds, (list, tuple)) else [thresholds]
-        self.n_vectors = n_vectors
-        self.dataset = dataset
         self.function = None
         self.builtin_metric = None
         if isinstance(metrics, (list, tuple, str)):

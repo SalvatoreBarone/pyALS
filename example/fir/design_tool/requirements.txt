@@ -1,5 +1,0 @@
-fixedpoint
-numpy
-matplotlib
-click
-scipy
