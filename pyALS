@@ -162,7 +162,7 @@ def als(configfile, dataset, ncpus):
 @click.command('generate')
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
-def generate(configfile):
+def generate(configfile, ncpus):
     """
     Performs the rewriting step of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command
 
@@ -187,7 +187,7 @@ def generate(configfile):
     lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
     print("Catalog generation completed.")
     print("Reading the Pareto front.")
-    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None, ncpus)
+    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
     optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", problem.plot_labels())
@@ -247,7 +247,7 @@ def get_model(configfile, outfile, exact, alwann, ncpus):
     # Forcing the MOP to generate exhaustive test patterns
     configuration.error_conf.dataset = None
     configuration.error_conf.n_vectors = 0
-    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, None, ncpus)
+    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     if not exact:
         print("Reading the Pareto front.")
@@ -268,8 +268,9 @@ def get_model(configfile, outfile, exact, alwann, ncpus):
 @click.command("metrics")
 @click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
 @click.argument('outfile', type=click.Path(dir_okay=True))
+@click.option('--dataset', type=click.Path(exists=True, dir_okay=False), default = None)
 @click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
-def fitnesses(configfile, outfile, ncpus):
+def fitnesses(configfile, outfile, dataset, ncpus):
     """
     Computes the all the builtin metrics (both error and hardware) for points coming from a given Pareto front.
 
@@ -304,12 +305,10 @@ def fitnesses(configfile, outfile, ncpus):
     metrics = list(ErrorConfig.get_builtin_metrics().keys())
     error_conf = ErrorConfig(
         metrics = list(metrics) if configuration.weights is not None else ["ep"],
-        thresholds = [np.inf] * len(metrics) if configuration.weights is not None else 1,
-        n_vectors = configuration.error_conf.n_vectors,
-        dataset = configuration.error_conf.dataset)
+        thresholds = [np.inf] * len(metrics) if configuration.weights is not None else 1)
     hw_conf = HwConfig(list(HwConfig.get_hw_metrics().keys()))
     print("Reading the Pareto front.")
-    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, None, ncpus)
+    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, ncpus) if dataset is None else IAMOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, dataset, ncpus)
     optimizer = pyamosa.Optimizer(configuration.amosa_conf)
     optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
     print("Computing the full characterization of the Pareto front. Please wait...")
