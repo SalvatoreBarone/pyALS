@@ -26,6 +26,7 @@ class IAMOP(MOP):
     error_ffs = {
         ErrorConfig.Metric.MAE   : "get_mae",
         ErrorConfig.Metric.MRE   : "get_mre",
+        ErrorConfig.Metric.MARE  : "get_mare",
         ErrorConfig.Metric.MSE   : "get_mse"
     }
     hw_ffs = {
@@ -127,6 +128,14 @@ class IAMOP(MOP):
             f =  float(bool_to_value(o["e"], weights))
             axf = float(bool_to_value(o["a"], weights))
             err.append( np.abs(f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f) * o["p"])
+        return np.sum(err)
+    
+    def get_mare(self, outputs, weights):
+        err = []
+        for o in outputs:
+            f =  float(bool_to_value(o["e"], weights))
+            axf = float(bool_to_value(o["a"], weights))
+            err.append( np.abs((f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f)) * o["p"])
         return np.sum(err)
 
     def get_mse(self, outputs, weights):

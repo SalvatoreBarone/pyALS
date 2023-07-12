@@ -188,6 +188,7 @@ class MOP(pyamosa.Problem):
             ErrorConfig.Metric.MAE: "MAE",
             ErrorConfig.Metric.WRE: "WRE",
             ErrorConfig.Metric.MRE: "MRE",
+            ErrorConfig.Metric.MARE: "MARE",
             ErrorConfig.Metric.MSE: "MSE",
             ErrorConfig.Metric.MED: "MED",
             ErrorConfig.Metric.ME: "ME",
@@ -265,6 +266,17 @@ class MOP(pyamosa.Problem):
             axf = float(bool_to_value(o["a"], weights))
             err.append(np.abs(f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f))
         return err
+    
+    @staticmethod
+    def evaluate_abs_relative_ed(outputs, weights):
+        if weights is None:
+            return [0]
+        err = []
+        for o in outputs:
+            f =  float(bool_to_value(o["e"], weights))
+            axf = float(bool_to_value(o["a"], weights))
+            err.append(np.abs((f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f)))
+        return err
 
     def get_awce(self, outputs, weights):
         return np.max(MOP.evaluate_abs_ed(outputs, weights))
@@ -274,6 +286,9 @@ class MOP(pyamosa.Problem):
 
     def get_mre(self, outputs, weights):
         return np.mean(MOP.evaluate_relative_ed(outputs, weights))
+    
+    def get_mare(self, outputs, weights):
+        return np.mean(MOP.evaluate_abs_relative_ed(outputs, weights))
 
     def get_wre(self, outputs, weights):
         return np.max(MOP.evaluate_relative_ed(outputs, weights))

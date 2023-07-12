@@ -31,6 +31,7 @@ class ErrorConfig:
         RMSED = 9           # Root Mean Squared Error Distance
         VARED = 10          # Variance of the Error Distance
         ME = 11             # Mean error
+        MARE = 12           # Mean absolute relative error
         
     def __init__(self, metrics, thresholds):
         self.metrics = None
@@ -52,6 +53,7 @@ class ErrorConfig:
             "mae" : ErrorConfig.Metric.MAE,
             "wre" : ErrorConfig.Metric.WRE,
             "mre": ErrorConfig.Metric.MRE,
+            "mare": ErrorConfig.Metric.MARE,
             "mse": ErrorConfig.Metric.MSE,
             "med": ErrorConfig.Metric.MED,
             "me": ErrorConfig.Metric.ME,
