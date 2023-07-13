@@ -28,6 +28,7 @@ class MOP(pyamosa.Problem):
         ErrorConfig.Metric.MAE   : "get_mae",
         ErrorConfig.Metric.WRE   : "get_wre",
         ErrorConfig.Metric.MRE   : "get_mre",
+        ErrorConfig.Metric.MARE  : "get_mare",
         ErrorConfig.Metric.MSE   : "get_mse",
         ErrorConfig.Metric.MED   : "get_med",
         ErrorConfig.Metric.ME    : "get_me",
