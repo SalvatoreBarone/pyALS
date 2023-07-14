@@ -18,15 +18,7 @@ set flat_netlist $2
 set tb_file $3
 set sdf_file $4
 set vcd_file $5
-set cell_library $5
-
-
-puts $top_module
-puts $flat_netlist
-puts $tb_file
-puts $sdf_file
-puts $vcd_file
-puts $cell_library
+set cell_library $6
 
 # Set Library
 vlib work
