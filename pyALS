@@ -26,6 +26,7 @@ from src.stats import *
 from src.ConfigParser import *
 from src.PyModelArithInt import *
 from src.ALWANNPyModelArithInt import *
+from src.TbGenerator import *
 from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, hamming, synthesize_at_dist
 from git import RemoteProgress
 
@@ -84,6 +85,9 @@ def parse_output_weights(ctx):
         print("Done!")
         
 def create_mop(ctx):
+    assert "configuration" in ctx.obj, "You must read the JSON configuration file to run this command(s)"
+    assert "graph" in ctx.obj, "You must create a ALSGraph object first"
+    
     if "problem" not in ctx.obj:
         ctx.obj["problem"] = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['ncpus']) if ctx.obj['dataset'] is None else IAMOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['dataset'], ctx.obj['ncpus'])
         
@@ -178,7 +182,7 @@ def als(ctx):
 
 @click.command('hdl')
 @click.pass_context
-def generate(ctx):
+def generate_verilog(ctx):
     """
     Performs the rewriting step of the catalog-based AIG-rewriting workflow to generate HDL, starting from the results of a previous run of the "als" command.
     """
@@ -211,7 +215,7 @@ def generate(ctx):
 @click.option("-e", "--exact", is_flag = True, help = "Generates the exact implementation only")
 @click.option("-a", "--alwann", is_flag = True, help = "Enable the weight-tuning approach. See below.")
 @click.pass_context
-def get_model(ctx, output, altconf, exact, alwann):
+def generate_python(ctx, output, altconf, exact, alwann):
     """
     Generates software models of twp-inputs-one-output arithmetic circuits resulting from the 'als' command, for GPU software simulations.
     You can select which models to be generated using the available options.
@@ -253,6 +257,26 @@ def get_model(ctx, output, altconf, exact, alwann):
     generator.generate(ctx.obj["configuration"].top_module, pareto_set, output)
     ctx.obj["configuration"].weights = original_weights
     print(f"All done! Take a look at {output}!")
+    
+@click.command("tb")
+@click.option('-o', '--output', type=click.Path(file_okay=True, dir_okay=False), default = None, help = "Output path")
+@click.pass_context
+def generate_tb(ctx, output):
+    create_yshelper(ctx)
+    load_condiguration(ctx)
+    create_alsgraph(ctx)
+    ctx.obj["yshelper"].save_design("original")
+    create_catalog(ctx)
+    if output is None:
+        output = f"{ctx.obj['configuration'].output_dir}/tb.v" 
+    if "problem" not in ctx.obj or not isinstance(ctx.obj['problem'], MOP):
+        problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
+    else:
+        problem = ctx.obj['problem']
+    
+    create_optimizer(ctx)
+    TbGenerator(ctx.obj["yshelper"], problem).generate(output)
+    
     
 @click.command("metrics")
 @click.option("--altconf", type=click.Path(exists=True, dir_okay=False), help = "Optional alternative configuration file (for signals' weights)", default = None)
@@ -304,8 +328,9 @@ def fitnesses(ctx, altconf, output):
 cli.add_command(elaborate)
 cli.add_command(es_synth)
 cli.add_command(als)
-cli.add_command(generate)
-cli.add_command(get_model)
+cli.add_command(generate_verilog)
+cli.add_command(generate_tb)
+cli.add_command(generate_python)
 cli.add_command(fitnesses)
     
 @click.command('clean')
