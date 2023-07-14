@@ -13,34 +13,42 @@
 # RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 # Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-set bench_name {{ items["top_level_entity"] }}
+set top_module $1
+set flat_netlist $2
+set tb_file $3
+set sdf_file $4
+set vcd_file $5
+set cell_library $5
+
+
+puts $top_module
+puts $flat_netlist
+puts $tb_file
+puts $sdf_file
+puts $vcd_file
+puts $cell_library
 
 # Set Library
 vlib work
 
 # Compile Library
-vlog -reportprogress 300 -work work {{ items["lib_v"] }}
+vlog -reportprogress 300 -work work $cell_library
 
 # Compile Netlist
-#vlog -reportprogress 300 -work work ./$bench_name/source/$bench_name\_comb_syn.v
-vlog -reportprogress 300 -work work {{ items["flat_netlist"] }}
+vlog -reportprogress 300 -work work $flat_netlist
 
 # Compile Testbench
-#vlog -reportprogress 30 -work work ./$bench_name/results/tb_$bench_name\_comb_syn.v
-vlog -reportprogress 30 -work work {{ items["tb_file"] }}.v
+vlog -reportprogress 30 -work work $tb_file
 
 
 # Start Simulation
-#vsim -sdftyp $bench_name\_1_test/dut=./$bench_name/results/$bench_name\_comb_syn.sdf -sdfnoerror -t 10ps -novopt work.$bench_name\_1_test
-vsim -sdftyp {{ items["top_level_entity"] }}_test/dut={{ items["sdf_file"] }} -sdfnoerror -t 10ps -novopt work.{{ items["top_level_entity"] }}_test
+vsim -sdftyp $top_module/dut=$sdf_file -sdfnoerror -t 10ps -novopt work.$top_module
 
 # Write  Switching Activity to .vcd file
-#vcd file ./$bench_name/results/tb_$bench_name\_comb_syn.vcd
-vcd file {{ items["vcd_file"] }}
-#vcd add -r /$bench_name\_1_test/dut/*
-vcd add -r /{{ items["top_level_entity"] }}_test/dut/*
-#power add -r /$bench_name\_1_test/dut/*
-power add -r /{{ items["top_level_entity"] }}_test/dut/*
+vcd file $vcd_file
+
+vcd add -r /$top_module/dut/*
+power add -r /$top_module/dut/*
 
 # Start Simulation 
 run -all

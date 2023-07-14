@@ -25,16 +25,8 @@ fi
 
 source /opt/source.synopsys
 source /opt/source.mentor
-echo "Area (nm²);Internal Power (mW);Switching Power (mW);Total Power (mW)" > ${directory}/synth_data.csv;
-for v in `find ${directory} -name '*.v' | sort`; 
+
+for v in `find ${directory}/flat -name '*.v' | sort`; 
 do 
-    dc_shell -f do_synth.tcl -x "set hdl_source ${v}; set top_module ${toplevel}"
-    area=`cat area.txt | grep "Combinational area:" | sed -r "s/[^0-9.]*//g"`
-	int_pwr=`grep "Total   " power.txt | sed -e's/  */ /g' | cut -d " " -f2`
-	swc_pwr=`grep "Total   " power.txt | sed -e's/  */ /g' | cut -d " " -f4`
-	tot_pwr=`grep "Total   " power.txt | sed -e's/  */ /g' | cut -d " " -f8`
-    echo "${area};${int_pwr};${swc_pwr};${tot_pwr}" >> ${directory}/synth_data.csv;
-	rm area.txt power.txt *.pvl *.syn *.mr
+    vsim -c -do "do do_sim.tcl ${toplevel} ${v} tb.v ${v}.sdf ${v}.vcd gscl45nm.v"
 done;
-cat ${directory}/metrics.csv | cut -d ";" -f1-15 > ${directory}/fitness.csv
-paste -d ';' ${directory}/fitness.csv ${directory}/synth_data.csv > ${directory}/synthesis_results.csv

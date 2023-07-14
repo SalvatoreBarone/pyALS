@@ -43,8 +43,6 @@ class TbGenerator:
             "initialdelay" : 5*self.delay,
             "delay"        : self.delay,
         }
-        
-        print(items)
         template_render(self.resource_dir, self.__tb_v, items, outfile)  
 
         

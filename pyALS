@@ -273,7 +273,7 @@ def generate_python(ctx, output, altconf, exact, alwann):
     print(f"All done! Take a look at {output}!")
     
 @click.command("tb")
-@click.option('-o', '--output', type=click.Path(file_okay=True, dir_okay=False), default = None, help = "Output path")
+@click.option('-o', '--output', type=click.Path(file_okay=False, dir_okay=True), default = None, help = "Output path")
 @click.option("--delay", type=int, default = 10, help = "Simulation delay")
 @click.pass_context
 def generate_tb(ctx, output, delay):
@@ -284,15 +284,25 @@ def generate_tb(ctx, output, delay):
     ctx.obj["yshelper"].save_design("original")
     create_catalog(ctx)
     if output is None:
-        output = f"{ctx.obj['configuration'].output_dir}/tb.v" 
+        output = f"{ctx.obj['configuration'].output_dir}" 
     if "problem" not in ctx.obj or not isinstance(ctx.obj['problem'], MOP):
         problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
     else:
         problem = ctx.obj['problem']
     
     create_optimizer(ctx)
-    TbGenerator(ctx.obj["yshelper"], problem, delay).generate(output)
-    
+    TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/tb.v")
+    for f in [
+        "resources/.synopsys_dc.setup",
+        "resources/do_synth.sh",
+        "resources/do_synth.tcl",
+        "resources/gscl45nm.db",
+        "resources/gscl45nm.v",
+        "resources/do_sim.sh",
+        "resources/do_sim.tcl",
+    ]:
+        copy_file(f, output)
+    print(f"All done! Take a look at {output}!")
     
 @click.command("metrics")
 @click.option("--altconf", type=click.Path(exists=True, dir_okay=False), help = "Optional alternative configuration file (for signals' weights)", default = None)

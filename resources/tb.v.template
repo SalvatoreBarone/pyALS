@@ -11,7 +11,7 @@ module tb_{{items["top_module"]}}();
         {% for s in items["pi"] -%}
         .{{ s }} ( {{ s }}_con ),
         {% endfor %}{% for s in items["po"] -%}
-        .{{ s }} ( {{ s }}_con ){{ ", " if not loop.last else "" }}{% endfor %})
+        .{{ s }} ( {{ s }}_con ){{ ", " if not loop.last else "" }}{% endfor %});
 
     initial
     begin
