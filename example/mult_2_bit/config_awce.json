@@ -15,7 +15,7 @@
     },
     "output_path" : "mult_2_bit_awce",
     "als" : {
-        "cache"    : "/user/lut_catalog.db",
+        "cache"    : "/home/user/lut_catalog.db",
         "cut_size" : 4,
         "solver"   : "btor",
         "timeout"  : 60000

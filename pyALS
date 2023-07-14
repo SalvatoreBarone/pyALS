@@ -16,7 +16,7 @@ RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 
-import sys, os, click, git, time
+import sys, os, click, git, time, random
 from distutils.dir_util import mkpath
 from tqdm import tqdm
 from multiprocessing import cpu_count
@@ -35,186 +35,188 @@ def rm_old_implementation(output_directory, files =  ".v"):
             print(f"Removing old source-file {output_directory}/{file}")
             os.remove(f"{output_directory}/{file}")
 
+def create_yshelper(ctx):
+    if "yshelper" not in ctx.obj:
+        print("Creating yshelper")
+        ctx.obj["yshelper"] = YosysHelper()
+        ctx.obj["yshelper"].load_ghdl()
+        
+def load_condiguration(ctx):
+    if "configuration" not in ctx.obj:
+        assert "configfile" in ctx.obj, "You must provide a JSON configuration file to run this command(s)"
+        ctx.obj["configuration"] = ConfigParser(ctx.obj['configfile'])
+        check_for_file(ctx.obj["configuration"].als_conf.lut_cache)
+        
+def create_alsgraph(ctx):
+    if "graph" not in ctx.obj:
+        assert "configuration" in ctx.obj, "You must read the JSON configuration file to run this command(s)"
+        assert "yshelper" in ctx.obj, "You must create a YosysHelper object first"
+        print("Graph generation...")
+        ctx.obj["yshelper"].read_sources(ctx.obj["configuration"].source_hdl, ctx.obj["configuration"].top_module)
+        ctx.obj["yshelper"].prep_design(ctx.obj["configuration"].als_conf.cut_size)
+        ctx.obj["graph"] = ALSGraph(ctx.obj["yshelper"].design)
+        print("Done!")
+        
+def create_catalog(ctx):
+    if "catalog" not in ctx.obj:
+        assert "configuration" in ctx.obj, "You must read the JSON configuration file to run this command(s)"
+        assert "yshelper" in ctx.obj, "You must create a YosysHelper object first"
+        assert "graph" in ctx.obj, "You must create a ALSGraph object first"
+        ctx.obj["luts_set"] = ctx.obj["yshelper"].get_luts_set()
+        print(f"Performing catalog generation using {ctx.obj['ncpus']} threads. Please wait patiently. This may take time.")
+        ctx.obj["catalog"] = ALSCatalog(ctx.obj["configuration"].als_conf.lut_cache, ctx.obj["configuration"].als_conf.solver).generate_catalog(ctx.obj["luts_set"], ctx.obj["configuration"].als_conf.timeout, ctx.obj['ncpus'])
+        print("Done!")
+        
+def parse_input_weights(ctx):
+    assert "configuration" in ctx.obj, "You must read the JSON configuration file to run this command(s)"
+    assert "graph" in ctx.obj, "You must create a ALSGraph object first"
+    if ctx.obj["configuration"].weights is not None and len(ctx.obj["configuration"].weights) != 0:
+        print("Input-weight parsing...")
+        ctx.obj["input_weights"] = ctx.obj["graph"].validate_pi_weights(ctx.obj["configuration"].weights)
+        print("Done!")
+        
+def parse_output_weights(ctx):
+    assert "configuration" in ctx.obj, "You must read the JSON configuration file to run this command(s)"
+    assert "graph" in ctx.obj, "You must create a ALSGraph object first"
+    if ctx.obj["configuration"].weights is not None and len(ctx.obj["configuration"].weights) != 0:
+        print("Output-weight parsing...")
+        ctx.obj["output_weights"] = ctx.obj["graph"].validate_po_weights(ctx.obj["configuration"].weights)
+        print("Done!")
+        
+def create_mop(ctx):
+    if "problem" not in ctx.obj:
+        ctx.obj["problem"] = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['ncpus']) if ctx.obj['dataset'] is None else IAMOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['dataset'], ctx.obj['ncpus'])
+        
+def create_optimizer(ctx):
+    if "optimizer" not in ctx.obj:
+        ctx.obj["optimizer"] = pyamosa.Optimizer(ctx.obj["configuration"].amosa_conf)
+        ctx.obj["final_archive_json"] = f"{ctx.obj['configuration'].output_dir}/final_archive.json"
+        ctx.obj["improve"] = None
+        if os.path.exists(ctx.obj["final_archive_json"]):
+            print("Using results from previous runs as a starting point.")
+            ctx.obj["improve"] = ctx.obj["final_archive_json"]
+    
+@click.group(chain=True)
+@click.option('-c', '--conf', type=click.Path(exists=True, dir_okay=False), default = None, help = "Json configuration file")
+@click.option('-j', "--ncpus", type = int, help = f"Number of parallel jobs to be used turing DSE. By default, it is {cpu_count()}", default = cpu_count())
+@click.option('-d', '--dataset', type=click.Path(exists=True, dir_okay=False), default = None, help = "Reference dataset, in Json format")
+@click.pass_context
+def cli(ctx, conf, ncpus, dataset):
+    ctx.ensure_object(dict)
+    ctx.obj['configfile'] = conf
+    ctx.obj['ncpus'] = ncpus
+    ctx.obj['dataset'] = dataset
 
-@click.group()
-def cli():
-    pass
 
-
-@click.command("elaborate")
-@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.argument('outfile', type=click.Path(dir_okay=False))
-def elaborate(configfile, outfile):
+@click.command("elab")
+@click.pass_context
+@click.option('-o', '--output', type=click.Path(), required = True, help = "Output path")
+def elaborate(ctx, output):
     """
     Draws a k-LUT map of the given circuit
-    
-    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-    
-    OUTFILE is the name of the file where the circuit graph will be saved
     """
-    configuration = ConfigParser(configfile)
-    check_for_file(configuration.als_conf.lut_cache)
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(configuration.source_hdl, configuration.top_module)
-    helper.prep_design(configuration.als_conf.cut_size)
-    graph = ALSGraph(helper.design)
-    print("Graph generation completed")
-    for v in graph.get_cells():
+    create_yshelper(ctx)
+    load_condiguration(ctx)
+    create_alsgraph(ctx)
+    for v in ctx.obj["graph"].get_cells():
         print(v["name"], v["spec"])
-    graph.save(outfile)
+    ctx.obj["graph"].save(output)
 
 
 @click.command("es")
-@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
-def es_synth(configfile, ncpus):
+@click.pass_context
+def es_synth(ctx):
     """
     Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and
     exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
-
-    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
     """
-    if ncpus is None:
-        ncpus = cpu_count()
-    configuration = ConfigParser(configfile)
-    check_for_file(configuration.als_conf.lut_cache)
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(configuration.source_hdl, configuration.top_module)
-    helper.prep_design(configuration.als_conf.cut_size)
-    luts_set = helper.get_luts_set()
-    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time.")
-    ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout)
-    print("Done!")
+    create_yshelper(ctx)
+    load_condiguration(ctx)
+    create_alsgraph(ctx)
+    create_catalog(ctx)
 
 
 @click.command("als")
-@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.option('--dataset', type=click.Path(exists=True, dir_okay=False), default = None)
-@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
-def als(configfile, dataset, ncpus):
+@click.pass_context
+def als(ctx):
     """
     Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
-    cuts, design space exploration and rewriting.
-
-    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    cuts, and design space exploration. It does not performs HDL generation.
     """
-    configuration = ConfigParser(configfile)
-    check_for_file(configuration.als_conf.lut_cache)
+    create_yshelper(ctx)
+    load_condiguration(ctx)
+    create_alsgraph(ctx)
+    ctx.obj["yshelper"].save_design("original")
+    parse_output_weights(ctx)
+    create_catalog(ctx)
     
-    if configuration.output_dir != ".":
-        mkpath(configuration.output_dir)
-    if ncpus is None:
-        ncpus = cpu_count()
-    
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(configuration.source_hdl, configuration.top_module)
-    helper.prep_design(configuration.als_conf.cut_size)
-    luts_set = helper.get_luts_set()
-    graph = ALSGraph(helper.design)
-    print("Graph generation completed")
-    output_weights = None
-    if configuration.weights is not None and len(configuration.weights) != 0:
-        output_weights = graph.validate_po_weights(configuration.weights)
-        print("Output-weight parsing completed successfully")
-    helper.save_design("original")
-    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
-    print("Catalog generation completed.")
-    
-    print(f"Performing AMOSA heuristic using {ncpus} threads. Please wait patiently. This may take time.")
-    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, ncpus) if dataset is None else IAMOP(configuration.top_module, graph, output_weights, lut_catalog, configuration.error_conf, configuration.hw_conf, dataset, ncpus)
-    optimizer = pyamosa.Optimizer(configuration.amosa_conf)
-    improve = None
-    if os.path.exists(f"{configuration.output_dir}/final_archive.json"):
-        print("Using results from previous runs as a starting point.")
-        improve = f"{configuration.output_dir}/final_archive.json"
+    if ctx.obj["configuration"].output_dir != ".":
+        mkpath(ctx.obj["configuration"].output_dir)
+        
+    create_mop(ctx)
+    fitness_labels = ctx.obj['problem'].plot_labels()
+
+    create_optimizer(ctx)
+   
     init_t = time.time()
     print("AMOSA termination criterion:")
-    configuration.termination_criterion.info()
-    optimizer.run(problem, termination_criterion = configuration.termination_criterion, improve = improve)
+    ctx.obj["configuration"].termination_criterion.info()
+    print(f"Performing AMOSA heuristic using {ctx.obj['ncpus']} threads. Please wait patiently. This may take time.")
+    ctx.obj["optimizer"].run(ctx.obj["problem"], termination_criterion = ctx.obj["configuration"].termination_criterion, improve = ctx.obj["improve"])
     dt = time.time() - init_t
-    print(f"AMOSA heuristic completed in {dt} seconds")
+    ctx.obj["optimizer"].archive_to_json(ctx.obj["final_archive_json"])
+    ctx.obj["optimizer"].archive_to_csv(ctx.obj['problem'], f"{ctx.obj['configuration'].output_dir}/final_archive.csv", fitness_labels)
+    ctx.obj["optimizer"].plot_pareto(ctx.obj['problem'], f"{ctx.obj['configuration'].output_dir}/pareto_front.pdf", ctx.obj["configuration"].top_module, fitness_labels)
     
-    hours = int(optimizer.duration / 3600)
-    minutes = int((optimizer.duration - hours * 3600) / 60)
+    print(f"AMOSA heuristic completed in {dt} seconds")
+    hours = int(ctx.obj["optimizer"].duration / 3600)
+    minutes = int((ctx.obj["optimizer"].duration - hours * 3600) / 60)
     print(f"Took {hours} hours, {minutes} minutes")
-    print(f"Cache hits: {problem.cache_hits} over {problem.total_calls} evaluations.")
-    print(f"{len(problem.cache)} cache entries collected")
-    optimizer.archive_to_json(f"{configuration.output_dir}/final_archive.json")
-    fitness_labels = problem.plot_labels()
-    optimizer.archive_to_csv(problem, f"{configuration.output_dir}/final_archive.csv", fitness_labels)
-    optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", configuration.top_module, fitness_labels)
-    pareto_set = optimizer.pareto_set()
-    rm_old_implementation(configuration.output_dir)
-    print("Performing AIG-rewriting.")
-    rewriter = ALSRewriter(helper, problem)
-    rewriter.generate_hdl(pareto_set, configuration.output_dir)
-    print("Modifiche")
-    print(f"All done! Take a look at {configuration.output_dir}!")
+    print(f"Cache hits: {ctx.obj['problem'].cache_hits} over {ctx.obj['problem'].total_calls} evaluations.")
+    print(f"{len(ctx.obj['problem'].cache)} cache entries collected")
 
 
-
-
-
-@click.command('generate')
-@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
-def generate(configfile, ncpus):
+@click.command('hdl')
+@click.pass_context
+def generate(ctx):
     """
-    Performs the rewriting step of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command
-
-    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
+    Performs the rewriting step of the catalog-based AIG-rewriting workflow to generate HDL, starting from the results of a previous run of the "als" command.
     """
-    configuration = ConfigParser(configfile)
-    check_for_file(configuration.als_conf.lut_cache)
-    if configuration.output_dir != ".":
-        mkpath(configuration.output_dir)
-    if ncpus is None:
-        ncpus = cpu_count()
-    check_for_file(f"{configuration.output_dir}/final_archive.json")
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(configuration.source_hdl, configuration.top_module)
-    helper.prep_design(configuration.als_conf.cut_size)
-    luts_set = helper.get_luts_set()
-    graph = ALSGraph(helper.design)
-    print("Graph generation completed")
-    helper.save_design("original")
-    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
-    print("Catalog generation completed.")
+    create_yshelper(ctx)
+    load_condiguration(ctx)
+    create_alsgraph(ctx)
+    parse_output_weights(ctx)
+    ctx.obj["yshelper"].save_design("original")
+    create_catalog(ctx)
+    create_mop(ctx)
+    if ctx.obj["configuration"].output_dir != ".":
+        mkpath(ctx.obj["configuration"].output_dir)
+    
+    problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
+    create_optimizer(ctx)
+    
     print("Reading the Pareto front.")
-    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, ncpus)
-    optimizer = pyamosa.Optimizer(configuration.amosa_conf)
-    optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
-    optimizer.plot_pareto(problem, f"{configuration.output_dir}/pareto_front.pdf", "", problem.plot_labels())
-    pareto_set = optimizer.pareto_set()
-    rm_old_implementation(configuration.output_dir)
+    ctx.obj["optimizer"].read_final_archive_from_json(problem, ctx.obj["final_archive_json"])
+    pareto_set = ctx.obj["optimizer"].pareto_set()
+    rm_old_implementation(ctx.obj["configuration"].output_dir)
     print("Performing AIG-rewriting.")
-    rewriter = ALSRewriter(helper, problem)
-    rewriter.generate_hdl(pareto_set, configuration.output_dir)
-    print(f"All done! Take a look at {configuration.output_dir}!")
+    rewriter = ALSRewriter(ctx.obj["yshelper"], problem)
+    rewriter.generate_hdl(pareto_set, ctx.obj['configuration'].output_dir)
+    print(f"All done! Take a look at {ctx.obj['configuration'].output_dir}!")
 
 
-@click.command("pymodels")
-@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.argument('outfile', type=click.Path(dir_okay=True))
+@click.command("py")
+@click.option('-o', '--output', type=click.Path(file_okay=False, dir_okay=True), default = None, help = "Output path")
+@click.option("--altconf", type=click.Path(exists=True, dir_okay=False), help = "Optional alternative configuration file (for signals' weights)", default = None)
 @click.option("-e", "--exact", is_flag = True, help = "Generates the exact implementation only")
 @click.option("-a", "--alwann", is_flag = True, help = "Enable the weight-tuning approach. See below.")
-@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
-def get_model(configfile, outfile, exact, alwann, ncpus):
+@click.pass_context
+def get_model(ctx, output, altconf, exact, alwann):
     """
     Generates software models of twp-inputs-one-output arithmetic circuits resulting from the 'als' command, for GPU software simulations.
     You can select which models to be generated using the available options.
 
-    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-    
-    OUTFILE is the path of the output python implementation (either single file or directory)
-    
-    If the "-a" option is enabled, the weight-tuning approach from [1] is used to tune the behavior of the multiplier.
+    If the "-a"/"--alwann" option is enabled, the weight-tuning approach from [1] is used to tune the behavior of the multiplier.
     
     [1] Mrazek, Vojtech, Zdenek Vasicek, Lukas Sekanina, Muhammad Abdullah Hanif, e Muhammad Shafique. 
         "ALWANN: Automatic Layer-Wise Approximation of Deep Neural Network Accelerators without Retraining"
@@ -222,115 +224,102 @@ def get_model(configfile, outfile, exact, alwann, ncpus):
         https://doi.org/10.1109/ICCAD45719.2019.8942068.
     
     """
-    configuration = ConfigParser(configfile)
-    check_for_file(configuration.als_conf.lut_cache)
-    if not exact:
-        check_for_file(f"{configuration.output_dir}/final_archive.json")
-    if ncpus is None:
-        ncpus = cpu_count()
-
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(configuration.source_hdl, configuration.top_module)
-    helper.prep_design(configuration.als_conf.cut_size)
-    luts_set = helper.get_luts_set()
-    graph = ALSGraph(helper.design)
-    print("Graph generation completed")
-    print("Validading weights for primary input signals")
-    graph.validate_pi_weights(configuration.weights)
-    print("Validading weights for primary output signals")
-    graph.validate_po_weights(configuration.weights)
-    helper.save_design("original")
-    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time....")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
-    print("Catalog generation completed.")
-    # Forcing the MOP to generate exhaustive test patterns
-    configuration.error_conf.dataset = None
-    configuration.error_conf.n_vectors = 0
-    problem = MOP(configuration.top_module, graph, None, lut_catalog, configuration.error_conf, configuration.hw_conf, ncpus)
-    optimizer = pyamosa.Optimizer(configuration.amosa_conf)
+    create_yshelper(ctx)
+    load_condiguration(ctx)
+    if output is None:
+        output = ctx.obj['configuration'].output_dir
+    create_alsgraph(ctx)
+    create_catalog(ctx)
+    configuration = ConfigParser(altconf) if altconf is not None else ctx.obj["configuration"]
+    original_weights = copy.deepcopy(ctx.obj["configuration"].weights)
+    ctx.obj["configuration"].weights = configuration.weights    
+    parse_input_weights(ctx)
+    parse_output_weights(ctx)
+    create_mop(ctx)
+    
+    problem = ctx.obj['problem'] if isinstance(ctx.obj['problem'], MOP) else MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
+    create_optimizer(ctx)
     if not exact:
         print("Reading the Pareto front.")
-        optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
-        pareto_set = optimizer.pareto_set()
-        print(f"{len(pareto_set)} solutions read from {configuration.output_dir}/final_archive.json")
+        ctx.obj["optimizer"].read_final_archive_from_json(problem, ctx.obj["final_archive_json"])
+        pareto_set = ctx.obj["optimizer"].pareto_set()
+        print(f"{len(pareto_set)} solutions read from {ctx.obj['final_archive_json']}")
     else:
         print("Generating the fake Pareto front.")
         pareto_set = [[0] * problem.n_vars]
-    generator = ALWANNPyModelArithInt(helper, problem, configuration.weights) if alwann else PyModelArithInt(helper, problem, configuration.weights)
-    #outfile = os.path.splitext(outfile)[0]
-
-    mkpath(outfile)
-    rm_old_implementation(outfile, ".py")
-    generator.generate(configuration.top_module, pareto_set, outfile)
-    print(f"All done! Take a look at {outfile}!")
+    generator = ALWANNPyModelArithInt(ctx.obj["yshelper"], problem, ctx.obj["configuration"].weights) if alwann else PyModelArithInt(ctx.obj["yshelper"], problem, ctx.obj["configuration"].weights)
+    mkpath(output)
+    rm_old_implementation(output, ".py")
+    generator.generate(ctx.obj["configuration"].top_module, pareto_set, output)
+    ctx.obj["configuration"].weights = original_weights
+    print(f"All done! Take a look at {output}!")
     
 @click.command("metrics")
-@click.argument('configfile', type=click.Path(exists=True, dir_okay=False))
-@click.argument('outfile', type=click.Path(dir_okay=True))
-@click.option('--dataset', type=click.Path(exists=True, dir_okay=False), default = None)
-@click.option("--ncpus", type = int, help = "Set the number of parallel jobs to be used turing DSE. By default, pyALS uses every CPU core.", default = None)
-def fitnesses(configfile, outfile, dataset, ncpus):
+@click.option("--altconf", type=click.Path(exists=True, dir_okay=False), help = "Optional alternative configuration file (for signals' weights)", default = None)
+@click.option('-o', '--output', type=click.Path(file_okay=True, dir_okay=False), default = None, help = "Output path")
+@click.pass_context
+def fitnesses(ctx, altconf, output):
     """
     Computes the all the builtin metrics (both error and hardware) for points coming from a given Pareto front.
-
-    CONFIGFILE is the path of the JSON configuration file containing all parameters which are needed to the tool.
-    
-    OUTFILE is the csv output file containing all the fitness values for each of the entries of the Pareto front
     """
-    configuration = ConfigParser(configfile)
-    check_for_file(configuration.als_conf.lut_cache)
-    if configuration.output_dir != ".":
-        mkpath(configuration.output_dir)
-    if ncpus is None:
-        ncpus = cpu_count()
-    check_for_file(f"{configuration.output_dir}/final_archive.json")
-    helper = YosysHelper()
-    helper.load_ghdl()
-    helper.read_sources(configuration.source_hdl, configuration.top_module)
-    helper.prep_design(configuration.als_conf.cut_size)
-    luts_set = helper.get_luts_set()
-    graph = ALSGraph(helper.design)
-    print("Graph generation completed")
-    output_weights = None
-    if configuration.weights is not None and len(configuration.weights) != 0:
-        output_weights = graph.validate_po_weights(configuration.weights)
-        print("Output-weight parsing completed successfully")
-    helper.save_design("original")
-    print(f"Performing catalog generation using {ncpus} threads. Please wait patiently. This may take time.")
-    lut_catalog = ALSCatalog(configuration.als_conf.lut_cache, configuration.als_conf.solver).generate_catalog(luts_set, configuration.als_conf.timeout, ncpus)
-    print("Catalog generation completed.")
+    create_yshelper(ctx)
+    load_condiguration(ctx)
+    create_alsgraph(ctx)
+    
+    if output is None:
+        output = f"{ctx.obj['configuration'].output_dir}/metrics.csv"
+    
+    configuration = ConfigParser(altconf) if altconf is not None else ctx.obj["configuration"]
+    original_weights = copy.deepcopy(ctx.obj["configuration"].weights)
+    ctx.obj["configuration"].weights = configuration.weights   
+    print(ctx.obj["configuration"].weights) 
+    parse_input_weights(ctx)
+    parse_output_weights(ctx)
+    create_catalog(ctx)
     
     # Ignoring configurations for error and hardware metrics
     metrics = list(ErrorConfig.get_builtin_metrics().keys())
     error_conf = ErrorConfig(
-        metrics = list(metrics) if configuration.weights is not None else ["ep"],
-        thresholds = [np.inf] * len(metrics) if configuration.weights is not None else 1)
+        metrics = list(metrics) if ctx.obj["configuration"].weights is not None else ["ep"],
+        thresholds = [np.inf] * len(metrics) if ctx.obj["configuration"].weights is not None else 1)
     hw_conf = HwConfig(list(HwConfig.get_hw_metrics().keys()))
-    print("Reading the Pareto front.")
-    problem = MOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, ncpus) if dataset is None else IAMOP(configuration.top_module, graph, output_weights, lut_catalog, error_conf, hw_conf, dataset, ncpus)
-    optimizer = pyamosa.Optimizer(configuration.amosa_conf)
-    optimizer.read_final_archive_from_json(problem, f"{configuration.output_dir}/final_archive.json")
-    print("Computing the full characterization of the Pareto front. Please wait...")
-    #archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in pareto_set]
-    archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in tqdm(optimizer.pareto_set(), desc="Please wait...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")]
+    problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["configuration"].weights, ctx.obj["catalog"], error_conf, hw_conf, ctx.obj["ncpus"]) if ctx.obj['dataset'] is None else IAMOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["configuration"].weights, ctx.obj["catalog"], error_conf, hw_conf, ctx.obj['dataset'], ctx.obj["ncpus"])
+    create_optimizer(ctx)
+    ctx.obj["optimizer"].read_final_archive_from_json(problem, ctx.obj["final_archive_json"])
+    
+    print("Computing the full characterization of the Pareto front.")
+    archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in tqdm(ctx.obj["optimizer"].pareto_set(), desc="Please wait...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")]
     fitness_labels = problem.plot_labels()
     original_stdout = sys.stdout
     row_format = "{:};" + "{:};" * problem.num_of_objectives + "{:};" * problem.num_of_variables
-    with open(outfile, "w") as file:
+    with open(output, "w") as file:
         sys.stdout = file
         print(row_format.format("", *fitness_labels, *[f"x{i}" for i in range(problem.num_of_variables)]))
         for i, s in enumerate(archive):
             print(row_format.format(i, *s["f"], *s["x"]))
     sys.stdout = original_stdout
-    print(f"All done! Take a look at {outfile}!")
+    ctx.obj["configuration"].weights = original_weights
+    print(f"All done! Take a look at {output}!")
+    
+cli.add_command(elaborate)
+cli.add_command(es_synth)
+cli.add_command(als)
+cli.add_command(generate)
+cli.add_command(get_model)
+cli.add_command(fitnesses)
     
 @click.command('clean')
-@click.option('--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
-def clean(catalog):
+@click.option('--catalog', type = str, default = None, help = 'Path of the LUT-catalog cache file. If specificed, the one from the configuration file is ignored.')
+@click.pass_context
+def clean(ctx, catalog):
     """Performs a sanity check of the catalog """
-    check_for_file(catalog)
-    cache = ALSCatalogCache(catalog)
+    if ctx.obj['configfile'] is None:
+        assert catalog is not None, "You must specify the path of the LUT-catalog cache file, or a JSON configuration file"
+        check_for_file(catalog)
+        cache = ALSCatalogCache(catalog)
+    else:    
+        load_condiguration(ctx)
+        cache = ALSCatalogCache(ctx.obj["configuration"].als_conf.lut_cache)
     count = 0
     for s in cache.get_all_exact_luts():
         exact_synth_spec, exact_S, exact_P, exact_out_p, exact_out, exact_depth = s
@@ -357,11 +346,17 @@ def clean(catalog):
 
 
 @click.command("expand")
-@click.option('--catalog', type = str, required = True, help = 'Path of the LUT-catalog cache file')
-def expand(catalog):
+@click.option('--catalog', type = str, default = None, help = 'Path of the LUT-catalog cache file. If specificed, the one from the configuration file is ignored.')
+@click.pass_context
+def expand(ctx, catalog):
     """ Attempts catalog expansion """
-    check_for_file(catalog)
-    cache = ALSCatalogCache(catalog)
+    if ctx.obj['configfile'] is None:
+        assert catalog is not None, "You must specify the path of the LUT-catalog cache file, or a JSON configuration file"
+        check_for_file(catalog)
+        cache = ALSCatalogCache(catalog)
+    else:    
+        load_condiguration(ctx)
+        cache = ALSCatalogCache(ctx.obj["configuration"].als_conf.lut_cache)
     # try to complete any incomplete path in the catalog
     luts_to_be_synthesized = set()
     for x in cache.get_all_exact_luts():
@@ -402,16 +397,20 @@ def expand(catalog):
 
 
 @click.command("query")
-@click.option("--catalog", type=str,  required = True, help="specify the path for the LUT-catalog cache file")
+@click.option('--catalog', type = str, default = None, help = 'Path of the LUT-catalog cache file. If specificed, the one from the configuration file is ignored.')
 @click.option("--spec",  type=str,    required = True, help="LUT specification to search")
 @click.option("--dist",  type=str,                     help="distance", default="0")
 @click.option("--neg",  is_flag=True,                  help="Search for complemented spec")
-def query(catalog, spec, dist, neg):
+@click.pass_context
+def query(ctx, catalog, spec, dist, neg):
     """ Query the catalog for a specific lut implementation """
-    if not os.path.exists(catalog):
-        print(f"{catalog}: no such file.")
-        exit()
-    cache = ALSCatalogCache(catalog)
+    if ctx.obj['configfile'] is None:
+        assert catalog is not None, "You must specify the path of the LUT-catalog cache file, or a JSON configuration file"
+        check_for_file(catalog)
+        cache = ALSCatalogCache(catalog)
+    else:    
+        load_condiguration(ctx)
+        cache = ALSCatalogCache(ctx.obj["configuration"].als_conf.lut_cache)
     x = cache.get_lut_at_dist(negate(spec) if neg else spec, dist)
     if x is None:
         print(f"{spec}@{dist} not in the catalog cache")
@@ -420,16 +419,20 @@ def query(catalog, spec, dist, neg):
 
 
 @click.command("stats")
-@click.option("--catalog",       type=str, required = True, help="specify the path for the LUT-catalog cache file")
+@click.option('--catalog', type = str, default = None, help = 'Path of the LUT-catalog cache file. If specificed, the one from the configuration file is ignored.')
 @click.option("--gates",                   is_flag = True,  help="histogram of functions w.r.t. the number of AIG nodes")
 @click.option("--power-gates",             is_flag = True,  help="box-and-whiskers plot of switching activity w.r.t. the number of AIG nodes")
 @click.option("--power-truth",             is_flag = True,  help="box-and-whiskers plot of switching activity w.r.t. the truth-density")
 @click.option("--power-truth-k", type=int,                  help="box-and-whiskers plot of switching activity w.r.t. the truth-density for k-luts", default = None)
-def stats(catalog, gates, power_gates, power_truth, power_truth_k):
+@click.pass_context
+def stats(ctx, catalog, gates, power_gates, power_truth, power_truth_k):
     """ Compute statistics on a given catalog """
-    if not os.path.exists(catalog):
-        print(f"{catalog}: no such file.")
-        exit()
+    if catalog is None:
+        load_condiguration(ctx)
+        catalog = ctx.obj["configuration"].als_conf.lut_cache
+    elif not os.path.exists(catalog):
+            print(f"{catalog}: no such file.")
+            exit()
     if gates:
         gates_histogram(catalog)
     if power_gates:
@@ -439,32 +442,11 @@ def stats(catalog, gates, power_gates, power_truth, power_truth_k):
     if power_truth_k is not None:
         power_truth_k_boxplot(power_truth_k)
 
-@click.command("update")
-def update_the_tool():
-    "Updates the tool"
-    try:
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        repo = git.Repo(dir_path)
-        repo.remotes.origin.fetch()
-        print("Updating the tool...")
-        repo.remotes.origin.pull()
-        for submodule in repo.submodules:
-            submodule.update(init = True, recursive = True)
-    except git.exc.GitCommandError as e:
-        print(e)
 
-cli.add_command(elaborate)
-cli.add_command(es_synth)
-cli.add_command(als)
-cli.add_command(generate)
-cli.add_command(get_model)
-cli.add_command(fitnesses)
 cli.add_command(clean)
 cli.add_command(expand)
 cli.add_command(query)
 cli.add_command(stats)
-cli.add_command(update_the_tool)
-
 
 def git_updater():
     try:

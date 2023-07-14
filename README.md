@@ -71,116 +71,57 @@ to obtain the list of options available for the command ```command```.
 ## Main commands
 
 pyALS supports the following main commands, each with its own set of options:
+  - ```elab```: only draws the k-LUT map of the given circuit;
   - ```es```: performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting;
-  - ```generate```: performs only the rewriting step, of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command;
   - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
-  - ```elaborate```: only draws the k-LUT map of the given circuit;
-  - ```pymodels```: generates software models (in python) for software simulations. 
-
+  - ```hdl```: performs only the rewriting step, of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command;
+  - ```py```: generates software models (in python) for software simulations. 
+  - ```metrics```: computes the all the builtin metrics (both error and hardware) for points coming from a given Pareto front.
 Please kindly note you will need the file where synthesized Boolean functions are stored, i.e., the catalog-cache file. 
 You can mine, which is ready-to-use, frequently updated and freely available at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
 If you do not want to use the one I mentioned, pyALS will perform exact synthesis when needed.
 
-Furthermore, the ```als``` and ```es``` commands requires a lot of configuration parameters, which are provided through a JSON configuration file. 
-I will its generic structure later. Now, focus on the command-line interface.
+Furthermore, the ```als``` and ```es``` commands requires a lot of configuration parameters, which are provided through a JSON configuration file. I will discuss its generic structure later. Now, focus on the command-line interface.
 
-Furthermore, the tool also provides the following sanity-related commands for catalog management:
+The above mentioned commands supports a lot of options, and can be concatenated, meaning that you can issue
+```
+pyALS [OPTIONS] COMMAND1 [ARGS]... [COMMAND2 [ARGS]...]...
+```
+The main options are:
+```
+  -c, --conf FILE      Json configuration file. For the above commands is mandatory.
+  -j, --ncpus INTEGER  Number of parallel jobs to be used turing DSE. By default, it is all the available cpus
+  -d, --dataset FILE   Reference dataset, in Json format.
+  --help               Show this message and exit.
+```
+For instance, you can issue
+```
+./pyALS -c example/mult_2_bit/config_awce.json als hdl py metrics
+```
+or
+```
+./pyALS -c example/mult_2_bit/config_awce.json als py -o prova metrics -o metrics.csv
+```
+or
+```
+./pyALS -c example/mult_2_bit/config_awce.json als metrics
+```
+or
+```
+./pyALS -c example/mult_2_bit/config_awce.json metrics -o metrics.csv
+```
+
+For the complete list of options supported by a given command, please issue
+```
+pyALS COMMAND --help
+```
+
+The tool also provides the following sanity-related commands for catalog management:
   - ```clean```: performs a sanity check of the catalog;
   - ```expand```: attempts the catalog expansion;
   - ```stats```: computes some statistics on a catalog;
   - ```query```: check if a specification is in the catalog.
   - 
-## Command line interface
-
-You can use the following commands
-
-### The ```elaborate``` command
-Draws a k-LUT map of the given circuit
-
-Usage: 
-```
-pyALS elaborate [OPTIONS]
-```
-Options:
-```
-  --source TEXT  specify the input HDL source file  [required]
-  --top TEXT     specify the top-module name  [required]
-  --lut TEXT     specify the LUT size  [required]
-  --output TEXT  Output file.  [required]
-```
-Example:
-```
-./pyALS plot --source example/mult_2_bit.sv --top mult_2_bit -lut 4 -output mult_2_bit.pdf 
-```
-
-
-### The ```es``` command
-Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
-
-Usage: 
-```
-pyALS es CONFIGFILE
-```
-where:
-```
-  CONFIGFILE is the path of the configuration file
-```
-Example:
-```
-./pyALS es /path_to_config.json 
-```
-
-
-### The ```als``` command
-Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting.
-
-Usage: 
-```
-pyALS als CONFIGFILE
-```
-where:
-```
-  CONFIGFILE is the path of the configuration file
-```
-Example:
-```
-pyALS als example/mult_2_bit/config_awce.json
-```
-
-### The ```generate``` command
-Performs the rewriting step of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command
-
-Usage: 
-```
-pyALS generate CONFIGFILE
-```
-where:
-```
-  CONFIGFILE is the path of the configuration file
-```
-Example:
-```
-pyALS generate example/mult_2_bit/config_awce.json
-```
-
-### The ```pymodels``` command
-Generates software models of twp-inouts-one-output arithmetic circuits resulting from the 'als' command, for software simulations. You can select which models to be generated using the available options.
-Usage: 
-```
-pyALS pymodels [OPTIONS] CONFIGFILE MODELDESCRIPTIONFILE
-```
-where:
-
-  - ```CONFIGFILE``` is the path of the JSON configuration file containing all   parameters which are needed to the tool. 
-  - ```OUTFILE``` it is the path to the output file containing generated models.
-
-Options:
-  - ```-f```: Enables using the floating-point representation for look-up tables
-
-Example:
-```
-pyALS pymodels example/mult_2_bit/config_awce.json output.py
-```
 
 ## The configuration file
 The configuration file defines parameters governing the behavior of pyALS. Is is a JSON file which generic structure is reported below.

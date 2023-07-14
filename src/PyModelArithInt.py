@@ -28,16 +28,16 @@ class PyModelArithInt:
     def __init__(self, helper, problem, signal_weights, design_name = "original"):
         dir_path = os.path.dirname(os.path.abspath(__file__))
         self.resource_dir =  f"{dir_path}/{self.__resource_dir}"
-        #self.lut_model_py = f"{self.resource_dir}{self.__library_model_dict_py}"
-        #self.single_circuit_model = f"{self.resource_dir}{self.__single_circuit_model_dict_py}"
         self.helper = helper
+        self.helper.reset()
+        self.helper.delete()
         self.problem = problem
         self.design_name = design_name
-        self.helper.load_design(design_name)
+        self.helper.load_design(self.design_name)
         self.helper.reverse_splitnets()
         self.wires = helper.get_PIs_and_Pos()
-        assert len(self.wires["PI"]) == 2, "This circuit has more than two multi-bit primary inputs. This is not supported"
-        assert len(self.wires["PO"]) == 1, "This circuit has more than one multi-bit primary output. This is not supported"
+        assert len(self.wires["PI"]) == 2, f"This circuit has more than two multi-bit primary inputs. This is not supported.\n {self.wires['PI']}"
+        assert len(self.wires["PO"]) == 1, f"This circuit has more than one multi-bit primary output. This is not supported.\n {self.wires['PO']}"
         self.pis_weights = [{f"{pi.str()}[{i}]": signal_weights[f"{pi.str()}[{i}]"] for i in range(w.width)} for pi, w in self.wires["PI"].items()]
         for po, w in self.wires["PO"].items():
             self.po_weights = { f"{po.str()}[{i}]": signal_weights[f"{po.str()}[{i}]"] for i in range(w.width)}

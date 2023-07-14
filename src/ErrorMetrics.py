@@ -78,7 +78,7 @@ class ErrorConfig:
         self.builtin_metric = False
 
 def bool_to_value(signal, weights):
-    return np.sum([float(weights[o]) * signal[o] for o in weights.keys()])
+    return np.sum([float(weights[o]) * signal[o] for o in signal.keys()])
 
 
 

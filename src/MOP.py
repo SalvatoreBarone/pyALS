@@ -70,25 +70,6 @@ class MOP(pyamosa.Problem):
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
         pyamosa.Problem.__init__(self, self.n_vars, [pyamosa.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
 
-    # def load_dataset(self):
-    #     print(f"Reading input data from {self.error_config.dataset} ...")
-    #     if self.error_config.dataset.endswith(".json5"):
-    #         self.samples = json5.load(open(self.error_config.dataset))
-    #         lut_io_info = {}
-    #         for s in self.samples:
-    #             _, lut_io_info = self.graph.evaluate(s["input"], lut_io_info)
-    #         return lut_io_info
-    #     print("Done!")
-    #     return self.read_samples(self.error_config.dataset)
-
-    # def store_dataset(self, dataset_outfile):
-    #     if dataset_outfile is not None:
-    #         if not dataset_outfile.endswith(".json5"):
-    #             dataset_outfile += ".json5"
-    #         print(f"Storing generated random vectors on {dataset_outfile} further use...")
-    #         with open(dataset_outfile, 'w') as outfile:
-    #             outfile.write(json5.dumps(self.samples))
-
     def evaluate(self, x, out):
         out["f"] = []
         out["g"] = []
@@ -110,25 +91,6 @@ class MOP(pyamosa.Problem):
         for metric in self.hw_config.metrics:
             out["f"].append(self.hw_ffs[metric](configuration, lut_io_info, self.graph))
         return out
-
-    # def read_samples(self, dataset):
-    #     self.samples = []
-    #     PI = self.graph.get_pi()
-    #     file = open(dataset, "r")
-    #     header = list(filter(None, file.readline().replace("\n", "").split(",")))
-    #     assert len(header) == len(PI), f"{dataset}: wrong amount of inputs (header: {len(header)} PI: {len(PI)})"
-    #     input_dict = {h : [] for h in header}
-    #     for row in file:
-    #         input_values = list(filter(None, row.replace("\n", "").split(",")))
-    #         assert len(input_values) == len(PI), f"{dataset}: wrong amount of inputs"
-    #         for i, v in zip(input_values, input_dict.values()):
-    #             v.append(i)
-    #     lut_io_info = {}
-    #     for i in range(len(list(input_dict.values())[0])):
-    #         inputs = {k["name"]: input_dict[k["name"]][i] == '1' for k in PI}
-    #         output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
-    #         self.samples.append({"input": inputs, "output": output})
-    #     return lut_io_info
 
     def generate_samples(self):
         self.samples = []
