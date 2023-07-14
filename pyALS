@@ -182,7 +182,7 @@ def als(ctx):
 
 
 @click.command('hdl')
-@click.option('-o', '--output', type=click.Path(file_okay=True, dir_okay=False), default = None, help = "Output path")
+@click.option('-o', '--output', type=click.Path(file_okay=False, dir_okay=True), default = None, help = "Output path")
 @click.pass_context
 def generate_verilog(ctx, output):
     """
