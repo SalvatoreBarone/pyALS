@@ -120,6 +120,7 @@ def elaborate(ctx, output):
     """
     Draws a k-LUT map of the given circuit
     """
+    print("Performing ELAB")
     create_yshelper(ctx)
     load_condiguration(ctx)
     create_alsgraph(ctx)
@@ -135,6 +136,7 @@ def es_synth(ctx):
     Performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and
     exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting.
     """
+    print("Performing ES")
     create_yshelper(ctx)
     load_condiguration(ctx)
     create_alsgraph(ctx)
@@ -148,6 +150,7 @@ def als(ctx):
     Performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate
     cuts, and design space exploration. It does not performs HDL generation.
     """
+    print("Performing ALS")
     create_yshelper(ctx)
     load_condiguration(ctx)
     create_alsgraph(ctx)
@@ -188,6 +191,7 @@ def generate_verilog(ctx, output):
     """
     Performs the rewriting step of the catalog-based AIG-rewriting workflow to generate HDL, starting from the results of a previous run of the "als" command.
     """
+    print("Generating HDL")
     create_yshelper(ctx)
     load_condiguration(ctx)
     if output is None:
@@ -242,6 +246,7 @@ def generate_python(ctx, output, altconf, exact, alwann):
         https://doi.org/10.1109/ICCAD45719.2019.8942068.
     
     """
+    print("Generating Python")
     create_yshelper(ctx)
     load_condiguration(ctx)
     if output is None:
@@ -278,6 +283,7 @@ def generate_python(ctx, output, altconf, exact, alwann):
 @click.pass_context
 def generate_tb(ctx, output, delay):
     """ Generate testbench and scritps files for vectored power estimation """
+    print("Generating testbench")
     create_yshelper(ctx)
     load_condiguration(ctx)
     create_alsgraph(ctx)
@@ -312,6 +318,7 @@ def fitnesses(ctx, altconf, output):
     """
     Computes the all the builtin metrics (both error and hardware) for points coming from a given Pareto front.
     """
+    print("Performing fitnesses computation")
     create_yshelper(ctx)
     load_condiguration(ctx)
     create_alsgraph(ctx)

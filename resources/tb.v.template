@@ -18,7 +18,7 @@ module tb_{{items["top_module"]}}();
         {% for stim in items["stimuli"] -%}
         {% for s, v in stim.items() -%}
         {{ s }}_con <= {{ v }};
-        {% endfor %}#{{ items["initialdelay"] if loop.first else items["delay"] }} 
+        {% endfor %}#{{ items["initialdelay"] if loop.first else items["delay"] }}; 
         {% endfor %}
         $finish;
     end

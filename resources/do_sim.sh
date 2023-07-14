@@ -28,5 +28,5 @@ source /opt/source.mentor
 
 for v in `find ${directory}/flat -name '*.v' | sort`; 
 do 
-    vsim -c -do "do do_sim.tcl ${toplevel} ${v} tb.v ${v}.sdf ${v}.vcd gscl45nm.v"
+    vsim -c -do "do do_sim.tcl ${toplevel} ${v} tb.v ${v}.sdf ${v}.vcd gscl45nm.v ${v}.saif"
 done;

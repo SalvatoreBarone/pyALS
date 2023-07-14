@@ -19,6 +19,7 @@ set tb_file $3
 set sdf_file $4
 set vcd_file $5
 set cell_library $6
+set saif_file $7
 
 # Set Library
 vlib work
@@ -34,16 +35,19 @@ vlog -reportprogress 30 -work work $tb_file
 
 
 # Start Simulation
-vsim -sdftyp $top_module/dut=$sdf_file -sdfnoerror -t 10ps -novopt work.$top_module
+vsim -sdftyp $top_module=$sdf_file -sdfnoerror -t 10ns -novopt work.$top_module
 
 # Write  Switching Activity to .vcd file
 vcd file $vcd_file
+vcd add -r /$top_module/*
+power add -r /$top_module/*
 
-vcd add -r /$top_module/dut/*
-power add -r /$top_module/dut/*
+
+
 
 # Start Simulation 
 run -all
+power report -all -bsaif $saif_file
 quit
 
 
