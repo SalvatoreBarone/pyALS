@@ -182,20 +182,24 @@ def als(ctx):
 
 
 @click.command('hdl')
+@click.option('-o', '--output', type=click.Path(file_okay=False, dir_okay=True), default = None, help = "Output path")
 @click.pass_context
-def generate_verilog(ctx):
+def generate_verilog(ctx, output):
     """
     Performs the rewriting step of the catalog-based AIG-rewriting workflow to generate HDL, starting from the results of a previous run of the "als" command.
     """
     create_yshelper(ctx)
     load_condiguration(ctx)
+    if output is None:
+        output = ctx.obj['configuration'].output_dir
+        
     create_alsgraph(ctx)
     parse_output_weights(ctx)
     ctx.obj["yshelper"].save_design("original")
     create_catalog(ctx)
     create_mop(ctx)
-    if ctx.obj["configuration"].output_dir != ".":
-        mkpath(ctx.obj["configuration"].output_dir)
+    if output != ".":
+        mkpath(output)
     
     problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
     create_optimizer(ctx)
@@ -203,10 +207,10 @@ def generate_verilog(ctx):
     print("Reading the Pareto front.")
     ctx.obj["optimizer"].read_final_archive_from_json(problem, ctx.obj["final_archive_json"])
     pareto_set = ctx.obj["optimizer"].pareto_set()
-    rm_old_implementation(ctx.obj["configuration"].output_dir)
+    rm_old_implementation(output)
     print("Performing AIG-rewriting.")
     rewriter = ALSRewriter(ctx.obj["yshelper"], problem)
-    rewriter.generate_hdl(pareto_set, ctx.obj['configuration'].output_dir)
+    rewriter.generate_hdl(pareto_set, output)
         
     for f in [
         "resources/.synopsys_dc.setup",
@@ -215,8 +219,8 @@ def generate_verilog(ctx):
         "resources/gscl45nm.db",
         "resources/gscl45nm.v"
     ]:
-        copy_file(f, ctx.obj['configuration'].output_dir)
-    print(f"All done! Take a look at {ctx.obj['configuration'].output_dir}!")
+        copy_file(f, output)
+    print(f"All done! Take a look at {output}!")
 
 
 @click.command("py")

@@ -23,12 +23,14 @@ if [ -z "${toplevel}" ] || [ -z "${directory}" ] ; then
    usage
 fi
 
+mkdir -p ${directory}/flat
+
 source /opt/source.synopsys
 source /opt/source.mentor
 echo "Area (nm²);Internal Power (mW);Switching Power (mW);Total Power (mW)" > ${directory}/synth_data.csv;
-for v in `find ${directory} -name '*.v' | sort`; 
+for v in `find ${directory} -name 'variant*.v' | sort`; 
 do 
-    dc_shell -f do_synth.tcl -x "set hdl_source ${v}; set top_module ${toplevel}"
+    dc_shell -f do_synth.tcl -x "set hdl_source ${v}; set top_module ${toplevel}; set flat_netlist ${directory}/flat/$(basename ${v}); set sdf_file ${directory}/flat/$(basename ${v}).sdf"
     area=`cat area.txt | grep "Combinational area:" | sed -r "s/[^0-9.]*//g"`
 	int_pwr=`grep "Total   " power.txt | sed -e's/  */ /g' | cut -d " " -f2`
 	swc_pwr=`grep "Total   " power.txt | sed -e's/  */ /g' | cut -d " " -f4`
