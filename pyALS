@@ -18,6 +18,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 import sys, os, click, git, time, random
 from distutils.dir_util import mkpath
+from distutils.file_util import copy_file
 from tqdm import tqdm
 from multiprocessing import cpu_count
 from src.MOP import *
@@ -206,6 +207,15 @@ def generate_verilog(ctx):
     print("Performing AIG-rewriting.")
     rewriter = ALSRewriter(ctx.obj["yshelper"], problem)
     rewriter.generate_hdl(pareto_set, ctx.obj['configuration'].output_dir)
+        
+    for f in [
+        "resources/.synopsys_dc.setup",
+        "resources/do_synth.sh",
+        "resources/do_synth.tcl",
+        "resources/gscl45nm.db",
+        "resources/gscl45nm.v"
+    ]:
+        copy_file(f, ctx.obj['configuration'].output_dir)
     print(f"All done! Take a look at {ctx.obj['configuration'].output_dir}!")
 
 

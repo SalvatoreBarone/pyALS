@@ -1,0 +1,4 @@
+set target_library gscl45nm.db
+set link_library gscl45nm.db
+set search_path [concat $search_path .]
+

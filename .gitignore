@@ -130,21 +130,10 @@ dmypy.json
 
 pyALS.code-workspace
 
-*.db
-output/reference.ilang
-output/report.csv
-output/variant_0.ilang
-output/variant_1.ilang
-output/variant_2.ilang
-output/variant_3.ilang
-output/variant_4.ilang
 .idea
 prova/
-
 Evaluation/
-
 run.sh
-
 run_experiments.sh
 *.pdf
 *.csv
@@ -153,5 +142,4 @@ result_x2
 prova.py
 mult_2_bit_awce
 x2_ep
-
 .vscode/
