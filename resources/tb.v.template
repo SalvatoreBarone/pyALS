@@ -5,8 +5,8 @@
 
 module tb_{{items["top_module"]}}();
 
-    {% for pi in items["pi"] -%}reg {% if pi['width'] > 1%}[{{pi['width']-1}}:0]{% endif %}{{ pi["name"] }};
-    {% endfor %}{% for po in items["po"] -%}wire {% if po['width'] > 1%}[{{po['width']-1}}:0]{% endif %}{{ po["name"] }};{% endfor %}
+    {% for pi in items["pi"] -%}reg {% if pi['width'] > 1%}[{{pi['width']-1}}:0] {% endif %}{{ pi["name"] }};
+    {% endfor %}{% for po in items["po"] -%}wire {% if po['width'] > 1%}[{{po['width']-1}}:0] {% endif %}{{ po["name"] }};{% endfor %}
 
     {{items["top_module"]}} dut (
         {% for pi in items["pi"] -%}
