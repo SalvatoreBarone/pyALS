@@ -33,21 +33,17 @@ vlog -reportprogress 300 -work work $flat_netlist
 # Compile Testbench
 vlog -reportprogress 30 -work work $tb_file
 
-
 # Start Simulation
-vsim -sdftyp $top_module=$sdf_file -sdfnoerror -t 10ns -novopt work.$top_module
+vsim -sdftyp tb_$top_module=$sdf_file -sdfnoerror -novopt -t 10ps work.tb_$top_module
 
 # Write  Switching Activity to .vcd file
 vcd file $vcd_file
-vcd add -r /$top_module/*
-power add -r /$top_module/*
-
-
-
+vcd add -r /tb_$top_module/*
+power add -r /tb_$top_module/*
 
 # Start Simulation 
 run -all
 power report -all -bsaif $saif_file
-quit
+quit -sim
 
 

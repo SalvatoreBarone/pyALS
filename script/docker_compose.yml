@@ -1,0 +1,18 @@
+# docker-compose.yml
+version: '3'
+services:
+ pyals-tools:
+    image: salvatorebarone/pyals-docker-image
+    user: $UID:$GID
+    working_dir: $HOME
+    stdin_open: true
+    volumes:
+      - /etc/group:/etc/group:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/shadow:/etc/shadow:ro
+      # - $HOME/pyALS:/home/user/pyALS-dbg:rw
+      # - $HOME/pyALSlib:/home/user/pyALSlib-dbg
+      # - $HOME/pyALS-lut-catalog/lut_catalog.db:/home/user/lut_catalog.db 
+      # - $HOME/pyALS:/home/user/shared
+    tty: true
+    command: /bin/zsh

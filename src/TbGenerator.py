@@ -37,14 +37,19 @@ class TbGenerator:
     def generate(self, outfile):
         items = {
             "top_module"   : self.helper.top_module,
-            "pi"           : [ s.str()[1:] for s in self.wires["PI"] ],
-            "po"           : [ s.str()[1:] for s in self.wires["PO"] ],
+            "pi"           : self.get_pi(),
+            "po"           : self.get_po(),
             "stimuli"      : self.get_stimuli(),
             "initialdelay" : 5*self.delay,
             "delay"        : self.delay,
         }
         template_render(self.resource_dir, self.__tb_v, items, outfile)  
 
+    def get_pi(self):
+        return [ {"name": name.str()[1:], "width": wire.width} for name, wire in self.wires["PI"].items() ]
+    
+    def get_po(self):
+        return [ {"name": name.str()[1:], "width": wire.width} for name, wire in self.wires["PO"].items() ]
         
     def get_stimuli(self):
         return [{name.str()[1:] : f"{wire.width}'b" + "".join(reversed([ "1" if s["input"][f"{name.str()}[{i}]"] else "0" for i in reversed(range(wire.width)) ])) for name, wire in self.wires["PI"].items()} for s in self.problem.samples ]
