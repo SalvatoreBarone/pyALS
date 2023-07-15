@@ -43,7 +43,17 @@ class TbGenerator:
             "initialdelay" : 2*self.delay,
             "delay"        : self.delay,
         }
-        template_render(self.resource_dir, self.__tb_v, items, outfile)  
+        template_render(self.resource_dir, self.__tb_v, items, outfile)
+        
+    def generate_split(self, outdir):
+        items = {
+            "top_module"   : self.helper.top_module,
+            "pi"           : self.get_pi(),
+            "po"           : self.get_po(),
+            "initialdelay" : 2*self.delay,
+            "delay"        : self.delay,
+        }
+        stimuli = self.get_stimuli()
 
     def get_pi(self):
         return [ {"name": name.str()[1:], "width": wire.width} for name, wire in self.wires["PI"].items() ]

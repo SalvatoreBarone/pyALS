@@ -30,7 +30,7 @@ source /opt/source.mentor
 echo "Area (nm²);Internal Power (mW);Switching Power (mW);Total Power (mW)" > ${directory}/synth_data.csv;
 for v in `find ${directory} -name 'variant*.v' | sort`; 
 do 
-    dc_shell -f do_synth.tcl -x "set hdl_source ${v}; set top_module ${toplevel}; set flat_netlist ${directory}/flat/$(basename ${v}); set sdf_file ${directory}/flat/$(basename ${v}).sdf"
+    dc_shell -f do_synth.tcl -x "set hdl_source ${v}; set top_module ${toplevel}; set flat_netlist ${directory}/flat/$(basename ${v}); set sdf_file ${directory}/flat/$(basename ${v}).sdf; set sdc_file ${directory}/flat/$(basename ${v}).sdc"
     area=`cat area.txt | grep "Combinational area:" | sed -r "s/[^0-9.]*//g"`
 	int_pwr=`grep "Total   " power.txt | sed -e's/  */ /g' | cut -d " " -f2`
 	swc_pwr=`grep "Total   " power.txt | sed -e's/  */ /g' | cut -d " " -f4`
