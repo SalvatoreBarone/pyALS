@@ -306,6 +306,7 @@ def generate_tb(ctx, output, delay):
         "resources/gscl45nm.v",
         "resources/do_sim.sh",
         "resources/do_sim.tcl",
+        "resources/do_pwr.tcl"
     ]:
         copy_file(f, output)
     print(f"All done! Take a look at {output}!")

@@ -28,5 +28,6 @@ source /opt/source.mentor
 
 for v in `find ${directory}/flat -name '*.v' | sort`; 
 do 
-    vsim -c -do "do do_sim.tcl ${toplevel} ${v} tb.v ${v}.sdf ${v}.vcd gscl45nm.v ${v}.saif"
+    vsim -c -do "do do_sim.tcl ${toplevel} ${v} tb.v ${v}.sdf ${v}.vcd gscl45nm.v"
+    pt_shell -f do_pwr.tcl -x "set flat_netlist ${v}; set top_module ${toplevel}; set vcd_file ${v}.vcd; set link_library gscl45nm.db"
 done;

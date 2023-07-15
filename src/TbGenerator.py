@@ -40,7 +40,7 @@ class TbGenerator:
             "pi"           : self.get_pi(),
             "po"           : self.get_po(),
             "stimuli"      : self.get_stimuli(),
-            "initialdelay" : 5*self.delay,
+            "initialdelay" : 2*self.delay,
             "delay"        : self.delay,
         }
         template_render(self.resource_dir, self.__tb_v, items, outfile)  
