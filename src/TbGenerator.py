@@ -35,36 +35,24 @@ class TbGenerator:
         self.wires = helper.get_PIs_and_Pos()
         
     def generate(self, outfile, nvec = None):
+        stims = self.get_stims()
+        for pi, stim in stims.items():
+            random.shuffle(stim["stims"])
+            if nvec is not None:
+                stim["stims"] = random.choices(stim["stims"], k = nvec)
         items = {
             "top_module"   : self.helper.top_module,
-            "pi"           : self.get_pi(),
+            "pi"           : list(stims.keys()),
             "po"           : self.get_po(),
-            "stimuli"      : self.get_stimuli() if nvec is None else random.choices(self.get_stimuli(), k = nvec),
+            "stimuli"      : stims,
             "initialdelay" : 2*self.delay,
             "delay"        : self.delay,
         }
         template_render(self.resource_dir, self.__tb_v, items, outfile)
         
-    # def generate_split(self, outdir):
-    #     items = {
-    #         "top_module"   : self.helper.top_module,
-    #         "pi"           : self.get_pi(),
-    #         "po"           : self.get_po(),
-    #         "initialdelay" : 3*self.delay,
-    #         "delay"        : self.delay,
-    #     }
-        
-    #     stimuli = self.get_stimuli()
-        
-
-    def get_pi(self):
-        return [ {"name": name.str()[1:], "width": wire.width} for name, wire in self.wires["PI"].items() ]
-    
     def get_po(self):
         return [ {"name": name.str()[1:], "width": wire.width} for name, wire in self.wires["PO"].items() ]
     
-    def get_initial_stimulus(self):
-        return [{name.str()[1:] : f"{wire.width}'b" + "0" * wire.width for name, wire in self.wires["PI"].items()}]
+    def get_stims(self):
+        return { name.str()[1:] : { "width": wire.width, "zero": f"{wire.width}'b" + "0" * wire.width, "stims" : list(dict.fromkeys( f"{wire.width}'b" + "".join(reversed([ "1" if s["input"][f"{name.str()}[{i}]"] else "0" for i in reversed(range(wire.width)) ])) for s in self.problem.samples )) } for name, wire in self.wires["PI"].items() }
         
-    def get_stimuli(self):
-        return [{name.str()[1:] : f"{wire.width}'b" + "0" * wire.width for name, wire in self.wires["PI"].items()}] + random.shuffle([{name.str()[1:] : f"{wire.width}'b" + "".join(reversed([ "1" if s["input"][f"{name.str()}[{i}]"] else "0" for i in reversed(range(wire.width)) ])) for name, wire in self.wires["PI"].items()} for s in self.problem.samples ])

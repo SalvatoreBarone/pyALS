@@ -5,24 +5,32 @@
 
 module tb_{{items["top_module"]}}();
 
-    {% for pi in items["pi"] -%}reg {% if pi['width'] > 1%}[{{pi['width']-1}}:0] {% endif %}{{ pi["name"] }};
-    {% endfor %}{% for po in items["po"] -%}wire {% if po['width'] > 1%}[{{po['width']-1}}:0] {% endif %}{{ po["name"] }};{% endfor %}
+    {% for pi, data in items["stimuli"].items() -%}reg {% if data['width'] > 1%}[{{data['width']-1}}:0] {% endif %}{{ pi }}_values{% if data['width'] > 1%}[0:{{data['stims']|length-1}}] = '{ {% for s in data["stims"] -%}{{s}}{{ ", " if not loop.last else "" }}{% endfor %} }{% endif %};
+    {% endfor %}
+
+    {% for po in items["po"] -%}wire {% if po['width'] > 1%}[{{po['width']-1}}:0] {% endif %}{{ po["name"] }};{% endfor %}
 
     {{items["top_module"]}} dut (
         {% for pi in items["pi"] -%}
-        .{{ pi["name"] }} ( {{ pi["name"] }} ),
+        .{{ pi }} ( {{ pi }} ),
         {% endfor %}{% for po in items["po"] -%}
         .{{ po["name"] }} ( {{ po["name"] }} ){{ ", " if not loop.last else "" }}{% endfor %});
 
     initial
     begin
-        {% for stim in items["stimuli"] -%}
-        {% for s, v in stim.items() -%}
-        {{ s }} = {{ v }};
-        {% endfor %}#{{ items["initialdelay"] if loop.first else items["delay"] }};
-        $display("{% for pi in items["pi"] -%} {{ pi["name"] }}: %b, {% endfor %}{% for po in items["po"] -%} {{ po["name"] }}: %b{{ ", " if not loop.last else "" }}{% endfor %}", {% for pi in items["pi"] -%} {{ pi["name"] }}, {% endfor %}{% for po in items["po"] -%} {{ po["name"] }}{{ ", " if not loop.last else "" }}{% endfor %});
-        {% endfor %}
-        $finish;
+        {% for pi, data in items["stimuli"].items() -%}
+        {{pi}} = {{data['zero']}}
+        {% endfor %}#{{ items["initialdelay"] }};
+        $display("{% for pi in items["pi"] -%} {{ pi }}: %b, {% endfor %}{% for po in items["po"] -%} {{ po["name"] }}: %b{{ ", " if not loop.last else "" }}{% endfor %}", {% for pi in items["pi"] -%} {{ pi }}, {% endfor %}{% for po in items["po"] -%} {{ po["name"] }}{{ ", " if not loop.last else "" }}{% endfor %});
+
+        {% for pi, data in items["stimuli"].items() -%}
+        {{ "for"|indent(width=(loop.index*4-4),first=true)}} (counter_{{pi}} = 0; counter_{{pi}} < {{data['stims']|length}}; counter_{{pi}} = counter_{{pi}} + 1) begin
+        {{pi|indent(width=(loop.index*4),first=true)}} = {{pi}}_values[counter_{{pi}}];
+        {% if loop.last %}{{"#"|indent(width=(loop.index*4),first=true)}}{{ items['delay']}};
+        {{"$display"|indent(width=(loop.index*4),first=true)}}("{% for pi in items["pi"] -%} {{ pi }}: %b, {% endfor %}{% for po in items["po"] -%} {{ po["name"] }}: %b{{ ", " if not loop.last else "" }}{% endfor %}", {% for pi in items["pi"] -%} {{ pi }}, {% endfor %}{% for po in items["po"] -%} {{ po["name"] }}{{ ", " if not loop.last else "" }}{% endfor %});
+        {% endif %}{% endfor %}{% for pi, data in items["stimuli"].items() -%}
+        {{"end"|indent(width=((loop.length-loop.index)*4),first=true)}}
+        {% endfor %}$finish;
     end
 
 endmodule

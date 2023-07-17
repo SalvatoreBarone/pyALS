@@ -296,7 +296,7 @@ def generate_tb(ctx, output, delay, nvec):
         problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
     else:
         problem = ctx.obj['problem']
-    
+    mkpath(output)
     create_optimizer(ctx)
     TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/tb.v", nvec)
     for f in [
