@@ -62,6 +62,9 @@ class TbGenerator:
     
     def get_po(self):
         return [ {"name": name.str()[1:], "width": wire.width} for name, wire in self.wires["PO"].items() ]
+    
+    def get_initial_stimulus(self):
+        return [{name.str()[1:] : f"{wire.width}'b" + "0" * wire.width for name, wire in self.wires["PI"].items()}]
         
     def get_stimuli(self):
         return [{name.str()[1:] : f"{wire.width}'b" + "0" * wire.width for name, wire in self.wires["PI"].items()}] + random.shuffle([{name.str()[1:] : f"{wire.width}'b" + "".join(reversed([ "1" if s["input"][f"{name.str()}[{i}]"] else "0" for i in reversed(range(wire.width)) ])) for name, wire in self.wires["PI"].items()} for s in self.problem.samples ])
