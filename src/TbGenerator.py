@@ -14,7 +14,7 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import os
+import os, random
 from .template_render import template_render
 
 class TbGenerator:
@@ -45,15 +45,17 @@ class TbGenerator:
         }
         template_render(self.resource_dir, self.__tb_v, items, outfile)
         
-    def generate_split(self, outdir):
-        items = {
-            "top_module"   : self.helper.top_module,
-            "pi"           : self.get_pi(),
-            "po"           : self.get_po(),
-            "initialdelay" : 2*self.delay,
-            "delay"        : self.delay,
-        }
-        stimuli = self.get_stimuli()
+    # def generate_split(self, outdir):
+    #     items = {
+    #         "top_module"   : self.helper.top_module,
+    #         "pi"           : self.get_pi(),
+    #         "po"           : self.get_po(),
+    #         "initialdelay" : 3*self.delay,
+    #         "delay"        : self.delay,
+    #     }
+        
+    #     stimuli = self.get_stimuli()
+        
 
     def get_pi(self):
         return [ {"name": name.str()[1:], "width": wire.width} for name, wire in self.wires["PI"].items() ]
@@ -62,4 +64,4 @@ class TbGenerator:
         return [ {"name": name.str()[1:], "width": wire.width} for name, wire in self.wires["PO"].items() ]
         
     def get_stimuli(self):
-        return [{name.str()[1:] : f"{wire.width}'b" + "".join(reversed([ "1" if s["input"][f"{name.str()}[{i}]"] else "0" for i in reversed(range(wire.width)) ])) for name, wire in self.wires["PI"].items()} for s in self.problem.samples ]
+        return [{name.str()[1:] : f"{wire.width}'b" + "0" * wire.width for name, wire in self.wires["PI"].items()}] + random.shuffle([{name.str()[1:] : f"{wire.width}'b" + "".join(reversed([ "1" if s["input"][f"{name.str()}[{i}]"] else "0" for i in reversed(range(wire.width)) ])) for name, wire in self.wires["PI"].items()} for s in self.problem.samples ])
