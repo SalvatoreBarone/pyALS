@@ -280,8 +280,9 @@ def generate_python(ctx, output, altconf, exact, alwann):
 @click.command("tb")
 @click.option('-o', '--output', type=click.Path(file_okay=False, dir_okay=True), default = None, help = "Output path")
 @click.option("--delay", type=int, default = 10, help = "Simulation delay")
+@click.option("--nvec", type=int, default = None, help = "Number of (random) test vectors (uniformly drawn with repetition).")
 @click.pass_context
-def generate_tb(ctx, output, delay):
+def generate_tb(ctx, output, delay, nvec):
     """ Generate testbench and scritps files for vectored power estimation """
     print("Generating testbench")
     create_yshelper(ctx)
@@ -297,7 +298,7 @@ def generate_tb(ctx, output, delay):
         problem = ctx.obj['problem']
     
     create_optimizer(ctx)
-    TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/tb.v")
+    TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/tb.v", nvec)
     for f in [
         "resources/.synopsys_dc.setup",
         "resources/do_synth.sh",

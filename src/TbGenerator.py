@@ -34,12 +34,12 @@ class TbGenerator:
         self.helper.reverse_splitnets()
         self.wires = helper.get_PIs_and_Pos()
         
-    def generate(self, outfile):
+    def generate(self, outfile, nvec = None):
         items = {
             "top_module"   : self.helper.top_module,
             "pi"           : self.get_pi(),
             "po"           : self.get_po(),
-            "stimuli"      : self.get_stimuli(),
+            "stimuli"      : self.get_stimuli() if nvec is None else random.choices(self.get_stimuli(), k = nvec),
             "initialdelay" : 2*self.delay,
             "delay"        : self.delay,
         }
