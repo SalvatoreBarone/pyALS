@@ -16,7 +16,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import itertools, pyamosa, numpy as np, copy
 from pyalslib import list_partitioning, negate, flatten
-from multiprocessing import Pool
+from multiprocessing import cpu_count, Pool
 from .HwMetrics import *
 from .ErrorMetrics import *
 from tqdm import tqdm
