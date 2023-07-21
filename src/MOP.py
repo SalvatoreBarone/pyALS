@@ -16,7 +16,7 @@ Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
 import itertools, pyamosa, numpy as np, copy
 from pyalslib import list_partitioning, negate, flatten
-from multiprocessing import cpu_count, Pool
+from multiprocessing import Pool
 from .HwMetrics import *
 from .ErrorMetrics import *
 from tqdm import tqdm
@@ -46,7 +46,8 @@ class MOP(pyamosa.Problem):
         self.top_module = top_module
         self.graph = graph
         self.output_weights = output_weights
-        self.graphs = [copy.deepcopy(graph) for _ in range(cpu_count())]
+        self.ncpus = min(ncpus, cpu_count())
+        self.graphs = [copy.deepcopy(graph) for _ in range(self.ncpus)]
         self.n_vars = graph.get_num_cells()
         self.catalog = catalog
         self.error_config = error_config
@@ -54,8 +55,7 @@ class MOP(pyamosa.Problem):
         self.samples = None
         self.n_vectors = 0
         lut_io_info = self.generate_samples()
-        self.ncpus = ncpus
-        self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
+        self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, self.ncpus))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
         self.baseline_and_gates = self.get_baseline_gates(None)
         self.baseline_depth = self.get_baseline_depth(None)
