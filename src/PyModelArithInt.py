@@ -22,8 +22,11 @@ from distutils.dir_util import mkpath
 
 class PyModelArithInt:
     __resource_dir = "../resources/"
-    __single_circuit_model_dict_py = "single_circuit_model_dict.py.template"
     __single_circuit_model_mat_py = "single_circuit_model_mat.py.template"
+    __single_circuit_model_mat_hh = "single_circuit_model_mat.hpp.template"
+    __single_circuit_model_mat_cc = "single_circuit_model_mat.cpp.template"
+    __single_circuit_model_mat_h = "single_circuit_model_mat.h.template"
+    __single_circuit_model_mat_c = "single_circuit_model_mat.c.template"
 
     def __init__(self, helper, problem, signal_weights, design_name = "original"):
         dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,14 +52,23 @@ class PyModelArithInt:
             computed_circuit_output, _ = self.problem.get_outputs(configuration)
             model, signed, offset_op1, offset_op2 = self.get_lut_for_variant_as_mat(computed_circuit_output)
             items["top_module"] = f"{top_module}"
-            items["lut"] = model.tolist()
-            items["signed"] = signed
-            items["offset1"] = offset_op1
-            items["offset2"] = offset_op2
+            items["lut"]        = model.tolist()
+            items["signed"]     = signed
+            items["offset1"]    = offset_op1
+            items["offset2"]    = offset_op2
+            items["c_header"]   = f"{top_module}.h"
+            items["cc_header"]  = f"{top_module}.hpp"
+            items["op1_c_type"] = f"{'' if signed else 'u'}int{len(self.pis_weights[0])}_t" 
+            items["op1_c_size"] = 2**len(self.pis_weights[0])
+            items["op2_c_type"] = f"{'' if signed else 'u'}int{len(self.pis_weights[1])}_t"
+            items["op2_c_size"] = 2**len(self.pis_weights[1])
+            items["res_c_type"] = f"{'' if signed else 'u'}int{len(self.pis_weights[0]) + len(self.pis_weights[0])}_t"
+            
             destination_dir = f"{destination}/variant_{n:05d}"
             mkpath(destination_dir)
-            output_file = f"{destination_dir}/{top_module}.py"
-            template_render(self.resource_dir, self.__single_circuit_model_mat_py, items, output_file)        
+            for template, ext in zip([self.__single_circuit_model_mat_py, self.__single_circuit_model_mat_hh, self.__single_circuit_model_mat_cc, self.__single_circuit_model_mat_h, self.__single_circuit_model_mat_c], ["py", "hpp", "cpp", "h", "c"]):
+                output_file = f"{destination_dir}/{top_module}.{ext}"
+                template_render(self.resource_dir, template, items, output_file)        
 
     def get_lut_for_variant_as_mat(self, computed_circuit_outputs):
         signed = np.min(list(self.pis_weights[0].values())) < 0 or np.min(list(self.pis_weights[1].values())) < 0 or np.min(list(self.po_weights.values())) < 0

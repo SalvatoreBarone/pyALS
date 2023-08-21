@@ -57,6 +57,7 @@ def create_alsgraph(ctx):
         ctx.obj["yshelper"].read_sources(ctx.obj["configuration"].source_hdl, ctx.obj["configuration"].top_module)
         ctx.obj["yshelper"].prep_design(ctx.obj["configuration"].als_conf.cut_size)
         ctx.obj["graph"] = ALSGraph(ctx.obj["yshelper"].design)
+        ctx.obj["yshelper"].save_design("original")
         print("Done!")
         
 def create_catalog(ctx):
@@ -154,7 +155,6 @@ def als(ctx):
     create_yshelper(ctx)
     load_condiguration(ctx)
     create_alsgraph(ctx)
-    ctx.obj["yshelper"].save_design("original")
     parse_output_weights(ctx)
     create_catalog(ctx)
     
@@ -199,7 +199,6 @@ def generate_verilog(ctx, output):
         
     create_alsgraph(ctx)
     parse_output_weights(ctx)
-    ctx.obj["yshelper"].save_design("original")
     create_catalog(ctx)
     create_mop(ctx)
     if output != ".":
@@ -227,13 +226,13 @@ def generate_verilog(ctx, output):
     print(f"All done! Take a look at {output}!")
 
 
-@click.command("py")
+@click.command("sw")
 @click.option('-o', '--output', type=click.Path(file_okay=False, dir_okay=True), default = None, help = "Output path")
 @click.option("--altconf", type=click.Path(exists=True, dir_okay=False), help = "Optional alternative configuration file (for signals' weights)", default = None)
 @click.option("-e", "--exact", is_flag = True, help = "Generates the exact implementation only")
 @click.option("-a", "--alwann", is_flag = True, help = "Enable the weight-tuning approach. See below.")
 @click.pass_context
-def generate_python(ctx, output, altconf, exact, alwann):
+def generate_sw(ctx, output, altconf, exact, alwann):
     """
     Generates software models of twp-inputs-one-output arithmetic circuits resulting from the 'als' command, for GPU software simulations.
     You can select which models to be generated using the available options.
@@ -246,7 +245,7 @@ def generate_python(ctx, output, altconf, exact, alwann):
         https://doi.org/10.1109/ICCAD45719.2019.8942068.
     
     """
-    print("Generating Python")
+    print("Generating software models")
     create_yshelper(ctx)
     load_condiguration(ctx)
     if output is None:
@@ -271,8 +270,11 @@ def generate_python(ctx, output, altconf, exact, alwann):
         print("Generating the fake Pareto front.")
         pareto_set = [[0] * problem.n_vars]
     generator = ALWANNPyModelArithInt(ctx.obj["yshelper"], problem, ctx.obj["configuration"].weights) if alwann else PyModelArithInt(ctx.obj["yshelper"], problem, ctx.obj["configuration"].weights)
+    
     mkpath(output)
     rm_old_implementation(output, ".py")
+    rm_old_implementation(output, ".c")
+    rm_old_implementation(output, ".h")
     generator.generate(ctx.obj["configuration"].top_module, pareto_set, output)
     ctx.obj["configuration"].weights = original_weights
     print(f"All done! Take a look at {output}!")
@@ -288,7 +290,6 @@ def generate_tb(ctx, output, delay, nvec):
     create_yshelper(ctx)
     load_condiguration(ctx)
     create_alsgraph(ctx)
-    ctx.obj["yshelper"].save_design("original")
     create_catalog(ctx)
     if output is None:
         output = f"{ctx.obj['configuration'].output_dir}" 
@@ -365,7 +366,7 @@ cli.add_command(es_synth)
 cli.add_command(als)
 cli.add_command(generate_verilog)
 cli.add_command(generate_tb)
-cli.add_command(generate_python)
+cli.add_command(generate_sw)
 cli.add_command(fitnesses)
     
 @click.command('clean')

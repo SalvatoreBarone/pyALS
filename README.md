@@ -75,7 +75,7 @@ pyALS supports the following main commands, each with its own set of options:
   - ```es```: performs the catalog-based AIG-rewriting workflow until catalog generation, i.e., including cut enumeration, and exact synthesis of approximate cuts, but it performs neither the design space exploration phase not the rewriting;
   - ```als```: performs the full catalog-based AIG-rewriting workflow, including cut enumeration, exact synthesis of approximate cuts, design space exploration and rewriting;
   - ```hdl```: performs only the rewriting step, of the catalog-based AIG-rewriting workflow, starting from the results of a previous run of the "als" command;
-  - ```py```: generates software models (in python) for software simulations. 
+  - ```sw```: generates software models (in python, C and C++) for software simulations. 
   - ```metrics```: computes the all the builtin metrics (both error and hardware) for points coming from a given Pareto front.
 Please kindly note you will need the file where synthesized Boolean functions are stored, i.e., the catalog-cache file. 
 You can mine, which is ready-to-use, frequently updated and freely available at ```git@github.com:SalvatoreBarone/pyALS-lut-catalog```.
@@ -96,11 +96,11 @@ The main options are:
 ```
 For instance, you can issue
 ```
-./pyALS -c example/mult_2_bit/config_awce.json als hdl py metrics
+./pyALS -c example/mult_2_bit/config_awce.json als hdl sw metrics
 ```
 or
 ```
-./pyALS -c example/mult_2_bit/config_awce.json als py -o prova metrics -o metrics.csv
+./pyALS -c example/mult_2_bit/config_awce.json als sw -o prova metrics -o metrics.csv
 ```
 or
 ```
