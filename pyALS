@@ -526,7 +526,7 @@ def git_updater():
             print(f"Updated {fetch_info.ref} to {fetch_info.commit}")
             if fetch_info.commit != local_head:
                 restart_needed = True
-                print("Local head moved to {}. The program will be restarted.")
+                print(f"Local head moved to {local_head}. The program will be restarted.")
 
         print("Checking for updates in submodules...")
         for submodule in repo.submodules:
@@ -534,7 +534,7 @@ def git_updater():
                 print(f"Updated {fetch_info.ref} to {fetch_info.commit}")
                 if fetch_info.commit != local_head:
                     restart_needed = True
-                    print("Local head moved to {}. The program will be restarted.")
+                    print(f"Local head moved to {local_head}. The program will be restarted.")
 
         return restart_needed
     except git.exc.GitCommandError as e:
