@@ -86,16 +86,33 @@ def parse_output_weights(ctx):
         ctx.obj["output_weights"] = ctx.obj["graph"].validate_po_weights(ctx.obj["configuration"].weights)
         print("Done!")
         
-def create_mop(ctx):
+def create_problem(ctx):
     assert "configuration" in ctx.obj, "You must read the JSON configuration file to run this command(s)"
     assert "graph" in ctx.obj, "You must create a ALSGraph object first"
-    
     if "problem" not in ctx.obj:
         ctx.obj["problem"] = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['ncpus']) if ctx.obj['dataset'] is None else IAMOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['dataset'], ctx.obj['ncpus'])
         
 def create_optimizer(ctx):
     if "optimizer" not in ctx.obj:
-        ctx.obj["optimizer"] = pyamosa.Optimizer(ctx.obj["configuration"].amosa_conf)
+        print("Creating optimizer...")
+        grp = ctx.obj["configuration"].variable_grouping_strategy 
+        tso = ctx.obj["configuration"].transfer_strategy_objectives
+        tsv = ctx.obj["configuration"].transfer_strategy_variables
+        if grp is None:
+            ctx.obj["optimizer"] = pyamosa.Optimizer(ctx.obj["configuration"].amosa_conf)
+        elif grp in ["DRG", "drg", "random"]:
+            print("Using dynamic random grouping")
+            ctx.obj["optimizer"] = pyamosa.DynamicRandomGroupingOptimizer(ctx.obj["configuration"].amosa_conf)
+        elif grp in ["dvg", "DVG", "dvg2", "DVG2", "differential"]:
+            print(f"Using differential grouping with TSO {tso} and TSV {tsv}")
+            variable_decomposition_cache = f"{ctx.obj['configuration'].output_dir}/dvg2_{tso}_{tsv}.json5"
+            grouper = pyamosa.DifferentialVariableGrouping2(ctx.obj["problem"])
+            if os.path.exists(variable_decomposition_cache):
+                grouper.load(variable_decomposition_cache)
+            else:
+                grouper.run(ctx.obj["configuration"].tso_selector[tso], ctx.obj["configuration"].tsv_selector[tsv])
+                grouper.store(variable_decomposition_cache)
+            ctx.obj["optimizer"] = pyamosa.GenericGroupingOptimizer(ctx.obj["configuration"], grouper)
         ctx.obj["final_archive_json"] = f"{ctx.obj['configuration'].output_dir}/final_archive.json"
         ctx.obj["improve"] = None
         if os.path.exists(ctx.obj["final_archive_json"]):
@@ -161,7 +178,7 @@ def als(ctx):
     if ctx.obj["configuration"].output_dir != ".":
         mkpath(ctx.obj["configuration"].output_dir)
         
-    create_mop(ctx)
+    create_problem(ctx)
     fitness_labels = ctx.obj['problem'].plot_labels()
 
     create_optimizer(ctx)
@@ -200,7 +217,7 @@ def generate_verilog(ctx, output):
     create_alsgraph(ctx)
     parse_output_weights(ctx)
     create_catalog(ctx)
-    create_mop(ctx)
+    create_problem(ctx)
     if output != ".":
         mkpath(output)
     
@@ -257,7 +274,7 @@ def generate_sw(ctx, output, altconf, exact, alwann):
     ctx.obj["configuration"].weights = configuration.weights    
     parse_input_weights(ctx)
     parse_output_weights(ctx)
-    create_mop(ctx)
+    create_problem(ctx)
     
     problem = ctx.obj['problem'] if isinstance(ctx.obj['problem'], MOP) else MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
     create_optimizer(ctx)

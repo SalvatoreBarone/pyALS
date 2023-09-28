@@ -21,6 +21,8 @@ from .ErrorMetrics import *
 from .HwMetrics import *
 
 class ConfigParser:
+    tso_selector = {"all" : pyamosa.VariableGrouping.TSObjective.All, "any": pyamosa.VariableGrouping.TSObjective.Any}
+    tsv_selector = {"all" : pyamosa.VariableGrouping.TSVariable.All, "any" : pyamosa.VariableGrouping.TSVariable.Any}
         
     def __init__(self, config_file):
         configuration = json5.load(open(config_file))
@@ -56,6 +58,10 @@ class ConfigParser:
                 hill_climb_checkpoint_file = f"{self.output_dir}/hill_climb_checkpoint.json",
                 minimize_checkpoint_file = f"{self.output_dir}/annealing_checkpoint.json",
                 cache_dir = f"{self.output_dir}/.cache")
+        
+        self.variable_grouping_strategy = ConfigParser.search_subfield_in_config(configuration, "amosa", "grouping", False, None)
+        self.transfer_strategy_objectives = ConfigParser.search_subfield_in_config(configuration, "amosa", "tso", False, "all")
+        self.transfer_strategy_variables = ConfigParser.search_subfield_in_config(configuration, "amosa", "tsv", False, "any")
         
         optimizer_min_temperature = ConfigParser.search_subfield_in_config(configuration, "amosa", "final_temperature", False, 1e-7)
         optimizer_stop_phy_window = ConfigParser.search_subfield_in_config(configuration, "amosa", "early_termination", False, None)

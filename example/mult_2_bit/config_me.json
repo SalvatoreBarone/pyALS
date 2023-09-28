@@ -30,6 +30,9 @@
         "metrics" : ["gates"]
     },
     "amosa" : {
+        "grouping"                 : "DRG",
+        "tso"                      : "any",
+        "tsv"                      : "any",
         "archive_hard_limit"       : 10,
         "archive_soft_limit"       : 20,
         "archive_gamma"            : 2,
@@ -40,7 +43,7 @@
         "cooling_factor"           : 0.9,
         "annealing_iterations"     : 500,
         "annealing_strength"       : 1,
-        "_early_termination"        : 10,
+        "_early_termination"       : 10,
         "multiprocess_enabled"     : false
     }
 }

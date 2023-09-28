@@ -19,7 +19,7 @@ nyoka
 packaging
 Pillow
 pyalslib
-pyamosa
+pyamosa>=2.0.1
 pyboolector
 pycairo
 pyeda

@@ -201,7 +201,54 @@ The latter can be set to
 - "rmsed" for the root mean squared error <!-- e_{\text{rmse}}(f,\hat{f}) = \sqrt{\frac{1}{2^n} \sum_{x \in \mathbb{B}^n} \left(  \hat{f}(x) - f(x)  \right)^2} --> <img src="https://latex.codecogs.com/svg.image?e_{\text{rmse}}(f,\hat{f})&space;=&space;\sqrt{\frac{1}{2^n}&space;\sum_{x&space;\in&space;\mathbb{B}^n}&space;\left(&space;&space;\hat{f}(x)&space;-&space;f(x)&space;&space;\right)^2}" title="https://latex.codecogs.com/svg.image?e_{\text{rmse}}(f,\hat{f}) = \sqrt{\frac{1}{2^n} \sum_{x \in \mathbb{B}^n} \left( \hat{f}(x) - f(x) \right)^2}" />
 - "vared" for the variance of the error distance <!-- e_{\sigma}(f,\hat{f}) = \frac{1}{2^n} \sum_{x \in \mathbb{B}^n} \left[  \left(f(x) - \hat{f}(x)\right) - \frac{1}{2^n} \sum_{x \in \mathbb{B}^n} \left(f(x) - \hat{f}(x)\right) \right]^2 --><img src="https://latex.codecogs.com/svg.image?e_{\sigma}(f,\hat{f})&space;=&space;\frac{1}{2^n}&space;\sum_{x&space;\in&space;\mathbb{B}^n}&space;\left[&space;&space;\left(f(x)&space;-&space;\hat{f}(x)\right)&space;-&space;\frac{1}{2^n}&space;\sum_{x&space;\in&space;\mathbb{B}^n}&space;\left(f(x)&space;-&space;\hat{f}(x)\right)&space;\right]^2" title="https://latex.codecogs.com/svg.image?e_{\sigma}(f,\hat{f}) = \frac{1}{2^n} \sum_{x \in \mathbb{B}^n} \left[ \left(f(x) - \hat{f}(x)\right) - \frac{1}{2^n} \sum_{x \in \mathbb{B}^n} \left(f(x) - \hat{f}(x)\right) \right]^2" />
  
-## Manual installation
+## Coping with large circuits
+Large circuits may imply a huge number of decision variables being involved in the design process. 
+For this reason, pyALS allows the circuit design problem to be faced using optimization heuristics suitable for large scale optimization problems, i.e., problems involving more the 100 decision variables.
+
+Currently, two heuristics are supported, both based on the divide-and-conquer strategy:
+  - the dynamic random grouping [3], that randomly divides the decision variables into several groups;
+  - the differential value analysis [4]: it groups decision variables based on their interaction and separability;
+    using this strategys requires specifying *transfer strategies* [5], that are divided into two consecutive steps. The first step combines interaction information of different objective functions, and two Transfer Strategies for Objective functions(TSO) have been defined, namely 
+      - *TSO_any*, regards two variables xi and xj as interacting, if an interaction exists in *any* of the objective functions 
+      - *TSO_all*, regards two variables xi and xj as interacting, if an interaction exists in *all* of the objective functions
+    and two Transfer Strategies for Variables (TSV), namely
+      - *TSV_any*, a variable xi is added to a group if the combined interaction graph contains an edge between xi and any variable xj in the group. 
+      - *TSV_all*, a variable xi is added to a group if the combined interaction graph contains an edge between xi and all the other variable xj in the group.
+
+You can specify which strategy to be used in the configuration file, as it follows:
+```json5
+
+"amosa": {
+  ...
+        "grouping"                 : "DRG", //use random grouping ("DRG", "drg", "random" are supported)
+  ...
+  }
+```
+```json5
+"amosa": {
+  ...
+        "grouping"                 : "DVG", //use differential value analysis ("dvg", "DVG", "dvg2", "DVG2", "differential" are supported)
+        "tso"                      : "any", // tso "any" or "all"
+        "tsv"                      : "any", // tsv "any" or "all"
+  ...
+  }
+```
+
+## Understanding the log prints
+When performing the ```als`` command, during the annealing procedure, the optimizers will print several statistical information in a table format.
+These are pretty useful for evaluating the effectiveness of the optimization process -- in specific whether it's going toward either convergence or diversity in the population, etc. -- so it's worth discoursing them.
+
+  - *temp*.: it is the current temperature of the matter; refer to [1] for further details on its impact on the optimization process;
+  - *eval*: it is the number of fitness-function evaluations;
+  - *nds*: it is the number of non-dominated solutions the algorithm found until then;
+  - *feas*: it is the number of **feasible** non-dominated solutions (i.e., those satisfying constraints) the algorithm found until then;
+  - *cv min* and *cv avg*: minimum and average constraint violation, computed on unfeasible non-dominated solutions the algorithm found until then;
+  - *D\** and *Dnad*: movement of the *ideal* and *nadir* idealized extreme points in the object-space; whether the algotithm is going toward convergence, they tend to be higher (the Pareto front is moving a lot!); see [2] for further details;
+  - *phi*: the *intergenerational distance index*, computed on candidate solutions from the previous annealing iteration *P'* and candidate solutions resulting from the very last annealing iteration *P*; this allows monitoring; if the Pareto front is stationary, and can be improved neither by convergence nor by diversity, this value is close to zero; this metric is taken into consideration to determine the early termination condition; see [3] for further details;
+  - *C(P', P)* and *C(P, P')*: the *coverage index* as defined in [6], computed on candidate solutions from the previous annealing iteration *P'* and candidate solutions resulting from the very last annealing iteration *P* and vice-versa, respectively; in general, *C(A,B)* is percentage the solutions in *B* that are dominated by at least one solution in *A*, where *A* and *B* are two Pareto fronts; therefore, *C(P, P')* should be alway greater than *C(P', P)* through the optimization process.
+
+
+# Manual installation
 
 Come on... Do you really want to install everything by hand!? [You can use a ready to use Docker container!](#using-the-ready-to-use-docker-container)
 
@@ -323,6 +370,12 @@ pip3 install -r requirements.txt
 
 
 
-## References
+# References
 1. Bandyopadhyay, S., Saha, S., Maulik, U., & Deb, K. (2008). A simulated annealing-based multiobjective optimization algorithm: AMOSA. IEEE transactions on evolutionary computation, 12(3), 269-283.
 2. Blank, Julian, and Kalyanmoy Deb. "A running performance metric and termination criterion for evaluating evolutionary multi-and many-objective optimization algorithms." 2020 IEEE Congress on Evolutionary Computation (CEC). IEEE, 2020.
+3. Song, An, Qiang Yang, Wei-Neng Chen, e Jun Zhang. "A random-based dynamic grouping strategy for large scale multi-objective optimization". In 2016 IEEE Congress on Evolutionary Computation (CEC), 468–75, 2016. https://doi.org/10.1109/CEC.2016.7743831.
+4. Omidvar, Mohammad Nabi, Ming Yang, Yi Mei, Xiaodong Li, e Xin Yao. "DG2: A Faster and More Accurate Differential Grouping for Large-Scale Black-Box Optimization". IEEE Transactions on Evolutionary Computation 21, fasc. 6 (dicembre 2017): 929–42. https://doi.org/10.1109/TEVC.2017.2694221.
+5. Sander, Frederick, Heiner Zille, e Sanaz Mostaghim. "Transfer Strategies from Single- to Multi-Objective Grouping Mechanisms". In Proceedings of the Genetic and Evolutionary Computation Conference, 729–36. Kyoto Japan: ACM, 2018. https://doi.org/10.1145/3205455.3205491.
+6. Zitzler, E., e L. Thiele. "Multiobjective evolutionary algorithms: a comparative case study and the strength Pareto approach". IEEE Transactions on Evolutionary Computation 3, fasc. 4 (novembre 1999).
+
+
