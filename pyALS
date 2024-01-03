@@ -182,16 +182,14 @@ def als(ctx):
     fitness_labels = ctx.obj['problem'].plot_labels()
 
     create_optimizer(ctx)
-   
     init_t = time.time()
     print("AMOSA termination criterion:")
     ctx.obj["configuration"].termination_criterion.info()
     print(f"Performing AMOSA heuristic using {ctx.obj['ncpus']} threads. Please wait patiently. This may take time.")
     ctx.obj["optimizer"].run(ctx.obj["problem"], termination_criterion = ctx.obj["configuration"].termination_criterion, improve = ctx.obj["improve"])
     dt = time.time() - init_t
-    ctx.obj["optimizer"].archive_to_json(ctx.obj["final_archive_json"])
-    ctx.obj["optimizer"].archive_to_csv(ctx.obj['problem'], f"{ctx.obj['configuration'].output_dir}/final_archive.csv", fitness_labels)
-    ctx.obj["optimizer"].plot_pareto(ctx.obj['problem'], f"{ctx.obj['configuration'].output_dir}/pareto_front.pdf", ctx.obj["configuration"].top_module, fitness_labels)
+    ctx.obj["optimizer"].archive.write_json(ctx.obj["final_archive_json"])
+    ctx.obj["optimizer"].archive.plot_front(ctx.obj['problem'].num_of_objectives, f"{ctx.obj['configuration'].output_dir}/pareto_front.pdf", ctx.obj["configuration"].top_module, fitness_labels)
     
     print(f"AMOSA heuristic completed in {dt} seconds")
     hours = int(ctx.obj["optimizer"].duration / 3600)
@@ -225,8 +223,9 @@ def generate_verilog(ctx, output):
     create_optimizer(ctx)
     
     print("Reading the Pareto front.")
-    ctx.obj["optimizer"].read_final_archive_from_json(problem, ctx.obj["final_archive_json"])
-    pareto_set = ctx.obj["optimizer"].pareto_set()
+    ctx.obj["optimizer"].archive = pyamosa.Pareto()
+    ctx.obj["optimizer"].archive.read_json(problem, ctx.obj["final_archive_json"])
+    pareto_set = ctx.obj["optimizer"].archive.get_set()
     rm_old_implementation(output)
     print("Performing AIG-rewriting.")
     rewriter = ALSRewriter(ctx.obj["yshelper"], problem)
@@ -280,8 +279,9 @@ def generate_sw(ctx, output, altconf, exact, alwann):
     create_optimizer(ctx)
     if not exact:
         print("Reading the Pareto front.")
-        ctx.obj["optimizer"].read_final_archive_from_json(problem, ctx.obj["final_archive_json"])
-        pareto_set = ctx.obj["optimizer"].pareto_set()
+        ctx.obj["optimizer"].archive = pyamosa.Pareto()
+        ctx.obj["optimizer"].archive.read_json(problem, ctx.obj["final_archive_json"])
+        pareto_set = ctx.obj["optimizer"].archive.get_set()
         print(f"{len(pareto_set)} solutions read from {ctx.obj['final_archive_json']}")
     else:
         print("Generating the fake Pareto front.")
@@ -362,10 +362,11 @@ def fitnesses(ctx, altconf, output):
     hw_conf = HwConfig(list(HwConfig.get_hw_metrics().keys()))
     problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["configuration"].weights, ctx.obj["catalog"], error_conf, hw_conf, ctx.obj["ncpus"]) if ctx.obj['dataset'] is None else IAMOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["configuration"].weights, ctx.obj["catalog"], error_conf, hw_conf, ctx.obj['dataset'], ctx.obj["ncpus"])
     create_optimizer(ctx)
-    ctx.obj["optimizer"].read_final_archive_from_json(problem, ctx.obj["final_archive_json"])
+    ctx.obj["optimizer"].archive = pyamosa.Pareto()
+    ctx.obj["optimizer"].archive.read_json(problem, ctx.obj["final_archive_json"])
     
     print("Computing the full characterization of the Pareto front.")
-    archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in tqdm(ctx.obj["optimizer"].pareto_set(), desc="Please wait...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")]
+    archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in tqdm(ctx.obj["optimizer"].archive.get_set(), desc="Please wait...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")]
     fitness_labels = problem.plot_labels()
     original_stdout = sys.stdout
     row_format = "{:};" + "{:};" * problem.num_of_objectives + "{:};" * problem.num_of_variables
