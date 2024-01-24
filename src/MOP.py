@@ -14,7 +14,7 @@ You should have received a copy of the GNU General Public License along with
 RMEncoder; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
-import itertools, pyamosa, numpy as np, copy
+import itertools, pyamosa, numpy as np, copy, random, json
 from pyalslib import list_partitioning, negate, flatten
 from multiprocessing import cpu_count, Pool
 from .HwMetrics import *
@@ -54,6 +54,7 @@ class MOP(pyamosa.Problem):
         self.hw_config = hw_config
         self.samples = None
         lut_io_info = self.generate_samples()
+        
         self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, self.ncpus))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
         self.baseline_and_gates = self.get_baseline_gates(None)
@@ -95,15 +96,23 @@ class MOP(pyamosa.Problem):
         self.samples = []
         PI = self.graph.get_pi()
         lut_io_info = {}
+        print(f"Generating the full input assignment...")
+        permutations = random.shuffle([list(i) for i in itertools.product([False, True], repeat = len(PI))])
         if self.error_config.n_vectors == 0:
             self.error_config.n_vectors = 2 ** len(PI)
-        permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
+        else:
+            permutations = permutations[: self.error_config.n_vectors]
+        print("Done!")
         for perm in tqdm(permutations, desc = "Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
             inputs = {i["name"]: p for i, p in zip(PI, perm)}
             output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
             self.samples.append({"input": inputs, "output": output})
         print("Done!")
         return lut_io_info
+    
+    def store_samples(self, outfile):
+        with open(outfile, 'w') as f:
+            json.dump(self.samples, f)
 
     def matter_configuration(self, x):
         matter = {}

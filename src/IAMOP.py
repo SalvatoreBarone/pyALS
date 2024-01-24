@@ -46,7 +46,6 @@ class IAMOP(MOP):
         self.hw_config = hw_config
         self.ncpus = ncpus
         self.samples = None
-        self.n_vectors = 0
         lut_io_info = self.load_dataset(dataset)
         self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
@@ -98,7 +97,7 @@ class IAMOP(MOP):
         samples = json5.load(open(dataset))
         PI = set(pi["name"] for pi in self.graph.get_pi())
         lut_io_info = {}
-        self.n_vectors = len(samples)
+        self.error_config.n_vectors = len(samples)
         self.samples = []
         for sample in tqdm(samples, desc = "Evaluating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
             assert PI == set(sample["i"].keys())
