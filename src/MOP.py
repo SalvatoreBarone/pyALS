@@ -97,7 +97,8 @@ class MOP(pyamosa.Problem):
         PI = self.graph.get_pi()
         lut_io_info = {}
         print(f"Generating the full input assignment...")
-        permutations = random.shuffle([list(i) for i in itertools.product([False, True], repeat = len(PI))])
+        permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
+        random.shuffle(permutations)
         if self.error_config.n_vectors == 0:
             self.error_config.n_vectors = 2 ** len(PI)
         else:
