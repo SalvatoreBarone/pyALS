@@ -53,7 +53,6 @@ class MOP(pyamosa.Problem):
         self.error_config = error_config
         self.hw_config = hw_config
         self.samples = None
-        self.n_vectors = 0
         lut_io_info = self.generate_samples()
         self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, self.ncpus))] if self.error_config.builtin_metric else None
         self.upper_bound = self.get_upper_bound()
@@ -96,7 +95,8 @@ class MOP(pyamosa.Problem):
         self.samples = []
         PI = self.graph.get_pi()
         lut_io_info = {}
-        self.n_vectors = 2 ** len(PI)
+        if self.error_config.n_vectors == 0:
+            self.error_config.n_vectors = 2 ** len(PI)
         permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
         for perm in tqdm(permutations, desc = "Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
             inputs = {i["name"]: p for i, p in zip(PI, perm)}

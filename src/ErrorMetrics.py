@@ -33,9 +33,10 @@ class ErrorConfig:
         ME = 11             # Mean error
         MARE = 12           # Mean absolute relative error
         
-    def __init__(self, metrics, thresholds):
+    def __init__(self, metrics, thresholds, n_vectors):
         self.metrics = None
         self.thresholds = thresholds if isinstance(thresholds, (list, tuple)) else [thresholds]
+        self.n_vectors = n_vectors 
         self.function = None
         self.builtin_metric = None
         if isinstance(metrics, (list, tuple, str)):
