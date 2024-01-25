@@ -237,14 +237,15 @@ def generate_verilog(ctx, output):
     rewriter = ALSRewriter(ctx.obj["yshelper"], problem)
     rewriter.generate_hdl(pareto_set, output)
         
-    for f in [
+    resource_dir = Path(os.path.dirname(os.path.abspath(__file__))).resolve().parents[1]
+    for resource in [
         "resources/.synopsys_dc.setup",
         "resources/do_synth.sh",
         "resources/do_synth.tcl",
         "resources/gscl45nm.db",
         "resources/gscl45nm.v"
     ]:
-        copy_file(f, output)
+        copy_file(f"{resource_dir}/{resource}", output)
     print(f"All done! Take a look at {output}!")
 
 
@@ -335,7 +336,7 @@ def generate_tb(ctx, output, delay, nvec):
         "resources/do_sim.tcl",
         "resources/do_pwr.tcl"
     ]:
-        copy_file(f"{resource_dir}{resource}", output)
+        copy_file(f"{resource_dir}/{resource}", output)
     print(f"All done! Take a look at {output}!")
     
 @click.command("metrics")
