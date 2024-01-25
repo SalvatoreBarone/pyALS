@@ -30,6 +30,7 @@ from src.ALWANNPyModelArithInt import *
 from src.TbGenerator import *
 from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, hamming, synthesize_at_dist
 from git import RemoteProgress
+from pathlib import Path
 
 def rm_old_implementation(output_directory, files =  ".v"):
     for file in os.listdir(output_directory):
@@ -322,7 +323,9 @@ def generate_tb(ctx, output, delay, nvec):
     mkpath(output)
     create_optimizer(ctx)
     TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/tb.v", nvec)
-    for f in [
+    
+    resource_dir = Path(os.path.dirname(os.path.abspath(__file__))).resolve().parents[1]
+    for resource in [
         "resources/.synopsys_dc.setup",
         "resources/do_synth.sh",
         "resources/do_synth.tcl",
@@ -332,7 +335,7 @@ def generate_tb(ctx, output, delay, nvec):
         "resources/do_sim.tcl",
         "resources/do_pwr.tcl"
     ]:
-        copy_file(f, output)
+        copy_file(f"{resource_dir}{resource}", output)
     print(f"All done! Take a look at {output}!")
     
 @click.command("metrics")
