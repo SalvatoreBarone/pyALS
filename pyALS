@@ -91,7 +91,8 @@ def create_problem(ctx):
     assert "graph" in ctx.obj, "You must create a ALSGraph object first"
     if "problem" not in ctx.obj:
         ctx.obj["problem"] = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['ncpus']) if ctx.obj['dataset'] is None else IAMOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['dataset'], ctx.obj['ncpus'])
-    if not os.path.exists(f"{ctx.obj['configuration'].output_dir}/test_vectors.json"):
+    if not issubclass(ctx.obj["problem"], MOP) and not os.path.exists(f"{ctx.obj['configuration'].output_dir}/test_vectors.json"):
+        print(f"Storing test vector to {ctx.obj['configuration'].output_dir}/test_vectors.json")
         ctx.obj["problem"].store_samples(f"{ctx.obj['configuration'].output_dir}/test_vectors.json")
         
 def create_optimizer(ctx):
@@ -192,10 +193,7 @@ def als(ctx):
     ctx.obj["optimizer"].run(ctx.obj["problem"], termination_criterion = ctx.obj["configuration"].termination_criterion, improve = ctx.obj["improve"])
     dt = time.time() - init_t
     ctx.obj["optimizer"].archive.write_json(ctx.obj["final_archive_json"])
-    ctx.obj["optimizer"].archive.plot_front(ctx.obj['problem'].num_of_objectives, f"{ctx.obj['configuration'].output_dir}/pareto_front.pdf", ctx.obj["configuration"].top_module, fitness_labels)
-    
-    
-    
+    ctx.obj["optimizer"].archive.plot_front(ctx.obj['problem'], f"{ctx.obj['configuration'].output_dir}/pareto_front.pdf", ctx.obj["configuration"].top_module, fitness_labels)
     
     print(f"AMOSA heuristic completed in {dt} seconds")
     hours = int(ctx.obj["optimizer"].duration / 3600)
