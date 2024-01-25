@@ -91,6 +91,8 @@ def create_problem(ctx):
     assert "graph" in ctx.obj, "You must create a ALSGraph object first"
     if "problem" not in ctx.obj:
         ctx.obj["problem"] = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['ncpus']) if ctx.obj['dataset'] is None else IAMOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['dataset'], ctx.obj['ncpus'])
+    if not os.path.exists(f"{ctx.obj['configuration'].output_dir}/test_vectors.json"):
+        ctx.obj["problem"].store_samples(f"{ctx.obj['configuration'].output_dir}/test_vectors.json")
         
 def create_optimizer(ctx):
     if "optimizer" not in ctx.obj:
@@ -179,8 +181,7 @@ def als(ctx):
         mkpath(ctx.obj["configuration"].output_dir)
         
     create_problem(ctx)
-    if not os.path.exists(f"{ctx.obj['configuration'].output_dir}/test_vectors.json"):
-        ctx.obj["problem"].store_samples(f"{ctx.obj['configuration'].output_dir}/test_vectors.json")
+    
     fitness_labels = ctx.obj['problem'].plot_labels()
 
     create_optimizer(ctx)
