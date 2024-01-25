@@ -237,7 +237,7 @@ def generate_verilog(ctx, output):
     rewriter = ALSRewriter(ctx.obj["yshelper"], problem)
     rewriter.generate_hdl(pareto_set, output)
         
-    resource_dir = Path(os.path.dirname(os.path.abspath(__file__))).resolve().parents[1]
+    resource_dir = os.path.dirname(os.path.abspath(__file__))
     for resource in [
         "resources/.synopsys_dc.setup",
         "resources/do_synth.sh",
@@ -325,7 +325,7 @@ def generate_tb(ctx, output, delay, nvec):
     create_optimizer(ctx)
     TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/tb.v", nvec)
     
-    resource_dir = Path(os.path.dirname(os.path.abspath(__file__))).resolve().parents[1]
+    resource_dir = os.path.dirname(os.path.abspath(__file__))
     for resource in [
         "resources/.synopsys_dc.setup",
         "resources/do_synth.sh",
