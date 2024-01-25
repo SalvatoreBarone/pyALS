@@ -38,7 +38,7 @@ class IAMOP(MOP):
         PIs = set(pi["name"] for pi in self.graph.get_pi())
         lut_io_info = {}
         self.error_config.n_vectors = len(self.samples)
-        self.samples = []
+        print(f"Read {self.error_config.n_vectors} test vectors.")
         for sample in tqdm(self.samples, desc = "Checking input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
             assert PIs == set(sample["input"].keys())
             output, lut_io_info = self.graph.evaluate(sample["input"], lut_io_info)
