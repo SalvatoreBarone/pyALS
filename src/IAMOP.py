@@ -62,80 +62,17 @@ class IAMOP(MOP):
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
         pyamosa.Problem.__init__(self, self.n_vars, [pyamosa.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
         
-    def evaluate(self, x, out):
-        out["f"] = []
-        out["g"] = []
-        configuration = self.matter_configuration(x)
-        outputs, lut_io_info = self.get_outputs(configuration)    
-        for m, t in zip(self.error_config.metrics, self.error_config.thresholds):
-            out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
-            out["g"].append(out["f"][-1] - t)
-        for metric in self.hw_config.metrics:
-            out["f"].append(self.hw_ffs[metric](configuration, lut_io_info, self.graph))
-
-    def evaluate_ffs(self, x):
-        out = { "f" : [], "g": []}
-        configuration = self.matter_configuration(x)
-        outputs, lut_io_info = self.get_outputs(configuration)
-        for m in self.error_config.metrics:
-            out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
-        for metric in self.hw_config.metrics:
-            out["f"].append(self.hw_ffs[metric](configuration, lut_io_info, self.graph))
-        return out
-
-    @staticmethod
-    def evaluate_output(graph, samples, configuration):
-        lut_io_info = {}
-        outputs = []
-        for s in samples:
-            ax_output, lut_io_info = graph.evaluate(s["i"], lut_io_info, configuration)
-            outputs.append({"i" : s["i"], "p" : s["p"], "e" : s["o"], "a" : ax_output })
-        return outputs, lut_io_info
-
     def load_dataset(self, dataset):
         print(f"Reading input data from {dataset} ...")
-        samples = json5.load(open(dataset))
-        PI = set(pi["name"] for pi in self.graph.get_pi())
+        self.samples = json5.load(open(dataset))
+        PIs = set(pi["name"] for pi in self.graph.get_pi())
         lut_io_info = {}
-        self.error_config.n_vectors = len(samples)
+        self.error_config.n_vectors = len(self.samples)
         self.samples = []
-        for sample in tqdm(samples, desc = "Evaluating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
-            assert PI == set(sample["i"].keys())
-            output, lut_io_info = self.graph.evaluate(sample["i"], lut_io_info)
-            self.samples.append({"i": sample["i"], "p": sample["p"], "o": output})
+        for sample in tqdm(self.samples, desc = "Checking input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
+            assert PIs == set(sample["input"].keys())
+            output, lut_io_info = self.graph.evaluate(sample["input"], lut_io_info)
+            assert sample["output"] == output, f"\n\nRead output:\n{sample['output']}\n\nComputed output:\n{output}\n"
         return lut_io_info
 
-    def get_outputs(self, configuration):
-        for a in self._args:
-            a[2] = configuration
-        with Pool(self.ncpus) as pool:
-           outputs = pool.starmap(IAMOP.evaluate_output, self._args)
-        out = [o[0] for o in outputs]
-        swc = [o[1] for o in outputs]
-        lut_io_info = {}
-        for k in swc[0].keys():
-            C = [s[k]["freq"] for s in swc if k in s.keys()]
-            lut_io_info[k] = { "spec": swc[0][k]["spec"], "freq" : [sum(x) for x in zip(*C)]}
-        return list(flatten(out)), lut_io_info
-
-    def get_mae(self, outputs, weights):
-        return np.sum(np.abs(bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights)) * o["p"] for o in outputs)
-
-    def get_mre(self, outputs, weights):
-        err = []
-        for o in outputs:
-            f =  float(bool_to_value(o["e"], weights))
-            axf = float(bool_to_value(o["a"], weights))
-            err.append( np.abs(f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f) * o["p"])
-        return np.sum(err)
     
-    def get_mare(self, outputs, weights):
-        err = []
-        for o in outputs:
-            f =  float(bool_to_value(o["e"], weights))
-            axf = float(bool_to_value(o["a"], weights))
-            err.append( np.abs((f - axf) / (1 if np.abs(f) <= np.finfo(float).eps else f)) * o["p"])
-        return np.sum(err)
-
-    def get_mse(self, outputs, weights):
-        return np.sum(o["p"] * ( bool_to_value(o["e"], weights) - bool_to_value(o["a"], weights))**2 for o in outputs)

@@ -94,18 +94,18 @@ class MOP(pyamosa.Problem):
 
     def generate_samples(self):
         self.samples = []
-        PI = self.graph.get_pi()
+        PIs = self.graph.get_pi()
         lut_io_info = {}
         print(f"Generating the full input assignment...")
-        permutations = [list(i) for i in itertools.product([False, True], repeat = len(PI))]
-        random.shuffle(permutations)
+        input_assignments = [list(i) for i in itertools.product([False, True], repeat = len(PIs))]
+        random.shuffle(input_assignments)
         if self.error_config.n_vectors == 0:
-            self.error_config.n_vectors = 2 ** len(PI)
+            self.error_config.n_vectors = 2 ** len(PIs)
         else:
-            permutations = permutations[: self.error_config.n_vectors]
+            input_assignments = input_assignments[: self.error_config.n_vectors]
         print("Done!")
-        for perm in tqdm(permutations, desc = "Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
-            inputs = {i["name"]: p for i, p in zip(PI, perm)}
+        for assignment in tqdm(input_assignments, desc = "Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
+            inputs = {pi["name"]: value for pi, value in zip(PIs, assignment)}
             output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
             self.samples.append({"input": inputs, "output": output})
         print("Done!")
