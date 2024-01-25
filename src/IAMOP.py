@@ -23,48 +23,18 @@ from tqdm import tqdm
 from .MOP import MOP
 
 class IAMOP(MOP):
-    error_ffs = {
-        ErrorConfig.Metric.MAE   : "get_mae",
-        ErrorConfig.Metric.MRE   : "get_mre",
-        ErrorConfig.Metric.MARE  : "get_mare",
-        ErrorConfig.Metric.MSE   : "get_mse"
-    }
-    hw_ffs = {
-        HwConfig.Metric.GATES:      get_gates,
-        HwConfig.Metric.DEPTH:      get_depth,
-        HwConfig.Metric.SWITCHING:  get_switching
-    }
     
-    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, dataset, ncpus):
-        self.top_module = top_module
-        self.graph = graph
-        self.output_weights = output_weights
-        self.graphs = [copy.deepcopy(graph) for _ in range(cpu_count())]
-        self.n_vars = graph.get_num_cells()
-        self.catalog = catalog
-        self.error_config = error_config
-        self.hw_config = hw_config
-        self.ncpus = ncpus
-        self.samples = None
-        lut_io_info = self.load_dataset(dataset)
-        self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, cpu_count()))] if self.error_config.builtin_metric else None
-        self.upper_bound = self.get_upper_bound()
-        self.baseline_and_gates = self.get_baseline_gates(None)
-        self.baseline_depth = self.get_baseline_depth(None)
-        self.baseline_switching = self.get_baseline_switching(lut_io_info)
-        print("Optimized error metrics:")
-        for m, t in zip(self.error_config.metrics, self.error_config.thresholds):
-            print(f"\t - {m} with threshold {t}")
-        print("Optimized resources metrics:")
-        for m in self.hw_config.metrics:
-            print(f"\t - {m}")
-        print(f"#vars: {self.n_vars}, ub:{self.upper_bound}, #conf.s {np.prod([ float(x + 1) for x in self.upper_bound ])}.")
-        print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
-        pyamosa.Problem.__init__(self, self.n_vars, [pyamosa.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
+    def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, ncpus, dataset):
+        MOP.__init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, ncpus)
+        self.dataset = dataset
         
-    def load_dataset(self, dataset):
-        print(f"Reading input data from {dataset} ...")
-        self.samples = json5.load(open(dataset))
+    def init(self):
+        lut_io_info = self.load_dataset()
+        self._setup_mop(lut_io_info)
+        
+    def load_dataset(self):
+        print(f"Reading input data from {self.dataset} ...")
+        self.samples = json5.load(open(self.dataset))
         PIs = set(pi["name"] for pi in self.graph.get_pi())
         lut_io_info = {}
         self.error_config.n_vectors = len(self.samples)

@@ -46,17 +46,22 @@ class MOP(pyamosa.Problem):
         self.top_module = top_module
         self.graph = graph
         self.output_weights = output_weights
-        self.ncpus = min(ncpus, cpu_count())
-        self.graphs = [copy.deepcopy(graph) for _ in range(self.ncpus)]
-        self.n_vars = graph.get_num_cells()
         self.catalog = catalog
         self.error_config = error_config
         self.hw_config = hw_config
-        self.samples = None
-        lut_io_info = self.generate_samples()
-        
-        self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, self.ncpus))] if self.error_config.builtin_metric else None
+        self.ncpus = min(ncpus, cpu_count())
+        self.graphs = [copy.deepcopy(graph) for _ in range(self.ncpus)]
+        self.n_vars = self.graph.get_num_cells()
         self.upper_bound = self.get_upper_bound()
+        self.samples = None
+        pyamosa.Problem.__init__(self, self.n_vars, [pyamosa.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
+        
+    def init(self):
+        lut_io_info = self.generate_samples()
+        self._setup_mop(lut_io_info)
+        
+    def _setup_mop(self, lut_io_info):
+        self._args = [[g, s, [0] * self.n_vars] for g, s in zip(self.graphs, list_partitioning(self.samples, self.ncpus))] if self.error_config.builtin_metric else None
         self.baseline_and_gates = self.get_baseline_gates(None)
         self.baseline_depth = self.get_baseline_depth(None)
         self.baseline_switching = self.get_baseline_switching(lut_io_info)
@@ -68,7 +73,6 @@ class MOP(pyamosa.Problem):
             print(f"\t - {m}")
         print(f"#vars: {self.n_vars}, ub:{self.upper_bound}, #conf.s {np.prod([ float(x + 1) for x in self.upper_bound ])}.")
         print(f"Baseline requirements. Nodes: {self.baseline_and_gates}. Depth: {self.baseline_depth}. Switching: {self.baseline_switching}")
-        pyamosa.Problem.__init__(self, self.n_vars, [pyamosa.Type.INTEGER] * self.n_vars, [0] * self.n_vars, self.upper_bound, len(self.error_config.metrics) + len(self.hw_config.metrics), len(self.error_config.metrics))
 
     def evaluate(self, x, out):
         out["f"] = []
