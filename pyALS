@@ -363,25 +363,20 @@ def fitnesses(ctx, altconf, output):
     parse_output_weights(ctx)
     create_catalog(ctx)
     
-    # Ignoring configurations for error and hardware metrics
-    metrics = list(ErrorConfig.get_builtin_metrics().keys())
-    error_conf = ErrorConfig(
-        metrics = list(metrics) if ctx.obj["configuration"].weights is not None else ["ep"],
-        thresholds = [np.inf] * len(metrics) if ctx.obj["configuration"].weights is not None else 1)
-    hw_conf = HwConfig(list(HwConfig.get_hw_metrics().keys()))
-    problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["configuration"].weights, ctx.obj["catalog"], error_conf, hw_conf, ctx.obj["ncpus"]) if ctx.obj['dataset'] is None else IAMOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["configuration"].weights, ctx.obj["catalog"], error_conf, hw_conf, ctx.obj['dataset'], ctx.obj["ncpus"])
+    create_problem(ctx)
+    
     create_optimizer(ctx)
     ctx.obj["optimizer"].archive = pyamosa.Pareto()
-    ctx.obj["optimizer"].archive.read_json(problem, ctx.obj["final_archive_json"])
+    ctx.obj["optimizer"].archive.read_json(ctx.obj["problem"], ctx.obj["final_archive_json"])
     
     print("Computing the full characterization of the Pareto front.")
-    archive = [{"x": list(s)} | problem.evaluate_ffs(s) for s in tqdm(ctx.obj["optimizer"].archive.get_set(), desc="Please wait...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")]
-    fitness_labels = problem.plot_labels()
+    archive = [{"x": list(s)} | ctx.obj["problem"].evaluate_ffs(s) for s in tqdm(ctx.obj["optimizer"].archive.get_set(), desc="Please wait...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")]
+    fitness_labels = ctx.obj["problem"].plot_labels()
     original_stdout = sys.stdout
-    row_format = "{:};" + "{:};" * problem.num_of_objectives + "{:};" * problem.num_of_variables
+    row_format = "{:};" + "{:};" * ctx.obj["problem"].num_of_objectives + "{:};" * ctx.obj["problem"].num_of_variables
     with open(output, "w") as file:
         sys.stdout = file
-        print(row_format.format("", *fitness_labels, *[f"x{i}" for i in range(problem.num_of_variables)]))
+        print(row_format.format("", *fitness_labels, *[f"x{i}" for i in range(ctx.obj["problem"].num_of_variables)]))
         for i, s in enumerate(archive):
             print(row_format.format(i, *s["f"], *s["x"]))
     sys.stdout = original_stdout

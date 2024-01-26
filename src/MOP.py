@@ -90,10 +90,13 @@ class MOP(pyamosa.Problem):
         out = { "f" : [], "g": []}
         configuration = self.matter_configuration(x)
         outputs, lut_io_info = self.get_outputs(configuration)
-        for m in self.error_config.metrics:
-            out["f"].append(getattr(self, self.error_ffs[m])(outputs, self.output_weights))
-        for metric in self.hw_config.metrics:
-            out["f"].append(self.hw_ffs[metric](configuration, lut_io_info, self.graph))
+        if self.output_weights is not None:
+            for metric in self.error_ffs.values():
+                out["f"].append(getattr(self, metric)(outputs, self.output_weights))
+        else:
+            out["f"].append(self.get_ep(outputs, self.output_weights))
+        for metric in self.hw_ffs.values():
+            out["f"].append(metric(configuration, lut_io_info, self.graph))
         return out
 
     def generate_samples(self):
