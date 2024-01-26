@@ -242,8 +242,13 @@ def generate_verilog(ctx, output):
         "resources/.synopsys_dc.setup",
         "resources/do_synth.sh",
         "resources/do_synth.tcl",
+        "resources/do_fpga_synth.sh",
+        "resources/fpga_synth.tcl",
         "resources/gscl45nm.db",
-        "resources/gscl45nm.v"
+        "resources/gscl45nm.v",
+        "resources/do_sim.sh",
+        "resources/do_sim.tcl",
+        "resources/do_pwr.tcl"
     ]:
         copy_file(f"{resource_dir}/{resource}", output)
     print(f"All done! Take a look at {output}!")
@@ -330,6 +335,8 @@ def generate_tb(ctx, output, delay, nvec):
         "resources/.synopsys_dc.setup",
         "resources/do_synth.sh",
         "resources/do_synth.tcl",
+        "resources/do_fpga_synth.sh",
+        "resources/fpga_synth.tcl",
         "resources/gscl45nm.db",
         "resources/gscl45nm.v",
         "resources/do_sim.sh",
