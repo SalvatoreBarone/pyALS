@@ -365,7 +365,6 @@ def fitnesses(ctx, altconf, output):
     configuration = ConfigParser(altconf) if altconf is not None else ctx.obj["configuration"]
     original_weights = copy.deepcopy(ctx.obj["configuration"].weights)
     ctx.obj["configuration"].weights = configuration.weights   
-    print(ctx.obj["configuration"].weights) 
     parse_input_weights(ctx)
     parse_output_weights(ctx)
     create_catalog(ctx)
