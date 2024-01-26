@@ -199,7 +199,7 @@ class MOP(pyamosa.Problem):
         for a in self._args:
             a[2] = configuration
         with Pool(self.ncpus) as pool:
-           outputs = pool.starmap(MOP.evaluate_output, self._args)
+            outputs = pool.starmap(MOP.evaluate_output, self._args)
         out = [o[0] for o in outputs]
         swc = [o[1] for o in outputs]
         lut_io_info = {}
@@ -220,7 +220,7 @@ class MOP(pyamosa.Problem):
     def get_ep(self, outputs, weights):
         rs = sum(o["e"] != o["a"] for o in outputs) / len(outputs)
         if self.error_config.n_vectors != 0:
-            return float(np.min([1.0, rs + 4.5 / self.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.n_vectors * rs * (1 - rs)))]))
+            return float(np.min([1.0, rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))]))
         else:
             return float(rs)
         
