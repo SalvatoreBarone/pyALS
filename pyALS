@@ -378,7 +378,7 @@ def fitnesses(ctx, altconf, output):
     
     print("Computing the full characterization of the Pareto front.")
     archive = [{"x": list(s)} | ctx.obj["problem"].evaluate_ffs(s) for s in tqdm(ctx.obj["optimizer"].archive.get_set(), desc="Please wait...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")]
-    fitness_labels = ctx.obj["problem"].plot_labels()
+    fitness_labels = list(ctx.obj["problem"].error_labels.values()) + list(ctx.obj["problem"].hw_labels.values())
     original_stdout = sys.stdout
     row_format = "{:};" + "{:};" * ctx.obj["problem"].num_of_objectives + "{:};" * ctx.obj["problem"].num_of_variables
     with open(output, "w") as file:

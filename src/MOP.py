@@ -36,11 +36,32 @@ class MOP(pyamosa.Problem):
         ErrorConfig.Metric.RMSED : "get_rmsed",
         ErrorConfig.Metric.VARED : "get_vared"
     }
+    error_labels = {
+            ErrorConfig.Metric.EPROB: "Error probability",
+            ErrorConfig.Metric.AWCE: "AWCE",
+            ErrorConfig.Metric.MAE: "MAE",
+            ErrorConfig.Metric.WRE: "WRE",
+            ErrorConfig.Metric.MRE: "MRE",
+            ErrorConfig.Metric.MARE: "MARE",
+            ErrorConfig.Metric.MSE: "MSE",
+            ErrorConfig.Metric.MED: "MED",
+            ErrorConfig.Metric.ME: "ME",
+            ErrorConfig.Metric.MRED: "MRED",
+            ErrorConfig.Metric.RMSED: "RMSED",
+            ErrorConfig.Metric.VARED: "VarED"
+        }
+    
     hw_ffs = {
         HwConfig.Metric.GATES:      get_gates,
         HwConfig.Metric.DEPTH:      get_depth,
         HwConfig.Metric.SWITCHING:  get_switching
     }
+    
+    hw_labels = {
+            HwConfig.Metric.GATES: "#AIG nodes",
+            HwConfig.Metric.DEPTH: "AIG depth",
+            HwConfig.Metric.SWITCHING: "Switching activity"
+        }
 
     def __init__(self, top_module, graph, output_weights, catalog, error_config, hw_config, ncpus):
         self.top_module = top_module
@@ -162,26 +183,7 @@ class MOP(pyamosa.Problem):
         return matter
 
     def plot_labels(self):
-        error_labels = {
-            ErrorConfig.Metric.EPROB: "Error probability",
-            ErrorConfig.Metric.AWCE: "AWCE",
-            ErrorConfig.Metric.MAE: "MAE",
-            ErrorConfig.Metric.WRE: "WRE",
-            ErrorConfig.Metric.MRE: "MRE",
-            ErrorConfig.Metric.MARE: "MARE",
-            ErrorConfig.Metric.MSE: "MSE",
-            ErrorConfig.Metric.MED: "MED",
-            ErrorConfig.Metric.ME: "ME",
-            ErrorConfig.Metric.MRED: "MRED",
-            ErrorConfig.Metric.RMSED: "RMSED",
-            ErrorConfig.Metric.VARED: "VarED"
-        }
-        hw_labels = {
-            HwConfig.Metric.GATES: "#AIG nodes",
-            HwConfig.Metric.DEPTH: "AIG depth",
-            HwConfig.Metric.SWITCHING: "Switching activity"
-        }
-        return [error_labels[m] for m in self.error_config.metrics] + [hw_labels[m] for m in self.hw_config.metrics] if self.error_config.builtin_metric else ["Error"] + [hw_labels[m] for m in self.hw_config.metrics]
+        return [self.error_labels[m] for m in self.error_config.metrics] + [self.hw_labels[m] for m in self.hw_config.metrics] if self.error_config.builtin_metric else ["Error"] + [self.hw_labels[m] for m in self.hw_config.metrics]
 
     def get_upper_bound(self):
         return [len(e) - 1 for c in [{"name": c["name"], "spec": c["spec"]} for c in self.graph.get_cells()] for e in self.catalog if e[0]["spec"] == c["spec"] or negate(e[0]["spec"]) == c["spec"] ]
