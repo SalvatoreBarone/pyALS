@@ -1,13 +1,15 @@
 #!/bin/bash
 set -e
 usage() {
-  echo "Usage: $0 -x path_to_vivado -d path_to_target_directory -t top_module | -l ]";
-  echo "-l: enable long format (for arithmetic circuits only)";
-  exit 1;
+	echo "Usage: $0 -x path_to_vivado -d path_to_target_directory -t top_module [ -l ] [ -p part_number ]";
+	echo "-l: enable long format (for arithmetic circuits only)";
+	echo "-p: default is xc7a35ticsg324-1L";
+	exit 1;
 }
 
 COLLECT_ARITH_METRICS=false
-while getopts "x:t:l" o; do
+PART_ID=xc7a35ticsg324-1L
+while getopts "x:t:lp:" o; do
     case "${o}" in
         x)
             VIVADO_BIN=${OPTARG}
@@ -18,6 +20,9 @@ while getopts "x:t:l" o; do
 			;;
 		l)  
 			COLLECT_ARITH_METRICS=true
+			;;
+		p)
+			PART_ID=${OPTARG}
 			;;
         *)
             usage
@@ -36,7 +41,7 @@ fi
 for AXC_SOURCE in $(find . -name 'variant*.v' | sort); 
 do
 	echo "* Synthesizing ${AXC_SOURCE}"
-	${VIVADO_BIN} -mode batch -source fpga_synth.tcl -notrace -tclargs ${AXC_SOURCE} ${TOP_MODULE} report_lut.txt report_pwr.txt  > /dev/null;
+	${VIVADO_BIN} -mode batch -source fpga_synth.tcl -notrace -tclargs ${AXC_SOURCE} ${TOP_MODULE} report_lut.txt report_pwr.txt ${PART_ID} > /dev/null;
 	REQUIRED_LUTS=$(grep "Slice LUTs\*" < report_lut.txt | cut -d '|' -f 3);
 	POWER_CONSUMPTION=$(grep "Total On-Chip Power" < report_pwr.txt | cut -d '|' -f 3);
 	echo "${AXC_SOURCE};${REQUIRED_LUTS};${POWER_CONSUMPTION}" >> synth_report.txt;
