@@ -223,7 +223,8 @@ def generate_verilog(ctx, output):
     create_catalog(ctx)
     create_problem(ctx)
     if output != ".":
-        mkpath(output)
+        mkpath(f"{output}/hdl")
+        
     
     problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
     create_optimizer(ctx)
@@ -235,7 +236,7 @@ def generate_verilog(ctx, output):
     rm_old_implementation(output)
     print("Performing AIG-rewriting.")
     rewriter = ALSRewriter(ctx.obj["yshelper"], problem)
-    rewriter.generate_hdl(pareto_set, output)
+    rewriter.generate_hdl(pareto_set, f"{output}/hdl")
         
     resource_dir = os.path.dirname(os.path.realpath(__file__))
     for resource in [
@@ -246,6 +247,8 @@ def generate_verilog(ctx, output):
         "resources/fpga_synth.tcl",
         "resources/gscl45nm.db",
         "resources/gscl45nm.v",
+        "resources/gscl45nm.lib",
+        "resources/ys_synth",
         "resources/do_sim.sh",
         "resources/do_sim.tcl",
         "resources/do_pwr.tcl"
@@ -278,6 +281,7 @@ def generate_sw(ctx, output, altconf, exact, alwann):
     load_condiguration(ctx)
     if output is None:
         output = ctx.obj['configuration'].output_dir
+        
     create_alsgraph(ctx)
     create_catalog(ctx)
     configuration = ConfigParser(altconf) if altconf is not None else ctx.obj["configuration"]
@@ -300,11 +304,11 @@ def generate_sw(ctx, output, altconf, exact, alwann):
         pareto_set = [[0] * problem.n_vars]
     generator = ALWANNPyModelArithInt(ctx.obj["yshelper"], problem, ctx.obj["configuration"].weights) if alwann else PyModelArithInt(ctx.obj["yshelper"], problem, ctx.obj["configuration"].weights)
     
-    mkpath(output)
+    mkpath(f"{output}/sw")
     rm_old_implementation(output, ".py")
     rm_old_implementation(output, ".c")
     rm_old_implementation(output, ".h")
-    generator.generate(ctx.obj["configuration"].top_module, pareto_set, output)
+    generator.generate(ctx.obj["configuration"].top_module, pareto_set, f"{output}/sw")
     ctx.obj["configuration"].weights = original_weights
     print(f"All done! Take a look at {output}!")
     
@@ -321,14 +325,15 @@ def generate_tb(ctx, output, delay, nvec):
     create_alsgraph(ctx)
     create_catalog(ctx)
     if output is None:
-        output = f"{ctx.obj['configuration'].output_dir}" 
+        output = {ctx.obj['configuration'].output_dir}
+        
     if "problem" not in ctx.obj or not isinstance(ctx.obj['problem'], MOP):
         problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
     else:
         problem = ctx.obj['problem']
-    mkpath(output)
+    mkpath(f"{output}/hdl")
     create_optimizer(ctx)
-    TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/tb.v", nvec)
+    TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/hdl/tb.v", nvec)
     
     resource_dir = os.path.dirname(os.path.realpath(__file__))
     for resource in [
@@ -339,6 +344,8 @@ def generate_tb(ctx, output, delay, nvec):
         "resources/fpga_synth.tcl",
         "resources/gscl45nm.db",
         "resources/gscl45nm.v",
+        "resources/gscl45nm.lib",
+        "resources/ys_synth",
         "resources/do_sim.sh",
         "resources/do_sim.tcl",
         "resources/do_pwr.tcl"

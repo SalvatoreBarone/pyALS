@@ -1,0 +1,31 @@
+#!/usr/bin/python3
+import os, click
+from pyalslib import YosysHelper
+from tabulate import tabulate
+
+@click.command()
+@click.argument('directory')
+@click.argument('top_module')
+@click.option('--liberty', default="gscl45nm.lib", help='The cell library, in liberty format')
+def ys_synth(directory, top_module, liberty):
+    """
+    Simple Python script to perform ASIC synthesis using standard cells
+    
+    Arguments:
+      - DIRECTORY: the directory containing source files
+      - TOP_MODULE: the top-level entity name
+    """
+    table = []
+    yshelper = YosysHelper()
+    yshelper.load_ghdl()
+    yshelper.load_liberty(liberty)
+    for file in os.listdir(directory):
+        if any(file.endswith(e) for e in [".v", ".sv", ".vhd"]):
+            yshelper.read_sources(f"{directory}/{file}", top_module)
+            area, power = yshelper.synth_to_liberty()
+            table.append([file, area, power])
+            yshelper.delete()
+    print(tabulate(table, headers=["Circuit", "Area", "Power"]))
+            
+if __name__ == '__main__':
+    ys_synth()
