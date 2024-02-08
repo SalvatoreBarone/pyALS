@@ -34,7 +34,8 @@ class MOP(pyamosa.Problem):
         ErrorConfig.Metric.ME    : "get_me",
         ErrorConfig.Metric.MRED  : "get_mred",
         ErrorConfig.Metric.RMSED : "get_rmsed",
-        ErrorConfig.Metric.VARED : "get_vared"
+        ErrorConfig.Metric.VARED : "get_vared",
+        ErrorConfig.Metric.WSBEP : "get_wsbep"
     }
     error_labels = {
             ErrorConfig.Metric.EPROB: "Error probability",
@@ -48,7 +49,8 @@ class MOP(pyamosa.Problem):
             ErrorConfig.Metric.ME: "ME",
             ErrorConfig.Metric.MRED: "MRED",
             ErrorConfig.Metric.RMSED: "RMSED",
-            ErrorConfig.Metric.VARED: "VarED"
+            ErrorConfig.Metric.VARED: "VarED",
+            ErrorConfig.Metric.WSBEP: "WSBEP"
         }
     
     hw_ffs = {
@@ -225,6 +227,15 @@ class MOP(pyamosa.Problem):
             return float(np.min([1.0, rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))]))
         else:
             return float(rs)
+        
+    def get_wsbep(self, output_vectorss, output_bit_weights):
+        assert output_bit_weights is not None, "You must specity the weight of each output bit to use the WSBEP error metric!"
+        bep = MOP.evaluate_bep(output_vectorss, output_bit_weights)
+        return np.sum([float(output_bit_weights[o]) * bep[o] for o in output_bit_weights.keys()])
+    
+    @staticmethod
+    def evaluate_bep(output_vectors, bit_weights):
+        return { po : np.sum([1 if o["e"][po] != o["a"][po] else 0 for o in output_vectors]) / len(output_vectors) for po in bit_weights }
         
     @staticmethod
     def evaluate_abs_ed(outputs, weights):

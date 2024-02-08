@@ -1,0 +1,46 @@
+{
+    "circuit" : {
+        "sources" : "/home/user/pyALS/example/mult_2_bit/mult_2_bit.sv",
+        "top_module" : "mult_2_bit",
+        "io_weights" : {
+            "\\a[0]" : 1,
+            "\\a[1]" : 2,
+            "\\b[0]" : 1,
+            "\\b[1]" : 2,
+            "\\o[0]" : 1,
+            "\\o[1]" : 2,
+            "\\o[2]" : 4,
+            "\\o[3]" : 8
+        }
+    },
+    "output_path" : "/home/user/shared/mult_2_bit_wsbep",
+    "als" : {
+        "cache"    : "/home/user/lut_catalog.db",
+        "cut_size" : 4,
+        "solver"   : "btor",
+        "timeout"  : 60000
+    },
+    "error" : {
+        "metrics"      : ["wsbep"],
+        "thresholds"   : [4],
+        "vectors"      : 0,
+        "_dataset"     : "/home/user/pyALS/example/mult_2_bit/dataset.csv"
+    },
+    "hardware" : {
+        "metrics" : ["gates"]
+    },
+    "amosa" : {
+        "archive_hard_limit"       : 10,
+        "archive_soft_limit"       : 20,
+        "archive_gamma"            : 2,
+        "clustering_iterations"    : 300,
+        "hill_climbing_iterations" : 50,
+        "initial_temperature"      : 5,
+        "final_temperature"        : 0.01,
+        "cooling_factor"           : 0.9,
+        "annealing_iterations"     : 100,
+        "annealing_strength"       : 1,
+        "early_termination"        : 20,
+        "multiprocess_enabled"     : false
+    }
+}
