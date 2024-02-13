@@ -40,7 +40,8 @@ class ConfigParser:
         self.error_conf = ErrorConfig(
                 metrics = ConfigParser.search_subfield_in_config(configuration, "error", "metrics", True),
                 thresholds = ConfigParser.search_subfield_in_config(configuration, "error", "thresholds", True),
-                n_vectors = ConfigParser.search_subfield_in_config(configuration, "error", "vectors", False, 0))
+                n_vectors = ConfigParser.search_subfield_in_config(configuration, "error", "vectors", False, 0),
+                dataset = ConfigParser.search_subfield_in_config(configuration, "error", "dataset", False, None))
 
         self.weights = ConfigParser.search_subfield_in_config(configuration, "circuit", "io_weights", self.error_conf.builtin_metric and self.error_conf.metrics not in [ErrorConfig.Metric.EPROB])
         

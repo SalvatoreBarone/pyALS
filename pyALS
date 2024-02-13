@@ -90,6 +90,8 @@ def parse_output_weights(ctx):
 def create_problem(ctx):
     assert "configuration" in ctx.obj, "You must read the JSON configuration file to run this command(s)"
     assert "graph" in ctx.obj, "You must create a ALSGraph object first"
+    if ctx.obj['dataset'] is None:
+        ctx.obj['dataset'] = ctx.obj["configuration"].error_conf.dataset
     if "problem" not in ctx.obj:
         ctx.obj["problem"] = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['ncpus']) if ctx.obj['dataset'] is None else IAMOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], ctx.obj["output_weights"], ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj['ncpus'], ctx.obj['dataset'])
         ctx.obj["problem"].init()

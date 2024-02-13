@@ -34,10 +34,11 @@ class ErrorConfig:
         MARE = 12           # Mean absolute relative error
         WSBEP = 13          # Weighted sum of bit-error probability
         
-    def __init__(self, metrics, thresholds, n_vectors):
+    def __init__(self, metrics, thresholds, n_vectors, dataset):
         self.metrics = None
         self.thresholds = thresholds if isinstance(thresholds, (list, tuple)) else [thresholds]
         self.n_vectors = n_vectors 
+        self.dataset = dataset
         self.function = None
         self.builtin_metric = None
         if isinstance(metrics, (list, tuple, str)):
