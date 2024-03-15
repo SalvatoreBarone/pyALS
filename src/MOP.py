@@ -34,7 +34,8 @@ class MOP(pyamosa.Problem):
         ErrorConfig.Metric.ME    : "get_me",
         ErrorConfig.Metric.MRED  : "get_mred",
         ErrorConfig.Metric.RMSED : "get_rmsed",
-        ErrorConfig.Metric.VARED : "get_vared"
+        ErrorConfig.Metric.VARED : "get_vared",
+        ErrorConfig.Metric.WSBEP : "get_wsbep"
     }
     error_labels = {
             ErrorConfig.Metric.EPROB: "Error probability",
@@ -48,7 +49,8 @@ class MOP(pyamosa.Problem):
             ErrorConfig.Metric.ME: "ME",
             ErrorConfig.Metric.MRED: "MRED",
             ErrorConfig.Metric.RMSED: "RMSED",
-            ErrorConfig.Metric.VARED: "VarED"
+            ErrorConfig.Metric.VARED: "VarED",
+            ErrorConfig.Metric.WSBEP: "WSBEP"
         }
     
     hw_ffs = {
@@ -124,19 +126,27 @@ class MOP(pyamosa.Problem):
         self.samples = []
         PIs = self.graph.get_pi()
         lut_io_info = {}
-        print(f"Generating the full input assignment...")
-        input_assignments = [list(i) for i in itertools.product([False, True], repeat = len(PIs))]
-        random.shuffle(input_assignments)
         if self.error_config.n_vectors == 0:
             self.error_config.n_vectors = 2 ** len(PIs)
+        
+        input_assignments = []
+        if len(PIs) >= 16:
+            pbar = tqdm(total = self.error_config.n_vectors, desc = f"Generating input assignment...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")
+            while len(input_assignments) < self.error_config.n_vectors:
+                random_boolean_list = random.choices([True, False], k = len(PIs))
+                if random_boolean_list not in input_assignments:
+                    input_assignments.append(random_boolean_list)
+                    pbar.update(1)
+            pbar.close()
         else:
-            input_assignments = input_assignments[: self.error_config.n_vectors]
-        print("Done!")
-        for assignment in tqdm(input_assignments, desc = "Generating input-vectors...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
+            input_assignments = [list(i) for i in  tqdm(itertools.product([False, True], repeat = len(PIs)), total = 2 ** len(PIs), desc = f"Generating input assignment...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}") ]
+            if self.error_config.n_vectors != 2 ** len(PIs):
+                random.shuffle(input_assignments)
+                input_assignments = input_assignments[: self.error_config.n_vectors]
+        for assignment in tqdm(input_assignments, desc = "Computing the reference output...", bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):
             inputs = {pi["name"]: value for pi, value in zip(PIs, assignment)}
             output, lut_io_info = self.graph.evaluate(inputs, lut_io_info)
             self.samples.append({"input": inputs, "output": output})
-        print("Done!")
         return lut_io_info
     
     def store_samples(self, outfile):
@@ -225,6 +235,15 @@ class MOP(pyamosa.Problem):
             return float(np.min([1.0, rs + 4.5 / self.error_config.n_vectors * (1 + np.sqrt(1 + 4 / 9 * self.error_config.n_vectors * rs * (1 - rs)))]))
         else:
             return float(rs)
+        
+    def get_wsbep(self, output_vectorss, output_bit_weights):
+        assert output_bit_weights is not None, "You must specity the weight of each output bit to use the WSBEP error metric!"
+        bep = MOP.evaluate_bep(output_vectorss, output_bit_weights)
+        return np.sum([float(output_bit_weights[o]) * bep[o] for o in output_bit_weights.keys()])
+    
+    @staticmethod
+    def evaluate_bep(output_vectors, bit_weights):
+        return { po : np.sum([1 if o["e"][po] != o["a"][po] else 0 for o in output_vectors]) / len(output_vectors) for po in bit_weights }
         
     @staticmethod
     def evaluate_abs_ed(outputs, weights):

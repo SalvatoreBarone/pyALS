@@ -157,6 +157,8 @@ In the following, each field of the JSON file is described using C-Style comment
     "error" : {                                        // This section defines error-related stuff
         "metrics"      : ["mse"],                      // Error metric(s) to be used during Design-Space exploration. Please note you can specify more than one metric. See supported metrics for more.
         "threshold"    : [1e+3],                       // The error threshold. Please note you can specify more than one threshold, one for each of the error metrics.
+        "vectors"      : 1000,                         // The amount of test vectors to evaluate the error. "0" here will result in exhaustive test pattern evaluation.
+        "dataset"      : "path_to_the_dataset"         // Alternatively, you can specify a custom set of test vectors as either JSON, CSV or xsls file. ***THIS WILL OVERRIDE THE vectors FIELD! ***. See the following sections for more
     },
     "hardware" : {                                     // Hardware related stuff
         "metric" : ["gates", "depth", "switching"]     // hardware metric(s) to be optimized (AIG-gates, AIG-depth, or LUT switching activity). Please note you can specify more than one metric.
@@ -182,6 +184,24 @@ In the following, each field of the JSON file is described using C-Style comment
     }
 }
 ```
+
+## Using a custom dataset
+A custom set of input vectors can be used for error estimation. It can be either in the CSV or XLSX format. The first row of the file MUST specify the name of primary inputs, and for CSV files, the separator must be the semicolon ";". An example follows
+
+```
+\a[0];\a[1];\b[0];\b[1]
+0;0;0;0
+0;0;0;1
+0;0;1;0
+0;0;1;1
+0;1;0;0
+0;1;0;1
+0;1;1;0
+0;1;1;1
+1;0;0;0
+```
+Please, note the backslash "\" leading the name of primary inputs.
+
 
 ## Error metrics
 
