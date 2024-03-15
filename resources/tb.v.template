@@ -5,9 +5,13 @@
 
 module tb_{{items["top_module"]}}();
 
-    {% for pi, data in items["stimuli"].items() -%}reg {% if data['width'] > 1%}[{{data['width']-1}}:0] {% endif %}{{ pi }}_values{% if data['width'] > 1%}[0:{{data['stims']|length-1}}] = '{ {% for s in data["stims"] -%}{{s}}{{ ", " if not loop.last else "" }}{% endfor %} }{% endif %};
+    {% for pi, data in items["stimuli"].items() -%}wire {% if data['width'] > 1%}[{{data['width']-1}}:0] {% endif %}{{ pi }}_values{% if data['width'] > 1%}[0:{{data['stims']|length-1}}] = { {% for s in data["stims"] -%}{{s}}{{ ", " if not loop.last else "" }}{% endfor %} }{% endif %};
     {% endfor %}
-
+    {% for pi, data in items["stimuli"].items() -%}
+    integer counter_{{pi}};
+    {% endfor %}
+    {% for pi, data in items["stimuli"].items() -%}reg {% if data['width'] > 1%}[{{data['width']-1}}:0] {% endif %}{{ pi }};
+    {% endfor %}
     {% for po in items["po"] -%}wire {% if po['width'] > 1%}[{{po['width']-1}}:0] {% endif %}{{ po["name"] }};{% endfor %}
 
     {{items["top_module"]}} dut (
@@ -16,10 +20,13 @@ module tb_{{items["top_module"]}}();
         {% endfor %}{% for po in items["po"] -%}
         .{{ po["name"] }} ( {{ po["name"] }} ){{ ", " if not loop.last else "" }}{% endfor %});
 
+
+
+
     initial
     begin
         {% for pi, data in items["stimuli"].items() -%}
-        {{pi}} = {{data['zero']}}
+        {{pi}} = {{data['zero']}};
         {% endfor %}#{{ items["initialdelay"] }};
         $display("{% for pi in items["pi"] -%} {{ pi }}: %b, {% endfor %}{% for po in items["po"] -%} {{ po["name"] }}: %b{{ ", " if not loop.last else "" }}{% endfor %}", {% for pi in items["pi"] -%} {{ pi }}, {% endfor %}{% for po in items["po"] -%} {{ po["name"] }}{{ ", " if not loop.last else "" }}{% endfor %});
 

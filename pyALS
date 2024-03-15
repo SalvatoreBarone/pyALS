@@ -226,6 +226,7 @@ def generate_verilog(ctx, output):
         mkpath(output)
     
     problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
+    problem.init()
     create_optimizer(ctx)
     
     print("Reading the Pareto front.")
@@ -322,12 +323,13 @@ def generate_tb(ctx, output, delay, nvec):
     create_catalog(ctx)
     if output is None:
         output = f"{ctx.obj['configuration'].output_dir}" 
-    if "problem" not in ctx.obj or not isinstance(ctx.obj['problem'], MOP):
-        problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
-    else:
-        problem = ctx.obj['problem']
+
+    ctx.obj["configuration"].error_conf.n_vectors = nvec
+    problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
+    problem.init()
+
     mkpath(output)
-    create_optimizer(ctx)
+    #create_optimizer(ctx)
     TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/tb.v", nvec)
     
     resource_dir = os.path.dirname(os.path.abspath(__file__))
