@@ -54,13 +54,23 @@ class TbGenerator:
         return [ {"name": name.str()[1:], "width": wire.width} for name, wire in self.wires["PO"].items() ]
     
     def get_stims(self):
-        return { name.str()[1:] : 
-                    {   "width": wire.width, 
-                        "zero": f"{wire.width}'b" + "0" * wire.width,
-                        "stims" : list(
-                                    dict.fromkeys( 
-                                        f"{wire.width}'b" + "".join(reversed([ "1" if s["input"][f"{name.str()}[{i}]"] else "0" 
-                                                for i in reversed(range(wire.width)) ])) 
-                                                    for s in self.problem.samples )) } 
-                                                        for name, wire in self.wires["PI"].items() }
-        
+        stims = {}
+        for name, wire in self.wires["PI"].items():
+            stims[name.str()[1:]] = {   
+                        "width": wire.width, 
+                        "zero": f"{wire.width}'b" + "0" * wire.width}
+            if wire.width > 1:
+                stims[name.str()[1:]]["stims"] = list(
+                    dict.fromkeys( 
+                        f"{wire.width}'b" + "".join(reversed([ "1" if s["input"][f"{name.str()}[{i}]"] else "0" 
+                            for i in reversed(range(wire.width)) ])) 
+                                for s in self.problem.samples ))
+            elif wire.width == 1:
+                stims[name.str()[1:]]["stims"] = list(
+                    f"{wire.width}'b" + ("1" if s["input"][f"{name.str()}"] else "0")
+                                for s in self.problem.samples )
+                
+        # for name in self.wires["PI"].keys():
+        #     print(name.str()[1:], stims[name.str()[1:]]["stims"])
+        # exit()
+        return stims
