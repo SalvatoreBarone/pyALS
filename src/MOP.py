@@ -126,7 +126,7 @@ class MOP(pyamosa.Problem):
         self.samples = []
         PIs = self.graph.get_pi()
         lut_io_info = {}
-        if self.error_config.n_vectors == 0:
+        if self.error_config.n_vectors is None or self.error_config.n_vectors == 0:
             self.error_config.n_vectors = 2 ** len(PIs)
         
         input_assignments = []
