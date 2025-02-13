@@ -1,5 +1,5 @@
 """
-Copyright 2021-2023 Salvatore Barone <salvatore.barone@unina.it>
+Copyright 2021-2025 Salvatore Barone <salvatore.barone@unina.it>
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -78,7 +78,7 @@ class ErrorConfig:
             raise ValueError("'module' field not specified")
         if "function" not in metric.keys():
             raise ValueError("'function' field not specified")
-        self.function = dynamic_import(metric["module"], metric["function"])
+        self.function = dynamic_import(metric["module"])
         self.builtin_metric = False
 
 def bool_to_value(signal, weights):
