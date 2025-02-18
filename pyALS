@@ -28,9 +28,11 @@ from src.ConfigParser import *
 from src.PyModelArithInt import *
 from src.ALWANNPyModelArithInt import *
 from src.TbGenerator import *
+from src.LybertySynth import *
 from pyalslib import YosysHelper, ALSCatalog, ALSGraph, ALSRewriter, check_for_file, hamming, synthesize_at_dist
 from git import RemoteProgress
 from pathlib import Path
+from tabulate import tabulate
 
 def rm_old_implementation(output_directory, files =  ".v"):
     for file in os.listdir(output_directory):
@@ -399,6 +401,55 @@ def fitnesses(ctx, altconf, output):
     sys.stdout = original_stdout
     ctx.obj["configuration"].weights = original_weights
     print(f"All done! Take a look at {output}!")
+
+@click.command("synth")
+@click.option("-l", "--liberty", type=click.Path(exists=True, dir_okay=False), help = "Liberty file" )
+@click.option('-o', '--output', type=click.Path(file_okay=True, dir_okay=False), help = "Output file", default = "synth_results.csv")
+@click.pass_context
+def asicsynth(ctx, liberty, output):
+    print(f"Performing synthesis using {liberty}.")
+    create_yshelper(ctx)
+    load_condiguration(ctx)
+    create_alsgraph(ctx)
+    parse_output_weights(ctx)
+    create_catalog(ctx)
+    create_problem(ctx)
+    problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
+    problem.init()
+    create_optimizer(ctx)
+    print("Reading the Pareto front.")
+    ctx.obj["optimizer"].archive = pyamosa.Pareto()
+    ctx.obj["optimizer"].archive.read_json(problem, ctx.obj["final_archive_json"])
+    pareto_set = ctx.obj["optimizer"].archive.get_set()
+    pareto_front = ctx.obj["optimizer"].archive.get_front()
+    
+    labels = [ MOP.error_labels[i] for i in ctx.obj["configuration"].error_conf.metrics ] + [MOP.hw_labels[i] for i in ctx.obj["configuration"].hw_conf.metrics]
+    headers = ["Id"] + labels + ["Area", "Power"]
+    print("Performing AIG-rewriting.")
+    helper = ctx.obj["yshelper"]
+    synthesizer = LibertySynth(liberty)
+    synth_results = []
+    for n, (conf, ffs) in enumerate(zip(pareto_set, pareto_front)):
+            hdl_source = f"/tmp/variant_{n:05d}.v"
+            helper.reset()
+            helper.delete()
+            helper.load_design("original")
+            helper.to_aig(problem.matter_configuration(conf))
+            helper.reverse_splitnets()
+            helper.clean()
+            helper.opt()
+            helper.write_verilog(hdl_source)
+            helper.reset()
+            helper.delete()
+            area, power = synthesizer.do_synth(hdl_source, ctx.obj["configuration"].top_module)
+            synth_results.append([f"{n:05d}", *ffs, area, power])
+    
+    print(tabulate(synth_results, headers=headers))
+    with open(output, "w") as f:
+        print(*headers, sep=",", file=f)
+        for i in synth_results:
+            print(*i, sep=",", file=f)
+    print(f"All done! Take a look at {output}!")
     
 cli.add_command(elaborate)
 cli.add_command(es_synth)
@@ -407,6 +458,8 @@ cli.add_command(generate_verilog)
 cli.add_command(generate_tb)
 cli.add_command(generate_sw)
 cli.add_command(fitnesses)
+cli.add_command(asicsynth)
+
     
 @click.command('clean')
 @click.option('--catalog', type = str, default = None, help = 'Path of the LUT-catalog cache file. If specificed, the one from the configuration file is ignored.')
