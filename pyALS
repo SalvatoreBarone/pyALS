@@ -267,8 +267,10 @@ def generate_verilog(ctx, output):
 @click.option("--altconf", type=click.Path(exists=True, dir_okay=False), help = "Optional alternative configuration file (for signals' weights)", default = None)
 @click.option("-e", "--exact", is_flag = True, help = "Generates the exact implementation only")
 @click.option("-a", "--alwann", is_flag = True, help = "Enable the weight-tuning approach. See below.")
+@click.option("--ishift", type=int, help = "Left-shift for PIs", default = None)
+@click.option("--oshift", type=int, help = "Left-shift for POs", default = None)
 @click.pass_context
-def generate_sw(ctx, output, altconf, exact, alwann):
+def generate_sw(ctx, output, altconf, exact, alwann, ishift, oshift):
     """
     Generates software models of twp-inputs-one-output arithmetic circuits resulting from the 'als' command, for GPU software simulations.
     You can select which models to be generated using the available options.
@@ -313,7 +315,7 @@ def generate_sw(ctx, output, altconf, exact, alwann):
     rm_old_implementation(output, ".py")
     rm_old_implementation(output, ".c")
     rm_old_implementation(output, ".h")
-    generator.generate(ctx.obj["configuration"].top_module, pareto_set, f"{output}/sw")
+    generator.generate(ctx.obj["configuration"].top_module, pareto_set, f"{output}/sw", ishift, oshift)
     ctx.obj["configuration"].weights = original_weights
     print(f"All done! Take a look at {output}!")
     

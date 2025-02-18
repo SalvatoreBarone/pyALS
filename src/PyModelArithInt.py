@@ -45,7 +45,7 @@ class PyModelArithInt:
         for po, w in self.wires["PO"].items():
             self.po_weights = { f"{po.str()}[{i}]": signal_weights[f"{po.str()}[{i}]"] for i in range(w.width)}
   
-    def generate(self, top_module, pareto_set, destination):
+    def generate(self, top_module, pareto_set, destination, ishift, oshift):
         items = {"top_module" : top_module,	"lut" : {} } | { f"operand{i+1}" : k.str()[1:] for i, k in zip(range(2), self.wires["PI"].keys())}
         for n, c in enumerate(tqdm(pareto_set, desc = "Performing model generation...", leave = True, bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}")):
             configuration = self.problem.matter_configuration(c)
@@ -81,3 +81,18 @@ class PyModelArithInt:
             r = int(bool_to_value(o["a"], self.po_weights))
             result[a + offset_op1 if signed else a][b + offset_op2 if signed else b] = r
         return result, signed, offset_op1, offset_op2
+    
+    def get_shifted_lut_for_variant_as_mat(self, computed_circuit_outputs, ishift, oshift):
+        signed = np.min(list(self.pis_weights[0].values())) < 0 or np.min(list(self.pis_weights[1].values())) < 0 or np.min(list(self.po_weights.values())) < 0
+        result = np.zeros((2**(len(self.pis_weights[0]) + ishift), 2**len(self.pis_weights[1]) + ishift), dtype = int)
+        offset_op1 = 2**(len(self.pis_weights[0])+ishift-1) if signed else 0
+        offset_op2 = 2**(len(self.pis_weights[1])+ishift-1) if signed else 0
+        for o in computed_circuit_outputs:
+            a = int(bool_to_value({ k : i for k, i in o["i"].items() if k in self.pis_weights[0] }, self.pis_weights[0])) << ishift
+            b = int(bool_to_value({ k : i for k, i in o["i"].items() if k in self.pis_weights[1] }, self.pis_weights[1])) << ishift
+            r = int(bool_to_value(o["a"], self.po_weights)) << oshift
+            for a_fill in range(2**ishift):
+                for b_fill in  range(2**ishift):
+                    result[a + offset_op1 + a_fill if signed else a + a_fill][b + offset_op2 + b_fill if signed else b + b_fill] = r
+            return result, signed, offset_op1, offset_op2
+        
