@@ -7,6 +7,6 @@ const {{items["res_c_type"]}} model [{{items["op1_c_size"]}}][{{items["op2_c_siz
 {% for row in items["lut"] -%}{{"\t{"}}{% for col in row -%}{{col}}{{ ", " if not loop.last else "" }}{% endfor %}{{ "}, " if not loop.last else "}" }}
 {% endfor %}};	
 
-inline {{items["res_c_type"]}} {{items["top_module"]}} ({{items["op1_c_type"]}} {{items["operand1"]}}, {{items["op2_c_type"]}} {{items["operand2"]}}) {
+{{items["res_c_type"]}} {{items["top_module"]}} ({{items["op1_c_type"]}} {{items["operand1"]}}, {{items["op2_c_type"]}} {{items["operand2"]}}) {
 	return model[{{items["operand1"]}} + {{items["offset1"]}}][{{items["operand2"]}} + {{items["offset2"]}}];
 }

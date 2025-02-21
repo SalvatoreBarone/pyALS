@@ -2,4 +2,4 @@
 // Please, check it out at https://github.com/SalvatoreBarone/pyALS
 #include <inttypes.h>
 
-inline {{items["res_c_type"]}} {{items["top_module"]}} ({{items["op1_c_type"]}} {{items["operand1"]}}, {{items["op2_c_type"]}} {{items["operand2"]}});
+{{items["res_c_type"]}} {{items["top_module"]}} ({{items["op1_c_type"]}} {{items["operand1"]}}, {{items["op2_c_type"]}} {{items["operand2"]}});
