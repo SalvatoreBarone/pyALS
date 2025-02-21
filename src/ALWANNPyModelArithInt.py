@@ -47,4 +47,5 @@ class ALWANNPyModelArithInt(PyModelArithInt):
             alwann_behavior[w + offset_op1 if signed else w] = np.copy(behavioral_model[w_prime + offset_op1 if signed else w_prime])
             assert np.array_equal(alwann_behavior[w + offset_op1 if signed else w], behavioral_model[w_prime + offset_op1 if signed else w_prime])
             assert alwann_behavior[w + offset_op1 if signed else w] is not behavioral_model[w_prime + offset_op1 if signed else w_prime]
+        return alwann_behavior, signed, offset_op1, offset_op2
         

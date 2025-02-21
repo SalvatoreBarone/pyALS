@@ -35,4 +35,4 @@ class LibertySynth:
     def do_synth(self, hdl_source, top_module):
         design = ys.Design()
         ys.run_pass(f"tee -q read_verilog {hdl_source}; tee -q synth -flatten -top {top_module}; tee -q clean -purge; tee -q read_liberty -lib {self.liberty}; tee -q abc -liberty {self.liberty };", design)
-        return self.get_area(design), self.get_power(design)
+        return self.get_area(design), self.get_power(design) /10000

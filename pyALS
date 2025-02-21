@@ -225,7 +225,7 @@ def generate_verilog(ctx, output):
     create_alsgraph(ctx)
     parse_output_weights(ctx)
     create_catalog(ctx)
-    create_problem(ctx)
+    #create_problem(ctx)
     if output != ".":
         mkpath(f"{output}/hdl")
         
@@ -243,22 +243,6 @@ def generate_verilog(ctx, output):
     rewriter = ALSRewriter(ctx.obj["yshelper"], problem)
     rewriter.generate_hdl(pareto_set, f"{output}/hdl")
         
-    resource_dir = os.path.dirname(os.path.realpath(__file__))
-    for resource in [
-        "resources/.synopsys_dc.setup",
-        "resources/do_synth.sh",
-        "resources/do_synth.tcl",
-        "resources/do_fpga_synth.sh",
-        "resources/fpga_synth.tcl",
-        "resources/gscl45nm.db",
-        "resources/gscl45nm.v",
-        "resources/gscl45nm.lib",
-        "resources/ys_synth",
-        "resources/do_sim.sh",
-        "resources/do_sim.tcl",
-        "resources/do_pwr.tcl"
-    ]:
-        copy_file(f"{resource_dir}/{resource}", output)
     print(f"All done! Take a look at {output}!")
 
 
@@ -283,6 +267,8 @@ def generate_sw(ctx, output, altconf, exact, alwann, ishift, oshift):
         https://doi.org/10.1109/ICCAD45719.2019.8942068.
     
     """
+    assert (oshift == ishift == None) or (oshift == ishift) or (oshift == 2*ishift), "Error in specifying the oshift parameter"
+
     print("Generating software models")
     create_yshelper(ctx)
     load_configuration(ctx)
@@ -415,7 +401,7 @@ def asicsynth(ctx, liberty, output):
     create_alsgraph(ctx)
     parse_output_weights(ctx)
     create_catalog(ctx)
-    create_problem(ctx)
+    #create_problem(ctx)
     problem = MOP(ctx.obj["configuration"].top_module, ctx.obj["graph"], None, ctx.obj["catalog"], ctx.obj["configuration"].error_conf, ctx.obj["configuration"].hw_conf, ctx.obj["ncpus"])
     problem.init()
     create_optimizer(ctx)
