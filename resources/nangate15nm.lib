@@ -1,0 +1,4115 @@
+/* 
+* ******************************************************************************
+* *                                                                            *
+* *                   Copyright (C) 2004-2014, Nangate Inc.                    *
+* *                           All rights reserved.                             *
+* *                                                                            *
+* * Nangate and the Nangate logo are trademarks of Nangate Inc.                *
+* *                                                                            *
+* * All trademarks, logos, software marks, and trade names (collectively the   *
+* * "Marks") in this program are proprietary to Nangate or other respective    *
+* * owners that have granted Nangate the right and license to use such Marks.  *
+* * You are not permitted to use the Marks without the prior written consent   *
+* * of Nangate or such third party that may own the Marks.                     *
+* *                                                                            *
+* * This file has been provided pursuant to a License Agreement containing     *
+* * restrictions on its use. This file contains valuable trade secrets and     *
+* * proprietary information of Nangate Inc., and is protected by U.S. and      *
+* * international laws and/or treaties.                                        *
+* *                                                                            *
+* * The copyright notice(s) in this file does not indicate actual or intended  *
+* * publication of this file.                                                  *
+* *                                                                            *
+* *    NGLibraryCharacterizer, Development_version_64 - build 201405281900     *
+* *                                                                            *
+* ******************************************************************************
+*
+* Spice engine            : BDAspice 2014_Q1_update2
+* Liberty export type     : functional
+*
+*
+****************************************************************************/
+
+library (NanGate_15nm_OCL) {
+
+  /* Documentation Attributes */
+  date                    		: "Wed, 28 May 2014, 17:47:39";
+  revision                		: "revision 1.0";
+  comment                 		: "Copyright (c) 2004-2014 Nangate Inc. All Rights Reserved.";
+
+  define(drive_strength, cell, float);
+  define(ng_base_cell, cell, string);
+  define(ng_basename, cell, string);
+  define(ng_build_equation, cell, string);
+  define(ng_nominal_skew, cell, float);
+  define(ng_nominal_strength, cell, float);
+  define(ng_variant_type, cell, string);
+
+  /******************************************************************************************
+   Module          	: AND2_X1
+   Cell Description	: Combinational cell (AND2_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (AND2_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.294912;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(A1 & A2)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: AND2_X2
+   Cell Description	: Combinational cell (AND2_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (AND2_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.344064;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(A1 & A2)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: AND3_X1
+   Cell Description	: Combinational cell (AND3_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (AND3_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.393216;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "((A1 & A2) & A3)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: AND3_X2
+   Cell Description	: Combinational cell (AND3_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (AND3_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.393216;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "((A1 & A2) & A3)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: AND4_X1
+   Cell Description	: Combinational cell (AND4_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (AND4_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.442368;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A4) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(((A1 & A2) & A3) & A4)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: AND4_X2
+   Cell Description	: Combinational cell (AND4_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (AND4_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.491520;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A4) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(((A1 & A2) & A3) & A4)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: ANTENNA
+   Cell Description	: Physical cell (ANTENNA)
+  *******************************************************************************************/
+
+  cell (ANTENNA) {
+
+	dont_touch	: true;
+	dont_use	: true;
+	drive_strength	: 0.5;
+
+	area               	: 0.147456;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: AOI21_X1
+   Cell Description	: Combinational cell (AOI21_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (AOI21_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.294912;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 & A2) | B)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: AOI21_X2
+   Cell Description	: Combinational cell (AOI21_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (AOI21_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.442368;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 & A2) | B)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: AOI22_X1
+   Cell Description	: Combinational cell (AOI22_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (AOI22_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.344064;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 & A2) | (B1 & B2))";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: AOI22_X2
+   Cell Description	: Combinational cell (AOI22_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (AOI22_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.589824;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 & A2) | (B1 & B2))";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: BUF_X1
+   Cell Description	: Combinational cell (BUF_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (BUF_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.245760;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: BUF_X2
+   Cell Description	: Combinational cell (BUF_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (BUF_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.245760;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: BUF_X4
+   Cell Description	: Combinational cell (BUF_X4) with drive strength X4
+  *******************************************************************************************/
+
+  cell (BUF_X4) {
+
+	drive_strength	: 4;
+
+	area               	: 0.393216;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: BUF_X8
+   Cell Description	: Combinational cell (BUF_X8) with drive strength X8
+  *******************************************************************************************/
+
+  cell (BUF_X8) {
+
+	drive_strength	: 8;
+
+	area               	: 0.688128;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: BUF_X12
+   Cell Description	: Combinational cell (BUF_X12) with drive strength X12
+  *******************************************************************************************/
+
+  cell (BUF_X12) {
+
+	drive_strength	: 12;
+
+	area               	: 0.983040;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: BUF_X16
+   Cell Description	: Combinational cell (BUF_X16) with drive strength X16
+  *******************************************************************************************/
+
+  cell (BUF_X16) {
+
+	drive_strength	: 16;
+
+	area               	: 1.277952;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: CLKBUF_X1
+   Cell Description	: Combinational cell (CLKBUF_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (CLKBUF_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.245760;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: CLKBUF_X2
+   Cell Description	: Combinational cell (CLKBUF_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (CLKBUF_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.245760;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: CLKBUF_X4
+   Cell Description	: Combinational cell (CLKBUF_X4) with drive strength X4
+  *******************************************************************************************/
+
+  cell (CLKBUF_X4) {
+
+	drive_strength	: 4;
+
+	area               	: 0.393216;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: CLKBUF_X8
+   Cell Description	: Combinational cell (CLKBUF_X8) with drive strength X8
+  *******************************************************************************************/
+
+  cell (CLKBUF_X8) {
+
+	drive_strength	: 8;
+
+	area               	: 0.688128;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: CLKBUF_X12
+   Cell Description	: Combinational cell (CLKBUF_X12) with drive strength X12
+  *******************************************************************************************/
+
+  cell (CLKBUF_X12) {
+
+	drive_strength	: 12;
+
+	area               	: 0.983040;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: CLKBUF_X16
+   Cell Description	: Combinational cell (CLKBUF_X16) with drive strength X16
+  *******************************************************************************************/
+
+  cell (CLKBUF_X16) {
+
+	drive_strength	: 16;
+
+	area               	: 1.277952;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: DFFRNQ_X1
+   Cell Description	: Pos.edge D-Flip-Flop with active low reset, and drive strength X1
+  *******************************************************************************************/
+
+  cell (DFFRNQ_X1) {
+
+	ff ("IQ" , "IQN") {
+		next_state         	: "D";
+		clocked_on         	: "CLK";
+		clear              	: "!RN";
+	}
+
+	drive_strength	: 1;
+
+	area               	: 1.277952;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (D) {
+
+		direction		: input;
+		nextstate_type		: data;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (RN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (CLK) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		clock   		: true;
+	}
+
+	pin (Q) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "IQ";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: DFFSNQ_X1
+   Cell Description	: Pos.edge D-Flip-Flop with active low set, and drive strength X1
+  *******************************************************************************************/
+
+  cell (DFFSNQ_X1) {
+
+	ff ("IQ" , "IQN") {
+		next_state         	: "D";
+		clocked_on         	: "CLK";
+		preset             	: "!SN";
+	}
+
+	drive_strength	: 1;
+
+	area               	: 1.277952;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (D) {
+
+		direction		: input;
+		nextstate_type		: data;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (SN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (CLK) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		clock   		: true;
+	}
+
+	pin (Q) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "IQ";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: FA_X1
+   Cell Description	: Combinational cell (FA_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (FA_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 1.179648;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (CI) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (CO) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(((B & CI) | (B & A)) | (CI & A))";
+	}
+
+	pin (S) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((!((B & CI) | !(B | CI)) & A) | !(!((B & CI) | !(B | CI)) | A))";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: FILLTIE
+   Cell Description	: Physical cell (FILLTIE)
+  *******************************************************************************************/
+
+  cell (FILLTIE) {
+
+	dont_touch	: true;
+	dont_use	: true;
+	drive_strength	: 1;
+
+	area               	: 0.443136;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: FILL_X1
+   Cell Description	: Physical cell (FILL_X1)
+  *******************************************************************************************/
+
+  cell (FILL_X1) {
+
+	dont_touch	: true;
+	dont_use	: true;
+	drive_strength	: 1;
+
+	area               	: 0.098304;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: FILL_X2
+   Cell Description	: Physical cell (FILL_X2)
+  *******************************************************************************************/
+
+  cell (FILL_X2) {
+
+	dont_touch	: true;
+	dont_use	: true;
+	drive_strength	: 2;
+
+	area               	: 0.147456;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: FILL_X4
+   Cell Description	: Physical cell (FILL_X4)
+  *******************************************************************************************/
+
+  cell (FILL_X4) {
+
+	dont_touch	: true;
+	dont_use	: true;
+	drive_strength	: 4;
+
+	area               	: 0.245760;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: FILL_X8
+   Cell Description	: Physical cell (FILL_X8)
+  *******************************************************************************************/
+
+  cell (FILL_X8) {
+
+	dont_touch	: true;
+	dont_use	: true;
+	drive_strength	: 8;
+
+	area               	: 0.442368;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: FILL_X16
+   Cell Description	: Physical cell (FILL_X16)
+  *******************************************************************************************/
+
+  cell (FILL_X16) {
+
+	dont_touch	: true;
+	dont_use	: true;
+	drive_strength	: 16;
+
+	area               	: 0.835584;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: HA_X1
+   Cell Description	: Combinational cell (HA_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (HA_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.638976;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (CO) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(A & B)";
+	}
+
+	pin (S) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A & B) | !(A | B))";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: INV_X1
+   Cell Description	: Combinational cell (INV_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (INV_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.147456;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: INV_X2
+   Cell Description	: Combinational cell (INV_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (INV_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.196608;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: INV_X4
+   Cell Description	: Combinational cell (INV_X4) with drive strength X4
+  *******************************************************************************************/
+
+  cell (INV_X4) {
+
+	drive_strength	: 4;
+
+	area               	: 0.294912;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: INV_X8
+   Cell Description	: Combinational cell (INV_X8) with drive strength X8
+  *******************************************************************************************/
+
+  cell (INV_X8) {
+
+	drive_strength	: 8;
+
+	area               	: 0.491520;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: INV_X12
+   Cell Description	: Combinational cell (INV_X12) with drive strength X12
+  *******************************************************************************************/
+
+  cell (INV_X12) {
+
+	drive_strength	: 12;
+
+	area               	: 0.688128;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: INV_X16
+   Cell Description	: Combinational cell (INV_X16) with drive strength X16
+  *******************************************************************************************/
+
+  cell (INV_X16) {
+
+	drive_strength	: 16;
+
+	area               	: 0.884736;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!I";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: LHQ_X1
+   Cell Description	: High enable Latch with drive strength X1
+  *******************************************************************************************/
+
+  cell (LHQ_X1) {
+
+	latch ("IQ" , "IQN") {
+		data_in            	: "D";
+		enable             	: "E";
+	}
+
+	drive_strength	: 1;
+
+	area               	: 0.688128;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (D) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (E) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		clock   		: true;
+	}
+
+	pin (Q) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "IQ";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: MUX2_X1
+   Cell Description	: Combinational cell (MUX2_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (MUX2_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.638976;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (I0) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (I1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (S) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "((S & I1) | (!S & I0))";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NAND2_X1
+   Cell Description	: Combinational cell (NAND2_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (NAND2_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.196608;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!(A1 & A2)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NAND2_X2
+   Cell Description	: Combinational cell (NAND2_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (NAND2_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.294912;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!(A1 & A2)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NAND3_X1
+   Cell Description	: Combinational cell (NAND3_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (NAND3_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.294912;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 & A2) & A3)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NAND3_X2
+   Cell Description	: Combinational cell (NAND3_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (NAND3_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.442368;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 & A2) & A3)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NAND4_X1
+   Cell Description	: Combinational cell (NAND4_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (NAND4_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.344064;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A4) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!(((A1 & A2) & A3) & A4)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NAND4_X2
+   Cell Description	: Combinational cell (NAND4_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (NAND4_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.540672;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A4) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!(((A1 & A2) & A3) & A4)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NOR2_X1
+   Cell Description	: Combinational cell (NOR2_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (NOR2_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.196608;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!(A1 | A2)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NOR2_X2
+   Cell Description	: Combinational cell (NOR2_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (NOR2_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.294912;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!(A1 | A2)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NOR3_X1
+   Cell Description	: Combinational cell (NOR3_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (NOR3_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.294912;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 | A2) | A3)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NOR3_X2
+   Cell Description	: Combinational cell (NOR3_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (NOR3_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.442368;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 | A2) | A3)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NOR4_X1
+   Cell Description	: Combinational cell (NOR4_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (NOR4_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.344064;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A4) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!(((A1 | A2) | A3) | A4)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: NOR4_X2
+   Cell Description	: Combinational cell (NOR4_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (NOR4_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.540672;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A4) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!(((A1 | A2) | A3) | A4)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OAI21_X1
+   Cell Description	: Combinational cell (OAI21_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (OAI21_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.294912;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 | A2) & B)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OAI21_X2
+   Cell Description	: Combinational cell (OAI21_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (OAI21_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.442368;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 | A2) & B)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OAI22_X1
+   Cell Description	: Combinational cell (OAI22_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (OAI22_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.344064;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 | A2) & (B1 | B2))";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OAI22_X2
+   Cell Description	: Combinational cell (OAI22_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (OAI22_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.589824;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (B2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 | A2) & (B1 | B2))";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OR2_X1
+   Cell Description	: Combinational cell (OR2_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (OR2_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.294912;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(A1 | A2)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OR2_X2
+   Cell Description	: Combinational cell (OR2_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (OR2_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.344064;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(A1 | A2)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OR3_X1
+   Cell Description	: Combinational cell (OR3_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (OR3_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.393216;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "((A1 | A2) | A3)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OR3_X2
+   Cell Description	: Combinational cell (OR3_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (OR3_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.393216;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "((A1 | A2) | A3)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OR4_X1
+   Cell Description	: Combinational cell (OR4_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (OR4_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.442368;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A4) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(((A1 | A2) | A3) | A4)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: OR4_X2
+   Cell Description	: Combinational cell (OR4_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (OR4_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.491520;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A3) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A4) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "(((A1 | A2) | A3) | A4)";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: SDFFRNQ_X1
+   Cell Description	: Pos.edge D-Flip-Flop with active low reset, and active high scan, and drive strength X1
+  *******************************************************************************************/
+
+  cell (SDFFRNQ_X1) {
+
+	ff ("IQ" , "IQN") {
+		next_state         	: "((SE * SI) + (!SE * D))";
+		clocked_on         	: "CLK";
+		clear              	: "!RN";
+	}
+
+	drive_strength	: 1;
+
+	area               	: 1.622016;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (D) {
+
+		direction		: input;
+		nextstate_type		: data;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (RN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (SE) {
+
+		direction		: input;
+		nextstate_type		: scan_enable;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (SI) {
+
+		direction		: input;
+		nextstate_type		: scan_in;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (CLK) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		clock   		: true;
+	}
+
+	pin (Q) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "IQ";
+	}
+
+	test_cell () {
+
+		ff ("IQ" , "IQN") {
+			next_state         	: "D";
+			clocked_on         	: "CLK";
+			clear              	: "!RN";
+		}
+		pin (D) {
+			direction	: input;
+		}
+		pin (RN) {
+			direction	: input;
+		}
+		pin (SE) {
+			direction	: input;
+			signal_type	: test_scan_enable;
+		}
+		pin (SI) {
+			direction	: input;
+			signal_type	: test_scan_in;
+		}
+		pin (CLK) {
+			direction	: input;
+		}
+		pin (Q) {
+			direction	: output;
+			function	: "IQ";
+			signal_type	: test_scan_out;
+		}
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: SDFFSNQ_X1
+   Cell Description	: Pos.edge D-Flip-Flop with active high scan, and active low set, and drive strength X1
+  *******************************************************************************************/
+
+  cell (SDFFSNQ_X1) {
+
+	ff ("IQ" , "IQN") {
+		next_state         	: "((SE * SI) + (!SE * D))";
+		clocked_on         	: "CLK";
+		preset             	: "!SN";
+	}
+
+	drive_strength	: 1;
+
+	area               	: 1.622016;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (D) {
+
+		direction		: input;
+		nextstate_type		: data;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (SE) {
+
+		direction		: input;
+		nextstate_type		: scan_enable;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (SI) {
+
+		direction		: input;
+		nextstate_type		: scan_in;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (SN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (CLK) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		clock   		: true;
+	}
+
+	pin (Q) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "IQ";
+	}
+
+	test_cell () {
+
+		ff ("IQ" , "IQN") {
+			next_state         	: "D";
+			clocked_on         	: "CLK";
+			preset             	: "!SN";
+		}
+		pin (D) {
+			direction	: input;
+		}
+		pin (SE) {
+			direction	: input;
+			signal_type	: test_scan_enable;
+		}
+		pin (SI) {
+			direction	: input;
+			signal_type	: test_scan_in;
+		}
+		pin (SN) {
+			direction	: input;
+		}
+		pin (CLK) {
+			direction	: input;
+		}
+		pin (Q) {
+			direction	: output;
+			function	: "IQ";
+			signal_type	: test_scan_out;
+		}
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: TBUF_X1
+   Cell Description	: Combinational tri-state cell (TBUF_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (TBUF_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.540672;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (EN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+		three_state		: "!EN";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: TBUF_X2
+   Cell Description	: Combinational tri-state cell (TBUF_X2) with drive strength X2
+  *******************************************************************************************/
+
+  cell (TBUF_X2) {
+
+	drive_strength	: 2;
+
+	area               	: 0.589824;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (EN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+		three_state		: "!EN";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: TBUF_X4
+   Cell Description	: Combinational tri-state cell (TBUF_X4) with drive strength X4
+  *******************************************************************************************/
+
+  cell (TBUF_X4) {
+
+	drive_strength	: 4;
+
+	area               	: 0.737280;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (EN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+		three_state		: "!EN";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: TBUF_X8
+   Cell Description	: Combinational tri-state cell (TBUF_X8) with drive strength X8
+  *******************************************************************************************/
+
+  cell (TBUF_X8) {
+
+	drive_strength	: 8;
+
+	area               	: 1.032192;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (EN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+		three_state		: "!EN";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: TBUF_X12
+   Cell Description	: Combinational tri-state cell (TBUF_X12) with drive strength X1
+  *******************************************************************************************/
+
+  cell (TBUF_X12) {
+
+	drive_strength	: 1;
+
+	area               	: 1.327104;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (EN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+		three_state		: "!EN";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: TBUF_X16
+   Cell Description	: Combinational tri-state cell (TBUF_X16) with drive strength X16
+  *******************************************************************************************/
+
+  cell (TBUF_X16) {
+
+	drive_strength	: 16;
+
+	area               	: 1.622016;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (EN) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (I) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "I";
+		three_state		: "!EN";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: TIEH
+   Cell Description	: Physical cell (TIEH)
+  *******************************************************************************************/
+
+  cell (TIEH) {
+
+	dont_touch	: true;
+	dont_use	: true;
+	drive_strength	: 0.5;
+
+	area               	: 0.147456;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "1";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: TIEL
+   Cell Description	: Physical cell (TIEL)
+  *******************************************************************************************/
+
+  cell (TIEL) {
+
+	dont_touch	: true;
+	dont_use	: true;
+	drive_strength	: 0.5;
+
+	area               	: 0.147456;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "0";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: XNOR2_X1
+   Cell Description	: Combinational cell (XNOR2_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (XNOR2_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.442368;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (ZN) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!(!((A1 & A2) | !(A1 | A2)))";
+	}
+
+  }
+
+
+  /******************************************************************************************
+   Module          	: XOR2_X1
+   Cell Description	: Combinational cell (XOR2_X1) with drive strength X1
+  *******************************************************************************************/
+
+  cell (XOR2_X1) {
+
+	drive_strength	: 1;
+
+	area               	: 0.442368;
+	pg_pin(VDD) {
+		voltage_name : VDD;
+		pg_type      : primary_power;
+	}
+	pg_pin(VNW) {
+		voltage_name : VNW;
+		pg_type      : nwell;
+	}
+	pg_pin(VPW) {
+		voltage_name : VPW;
+		pg_type      : pwell;
+	}
+	pg_pin(VSS) {
+		voltage_name : VSS;
+		pg_type      : primary_ground;
+	}
+
+	pin (A1) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (A2) {
+
+		direction		: input;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+	}
+
+	pin (Z) {
+
+		direction		: output;
+		related_power_pin	: "VDD";
+		related_ground_pin	: "VSS";
+		function		: "!((A1 & A2) | !(A1 | A2))";
+	}
+
+  }
+
+}
+/*
+* End of file
+*/

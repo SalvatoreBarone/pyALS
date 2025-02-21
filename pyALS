@@ -46,7 +46,7 @@ def create_yshelper(ctx):
         ctx.obj["yshelper"] = YosysHelper()
         ctx.obj["yshelper"].load_ghdl()
         
-def load_condiguration(ctx):
+def load_configuration(ctx):
     if "configuration" not in ctx.obj:
         assert "configfile" in ctx.obj, "You must provide a JSON configuration file to run this command(s)"
         ctx.obj["configuration"] = ConfigParser(ctx.obj['configfile'])
@@ -146,7 +146,7 @@ def elaborate(ctx, output):
     """
     print("Performing ELAB")
     create_yshelper(ctx)
-    load_condiguration(ctx)
+    load_configuration(ctx)
     create_alsgraph(ctx)
     for v in ctx.obj["graph"].get_cells():
         print(v["name"], v["spec"])
@@ -162,7 +162,7 @@ def es_synth(ctx):
     """
     print("Performing ES")
     create_yshelper(ctx)
-    load_condiguration(ctx)
+    load_configuration(ctx)
     create_alsgraph(ctx)
     create_catalog(ctx)
 
@@ -176,7 +176,7 @@ def als(ctx):
     """
     print("Performing ALS")
     create_yshelper(ctx)
-    load_condiguration(ctx)
+    load_configuration(ctx)
     create_alsgraph(ctx)
     parse_output_weights(ctx)
     create_catalog(ctx)
@@ -218,7 +218,7 @@ def generate_verilog(ctx, output):
     """
     print("Generating HDL")
     create_yshelper(ctx)
-    load_condiguration(ctx)
+    load_configuration(ctx)
     if output is None:
         output = ctx.obj['configuration'].output_dir
         
@@ -285,7 +285,7 @@ def generate_sw(ctx, output, altconf, exact, alwann, ishift, oshift):
     """
     print("Generating software models")
     create_yshelper(ctx)
-    load_condiguration(ctx)
+    load_configuration(ctx)
     if output is None:
         output = ctx.obj['configuration'].output_dir
         
@@ -328,7 +328,7 @@ def generate_tb(ctx, output, delay, nvec):
     """ Generate testbench and scritps files for vectored power estimation """
     print("Generating testbench")
     create_yshelper(ctx)
-    load_condiguration(ctx)
+    load_configuration(ctx)
     create_alsgraph(ctx)
     create_catalog(ctx)
     if output is None:
@@ -343,22 +343,22 @@ def generate_tb(ctx, output, delay, nvec):
     TbGenerator(ctx.obj["yshelper"], problem, delay).generate(f"{output}/tb.v", nvec)
 
     
-    resource_dir = os.path.dirname(os.path.realpath(__file__))
-    for resource in [
-        "resources/.synopsys_dc.setup",
-        "resources/do_synth.sh",
-        "resources/do_synth.tcl",
-        "resources/do_fpga_synth.sh",
-        "resources/fpga_synth.tcl",
-        "resources/gscl45nm.db",
-        "resources/gscl45nm.v",
-        "resources/gscl45nm.lib",
-        "resources/ys_synth",
-        "resources/do_sim.sh",
-        "resources/do_sim.tcl",
-        "resources/do_pwr.tcl"
-    ]:
-        copy_file(f"{resource_dir}/{resource}", output)
+    # resource_dir = os.path.dirname(os.path.realpath(__file__))
+    # for resource in [
+    #     "resources/.synopsys_dc.setup",
+    #     "resources/do_synth.sh",
+    #     "resources/do_synth.tcl",
+    #     "resources/do_fpga_synth.sh",
+    #     "resources/fpga_synth.tcl",
+    #     "resources/gscl45nm.db",
+    #     "resources/gscl45nm.v",
+    #     "resources/gscl45nm.lib",
+    #     "resources/ys_synth",
+    #     "resources/do_sim.sh",
+    #     "resources/do_sim.tcl",
+    #     "resources/do_pwr.tcl"
+    # ]:
+    #     copy_file(f"{resource_dir}/{resource}", output)
     print(f"All done! Take a look at {output}!")
     
 @click.command("metrics")
@@ -371,7 +371,7 @@ def fitnesses(ctx, altconf, output):
     """
     print("Performing fitnesses computation")
     create_yshelper(ctx)
-    load_condiguration(ctx)
+    load_configuration(ctx)
     create_alsgraph(ctx)
     
     if output is None:
@@ -411,7 +411,7 @@ def fitnesses(ctx, altconf, output):
 def asicsynth(ctx, liberty, output):
     print(f"Performing synthesis using {liberty}.")
     create_yshelper(ctx)
-    load_condiguration(ctx)
+    load_configuration(ctx)
     create_alsgraph(ctx)
     parse_output_weights(ctx)
     create_catalog(ctx)
@@ -426,11 +426,15 @@ def asicsynth(ctx, liberty, output):
     pareto_front = ctx.obj["optimizer"].archive.get_front()
     
     labels = [ MOP.error_labels[i] for i in ctx.obj["configuration"].error_conf.metrics ] + [MOP.hw_labels[i] for i in ctx.obj["configuration"].hw_conf.metrics]
+    NA = ["N/A"] * (len(ctx.obj["configuration"].error_conf.metrics) + len(ctx.obj["configuration"].hw_conf.metrics))
     headers = ["Id"] + labels + ["Area", "Power"]
     print("Performing AIG-rewriting.")
     helper = ctx.obj["yshelper"]
     synthesizer = LibertySynth(liberty)
     synth_results = []
+    area, power = synthesizer.do_synth(ctx.obj["configuration"].source_hdl, ctx.obj["configuration"].top_module)
+    synth_results.append(["N/A", *NA, area, power])
+
     for n, (conf, ffs) in enumerate(zip(pareto_set, pareto_front)):
             hdl_source = f"/tmp/variant_{n:05d}.v"
             helper.reset()
@@ -473,7 +477,7 @@ def clean(ctx, catalog):
         check_for_file(catalog)
         cache = ALSCatalogCache(catalog)
     else:    
-        load_condiguration(ctx)
+        load_configuration(ctx)
         cache = ALSCatalogCache(ctx.obj["configuration"].als_conf.lut_cache)
     count = 0
     for s in cache.get_all_exact_luts():
@@ -510,7 +514,7 @@ def expand(ctx, catalog):
         check_for_file(catalog)
         cache = ALSCatalogCache(catalog)
     else:    
-        load_condiguration(ctx)
+        load_configuration(ctx)
         cache = ALSCatalogCache(ctx.obj["configuration"].als_conf.lut_cache)
     # try to complete any incomplete path in the catalog
     luts_to_be_synthesized = set()
@@ -564,7 +568,7 @@ def query(ctx, catalog, spec, dist, neg):
         check_for_file(catalog)
         cache = ALSCatalogCache(catalog)
     else:    
-        load_condiguration(ctx)
+        load_configuration(ctx)
         cache = ALSCatalogCache(ctx.obj["configuration"].als_conf.lut_cache)
     x = cache.get_lut_at_dist(negate(spec) if neg else spec, dist)
     if x is None:
@@ -583,7 +587,7 @@ def query(ctx, catalog, spec, dist, neg):
 def stats(ctx, catalog, gates, power_gates, power_truth, power_truth_k):
     """ Compute statistics on a given catalog """
     if catalog is None:
-        load_condiguration(ctx)
+        load_configuration(ctx)
         catalog = ctx.obj["configuration"].als_conf.lut_cache
     elif not os.path.exists(catalog):
             print(f"{catalog}: no such file.")
