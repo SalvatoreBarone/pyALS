@@ -392,9 +392,10 @@ def fitnesses(ctx, altconf, output):
 
 @click.command("synth")
 @click.option("-l", "--liberty", type=click.Path(exists=True, dir_okay=False), help = "Liberty file" )
-@click.option('-o', '--output', type=click.Path(file_okay=True, dir_okay=False), help = "Output file", default = "synth_results.csv")
+@click.option('-o', '--output', type=click.Path(file_okay=True, dir_okay=False), help = "Output file (CSV)", default = "synth_results.csv")
+@click.option('-j', '--jsonconfig', type=click.Path(file_okay=True, dir_okay=False), help = "Output file (JSON5)", default = "library_conf.json")
 @click.pass_context
-def asicsynth(ctx, liberty, output):
+def asicsynth(ctx, liberty, output, jsonconfig):
     print(f"Performing synthesis using {liberty}.")
     create_yshelper(ctx)
     load_configuration(ctx)
@@ -411,6 +412,7 @@ def asicsynth(ctx, liberty, output):
     pareto_set = ctx.obj["optimizer"].archive.get_set()
     pareto_front = ctx.obj["optimizer"].archive.get_front()
     
+    library = {}
     labels = [ MOP.error_labels[i] for i in ctx.obj["configuration"].error_conf.metrics ] + [MOP.hw_labels[i] for i in ctx.obj["configuration"].hw_conf.metrics]
     NA = ["N/A"] * (len(ctx.obj["configuration"].error_conf.metrics) + len(ctx.obj["configuration"].hw_conf.metrics))
     headers = ["Id"] + labels + ["Area", "Power"]
@@ -419,10 +421,15 @@ def asicsynth(ctx, liberty, output):
     synthesizer = LibertySynth(liberty)
     synth_results = []
     area, power = synthesizer.do_synth(ctx.obj["configuration"].source_hdl, ctx.obj["configuration"].top_module)
-    synth_results.append(["N/A", *NA, area, power])
+    library[ctx.obj["configuration"].top_module] = {
+        "path" : f"{ctx.obj['configuration'].output_dir}/sw/{ctx.obj['configuration'].top_module}/{ctx.obj['configuration'].top_module}.py", 
+        "area" : round(area, 3), 
+        "power": round(power, 3)}
+    synth_results.append([ctx.obj["configuration"].top_module, *NA, round(area, 3), round(power, 3)])
+
 
     for n, (conf, ffs) in enumerate(zip(pareto_set, pareto_front)):
-            hdl_source = f"/tmp/variant_{n:05d}.v"
+            hdl_source = f"/tmp/{n:05d}.v"
             helper.reset()
             helper.delete()
             helper.load_design("original")
@@ -434,13 +441,22 @@ def asicsynth(ctx, liberty, output):
             helper.reset()
             helper.delete()
             area, power = synthesizer.do_synth(hdl_source, ctx.obj["configuration"].top_module)
-            synth_results.append([f"{n:05d}", *ffs, area, power])
+            library[f"{n:05d}"] = {
+                "path" : f"{ctx.obj['configuration'].output_dir}/sw/{n:05d}/{ctx.obj['configuration'].top_module}.py", 
+                "area" : round(area, 3), 
+                "power": round(power, 3)
+            }
+            synth_results.append([f"{n:05d}", *ffs, round(area, 3), round(power, 3)])
     
     print(tabulate(synth_results, headers=headers))
     with open(output, "w") as f:
         print(*headers, sep=",", file=f)
         for i in synth_results:
             print(*i, sep=",", file=f)
+
+    with open(jsonconfig, "w") as f:
+        print(json5.dumps(library, indent=2), file = f)
+
     print(f"All done! Take a look at {output}!")
     
 cli.add_command(elaborate)

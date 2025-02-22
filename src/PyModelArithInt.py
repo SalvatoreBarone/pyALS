@@ -87,7 +87,7 @@ class PyModelArithInt:
             else:
                 model, _, _, _ = self.get_shifted_lut_for_variant_as_mat(computed_circuit_output, ishift, oshift)
             items["lut"]        = model.tolist()
-            destination_dir = f"{destination}/variant_{n:05d}"
+            destination_dir = f"{destination}/{n:05d}"
             mkpath(destination_dir)
             for template, ext in zip([self.__single_circuit_model_mat_py, self.__single_circuit_model_mat_hh, self.__single_circuit_model_mat_cc, self.__single_circuit_model_mat_h, self.__single_circuit_model_mat_c], ["py", "hpp", "cpp", "h", "c"]):
                 output_file = f"{destination_dir}/{top_module}.{ext}"
