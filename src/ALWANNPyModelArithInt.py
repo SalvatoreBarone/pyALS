@@ -38,7 +38,7 @@ class ALWANNPyModelArithInt(PyModelArithInt):
     
     def get_shifted_lut_for_variant_as_mat(self, computed_circuit_outputs, ishift, oshift):
         behavioral_model, signed, offset_op1, offset_op2 = PyModelArithInt.get_shifted_lut_for_variant_as_mat(self, computed_circuit_outputs, ishift, oshift)
-        alwann_behavior  = np.zeros((2**(len(self.pis_weights[0]) + ishift), 2**len(self.pis_weights[1]) + ishift), dtype = int)
+        alwann_behavior  = np.zeros((2**(len(self.pis_weights[0]) + ishift), 2**(len(self.pis_weights[1]) + ishift)), dtype = int)
         weights = range (-2**(len(self.pis_weights[0])+ishift-1) if signed else 0, 2**(len(self.pis_weights[0])+ishift-1) if signed else 2**(len(self.pis_weights[0])+ishift) )
         inputs  = range (-2**(len(self.pis_weights[1])+ishift-1) if signed else 0, 2**(len(self.pis_weights[1])+ishift-1) if signed else 2**(len(self.pis_weights[1])+ishift) )
         for w in tqdm(weights, desc = "Performing weight tuning...", leave = False, bar_format="{desc:40} {percentage:3.0f}% |{bar:60}{r_bar}{bar:-10b}"):

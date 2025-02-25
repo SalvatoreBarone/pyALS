@@ -423,9 +423,9 @@ def asicsynth(ctx, liberty, output, jsonconfig):
     area, power = synthesizer.do_synth(ctx.obj["configuration"].source_hdl, ctx.obj["configuration"].top_module)
     library[ctx.obj["configuration"].top_module] = {
         "path" : f"{ctx.obj['configuration'].output_dir}/sw/{ctx.obj['configuration'].top_module}/{ctx.obj['configuration'].top_module}.py", 
-        "area" : round(area, 3), 
-        "power": round(power, 3)}
-    synth_results.append([ctx.obj["configuration"].top_module, *NA, round(area, 3), round(power, 3)])
+        "area" : round(area, 4), 
+        "power": round(power, 4)}
+    synth_results.append([ctx.obj["configuration"].top_module, *NA, round(area, 4), round(power, 4)])
 
 
     for n, (conf, ffs) in enumerate(zip(pareto_set, pareto_front)):
