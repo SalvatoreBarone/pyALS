@@ -424,8 +424,8 @@ def asicsynth(ctx, liberty, output, jsonconfig):
     library[ctx.obj["configuration"].top_module] = {
         "path" : f"{ctx.obj['configuration'].output_dir}/sw/{ctx.obj['configuration'].top_module}/{ctx.obj['configuration'].top_module}.py", 
         "area" : round(area, 4), 
-        "power": round(power, 4)}
-    synth_results.append([ctx.obj["configuration"].top_module, *NA, round(area, 4), round(power, 4)])
+        "power": round(power, 5)}
+    synth_results.append([ctx.obj["configuration"].top_module, *NA, round(area, 4), round(power, 5)])
 
 
     for n, (conf, ffs) in enumerate(zip(pareto_set, pareto_front)):
@@ -443,10 +443,10 @@ def asicsynth(ctx, liberty, output, jsonconfig):
             area, power = synthesizer.do_synth(hdl_source, ctx.obj["configuration"].top_module)
             library[f"{n:05d}"] = {
                 "path" : f"{ctx.obj['configuration'].output_dir}/sw/{n:05d}/{ctx.obj['configuration'].top_module}.py", 
-                "area" : round(area, 3), 
-                "power": round(power, 3)
+                "area" : round(area, 4), 
+                "power": round(power, 5)
             }
-            synth_results.append([f"{n:05d}", *ffs, round(area, 3), round(power, 3)])
+            synth_results.append([f"{n:05d}", *ffs, round(area, 4), round(power, 5)])
     
     print(tabulate(synth_results, headers=headers))
     with open(output, "w") as f:
